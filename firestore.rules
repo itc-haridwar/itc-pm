@@ -2,10 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // The shared PM state is readable and writable by any signed-in user.
-    // Lock down further if you want role-based access in future.
+    // Shared PM state — readable by any signed-in user
+    // Writable only by admins (users whose UID has a doc in /admins)
     match /itc_pm/{docId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Admin list — readable by any signed-in user (to check their own status);
+    // writable only by existing admins.
+    // BOOTSTRAP: the very first admin must be added manually from Firebase Console
+    // (see "How to make someone admin" in the guide).
+    match /admins/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     // Default deny everything else

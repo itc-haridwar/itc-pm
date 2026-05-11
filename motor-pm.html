@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- Firebase: auth gate + Firestore for shared persistence -->
+<!-- Firebase: auth gate + Firestore for shared persistence + role-based access -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -23,16 +23,30 @@ const db = getFirestore(app);
 
 window.__pmFirebase = { db, auth, doc, getDoc, setDoc, onSnapshot };
 window.__pmFirebaseReady = false;
+window.__pmRole = 'viewer';  // default — upgraded to 'admin' if user UID found in /admins collection
 
-onAuthStateChanged(auth, (user)=>{
+onAuthStateChanged(auth, async (user)=>{
   if(!user){
-    // If running outside the app shell (direct access), redirect to login
     if(window.parent === window) window.location.href = './index.html';
     return;
   }
   window.__pmCurrentUser = user;
+
+  // Check if this user is an admin
+  try{
+    const adminRef = doc(db, 'admins', user.uid);
+    const adminSnap = await getDoc(adminRef);
+    if(adminSnap.exists()){
+      window.__pmRole = 'admin';
+    } else {
+      window.__pmRole = 'viewer';
+    }
+  } catch(e){
+    console.warn('Could not check admin status; defaulting to viewer.', e);
+    window.__pmRole = 'viewer';
+  }
+
   window.__pmFirebaseReady = true;
-  // Notify any waiters
   document.dispatchEvent(new CustomEvent('pm-firebase-ready'));
 });
 </script>
@@ -252,6 +266,22 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
 ::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:4px}
 ::-webkit-scrollbar-thumb:hover{background:var(--accent)}
 
+/* Role-based UI */
+.role-pill{display:inline-block;padding:3px 8px;font-size:9px;letter-spacing:1.5px;font-family:'JetBrains Mono',monospace;font-weight:700;border-radius:3px;border:1px solid}
+.role-admin-pill{color:var(--accent-4);border-color:var(--accent-4);background:rgba(124,242,139,0.1)}
+.role-viewer-pill{color:var(--accent);border-color:var(--accent);background:rgba(0,217,255,0.08)}
+.role-info{margin:12px 24px;padding:12px;background:var(--bg-panel-2);border:1px solid var(--border-bright);border-radius:6px;font-size:11px;color:var(--text-dim);line-height:1.5}
+.role-info b{color:var(--text)}
+
+/* Viewer mode: hide all admin-only actions */
+body.role-viewer .admin-only{display:none !important}
+body.role-viewer .daily-mark{display:none !important}
+body.role-viewer .daily-item{grid-template-columns:90px 1fr 110px 60px 50px 100px}
+/* Viewers see a read-only motor master, no inline edit / delete */
+body.role-viewer #mng-tbody input,
+body.role-viewer #mng-tbody select{pointer-events:none;background:transparent !important;border:none !important;color:var(--text-dim) !important}
+body.role-viewer #mng-tbody .btn.danger{display:none}
+
 @media print{.sidebar,.topbar,.filters,.notify-banner{display:none}.app{grid-template-columns:1fr}body{background:white;color:black}.card{border:1px solid #ccc;page-break-inside:avoid}}
 </style>
 </head>
@@ -268,6 +298,7 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
       <div class="nav-item" data-page="compliance"><span class="nav-icon">◷</span> Compliance</div>
       <div class="nav-item" data-page="areas"><span class="nav-icon">◈</span> Areas</div>
       <div class="nav-item" data-page="daily"><span class="nav-icon">▸</span> Daily View</div>
+      <div class="nav-item" data-page="reliability"><span class="nav-icon">⚡</span> Reliability</div>
       <div class="nav-item" data-page="motors"><span class="nav-icon">⚙</span> Motors</div>
       <div class="nav-item" data-page="manage"><span class="nav-icon">↑</span> Manage Data</div>
     </nav>
@@ -280,6 +311,11 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
       <div class="fy-tag-label">Capacity</div>
       <div class="fy-tag-val" id="cap-val">20<span style="font-size:11px;color:var(--text-dim);margin-left:4px">/ wk</span></div>
       <div class="fy-tag-meta">Planning rate · 4 motors / day</div>
+    </div>
+    <div class="fy-tag">
+      <div class="fy-tag-label">Your Access</div>
+      <div style="margin-top:6px"><span class="role-pill role-viewer-pill" id="role-badge">…</span></div>
+      <div class="fy-tag-meta" id="role-hint" style="margin-top:8px">Loading…</div>
     </div>
   </aside>
 
@@ -322,6 +358,27 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
           <div class="card"><div class="card-header"><div><div class="card-title">Category Mix</div></div></div><div class="chart-wrap tall"><canvas id="ch-cat"></canvas></div></div>
         </div>
         <div class="card"><div class="card-header"><div><div class="card-title">Weekly Workload Profile</div><div class="card-subtitle">52-week rolling — capacity ceiling at 20/week</div></div></div><div class="chart-wrap"><canvas id="ch-week"></canvas></div></div>
+
+        <!-- Reliability glance — quick KPIs at-a-glance. Detailed view: Reliability page -->
+        <div style="margin-top:24px;display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
+          <div>
+            <div style="font-size:14px;letter-spacing:1.5px;color:var(--text);text-transform:uppercase;font-weight:700">Reliability — at a glance</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;letter-spacing:0.5px">Quick snapshot — full breakdown on <b style="color:var(--accent);cursor:pointer" onclick="document.querySelector('[data-page=reliability]').click()">Reliability page →</b></div>
+          </div>
+        </div>
+        <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+          <div class="kpi"><div class="kpi-label">MTTR (min)</div><div class="kpi-value" id="ov-mttr">—</div><div class="kpi-meta">Mean Time To Repair</div></div>
+          <div class="kpi good"><div class="kpi-label">MTBF (hours)</div><div class="kpi-value" id="ov-mtbf">—</div><div class="kpi-meta">Mean Time Between Failures</div></div>
+          <div class="kpi danger"><div class="kpi-label">Breakdowns</div><div class="kpi-value" id="ov-bd">—</div><div class="kpi-meta">total logged</div></div>
+          <div class="kpi warn"><div class="kpi-label">Total Motors</div><div class="kpi-value" id="ov-tot-motors">—</div><div class="kpi-meta">across all areas</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Total Motors by Area</div><div class="card-subtitle">Click <b style="color:var(--accent);cursor:pointer" onclick="document.querySelector('[data-page=reliability]').click()">Reliability page</b> for MTTR/MTBF charts</div></div>
+          </div>
+          <div class="chart-wrap tall"><canvas id="ch-ov-motors"></canvas></div>
+        </div>
       </section>
 
       <!-- SCHEDULE -->
@@ -390,6 +447,43 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
         <div class="card"><div class="card-header"><div><div class="card-title">Action List</div><div class="card-subtitle">Click MARK DONE to log execution · sorted by date</div></div></div><div class="daily-list" id="daily-list"></div></div>
       </section>
 
+      <!-- RELIABILITY -->
+      <section class="page" id="page-reliability">
+        <div class="filters">
+          <div class="filter"><span class="filter-label">Area</span><select id="rel-area"><option value="">All Areas</option></select></div>
+          <div class="filter"><span class="filter-label">Method</span><select id="rel-method"><option value="avg">Weighted Average</option><option value="median">Median</option></select></div>
+          <button class="filter-reset" onclick="resetFilters('rel')">Reset</button>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi"><div class="kpi-label">MTTR (min)</div><div class="kpi-value" id="rel-mttr">—</div><div class="kpi-meta">Mean Time To Repair</div></div>
+          <div class="kpi good"><div class="kpi-label">MTBF (hours)</div><div class="kpi-value" id="rel-mtbf">—</div><div class="kpi-meta">Mean Time Between Failures</div></div>
+          <div class="kpi danger"><div class="kpi-label">Breakdowns</div><div class="kpi-value" id="rel-bd">—</div><div class="kpi-meta">in selection</div></div>
+          <div class="kpi violet"><div class="kpi-label">PMs Done</div><div class="kpi-value" id="rel-done">—</div><div class="kpi-meta">executed</div></div>
+          <div class="kpi warn"><div class="kpi-label">Motors</div><div class="kpi-value" id="rel-motors">—</div><div class="kpi-meta">in scope</div></div>
+        </div>
+
+        <div class="grid grid-2" style="margin-bottom:20px">
+          <div class="card"><div class="card-header"><div><div class="card-title">Total Motors by Area</div><div class="card-subtitle">Click an area in the chart filters to drill down</div></div></div><div class="chart-wrap tall"><canvas id="ch-rel-motors"></canvas></div></div>
+          <div class="card"><div class="card-header"><div><div class="card-title">Breakdowns by Area</div><div class="card-subtitle">Total breakdowns logged</div></div></div><div class="chart-wrap tall"><canvas id="ch-rel-bd"></canvas></div></div>
+        </div>
+
+        <div class="grid grid-2" style="margin-bottom:20px">
+          <div class="card"><div class="card-header"><div><div class="card-title">MTTR by Area (mins)</div><div class="card-subtitle">Lower is better — fast repair</div></div></div><div class="chart-wrap tall"><canvas id="ch-rel-mttr"></canvas></div></div>
+          <div class="card"><div class="card-header"><div><div class="card-title">MTBF by Area (hours)</div><div class="card-subtitle">Higher is better — fewer breakdowns</div></div></div><div class="chart-wrap tall"><canvas id="ch-rel-mtbf"></canvas></div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Per-area Reliability Summary</div></div></div>
+          <div class="tbl-wrap"><div class="tbl-inner">
+            <table>
+              <thead><tr><th>Area</th><th>Motors</th><th>PMs Done</th><th>Breakdowns</th><th>MTTR (min)</th><th>MTBF (hrs)</th></tr></thead>
+              <tbody id="rel-tbody"></tbody>
+            </table>
+          </div></div>
+        </div>
+      </section>
+
       <!-- MOTORS -->
       <section class="page" id="page-motors">
         <div class="filters">
@@ -413,13 +507,13 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
             <div class="dropzone" id="dropzone">
               <div class="dropzone-icon">⇪</div>
               <div class="dropzone-title">Drop CSV / Excel file or click to browse</div>
-              <div class="dropzone-sub">Required columns: <code>PM ID</code>, <code>Actual Date</code> &nbsp;·&nbsp; Optional: <code>Remarks</code></div>
+              <div class="dropzone-sub">Required: <code>PM ID</code>, <code>Actual Date</code> (DD-MM-YYYY) &nbsp;·&nbsp; Optional: <code>PM Start</code>, <code>PM Stop</code>, <code>B/D Start</code>, <code>B/D Stop</code>, <code>Remarks</code></div>
               <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none">
             </div>
             <div class="btn-row">
               <button class="btn secondary" onclick="downloadTemplate()">Download Template (CSV)</button>
               <button class="btn secondary" onclick="exportExecLog()">Export Current Log</button>
-              <button class="btn danger" onclick="clearExecData()">Clear All Logged Data</button>
+              <button class="btn danger admin-only" onclick="clearExecData()">Clear All Logged Data</button>
             </div>
             <div id="import-preview"></div>
           </div>
@@ -432,7 +526,7 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
                 <label>Add Financial Year</label>
                 <div style="display:flex;gap:8px">
                   <select id="add-fy-year" style="flex:1;background:var(--bg-panel-2);border:1px solid var(--border-bright);color:var(--text);padding:10px 12px;border-radius:5px;font-size:13px;font-family:inherit"></select>
-                  <button class="btn" onclick="addFY()">+ Generate</button>
+                  <button class="btn admin-only" onclick="addFY()">+ Generate</button>
                 </div>
               </div>
             </div>
@@ -446,13 +540,14 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
           <div class="card-header">
             <div><div class="card-title">Motor Master · Add / Edit / Remove</div><div class="card-subtitle">Edits trigger schedule regeneration. Fire Pump House motors auto-set to BM.</div></div>
             <div class="btn-row">
-              <button class="btn secondary" onclick="exportMotors()">Export</button>
-              <button class="btn" onclick="document.getElementById('motor-import').click()">Import Motors (CSV/XLSX)</button>
+              <button class="btn secondary" onclick="exportMotors()">Export Current</button>
+              <button class="btn secondary" onclick="downloadMotorTemplate()">Download Template (CSV)</button>
+              <button class="btn admin-only" onclick="document.getElementById('motor-import').click()">Import Motors (CSV/XLSX)</button>
               <input type="file" id="motor-import" accept=".csv,.xlsx,.xls" style="display:none">
             </div>
           </div>
 
-          <div class="form-grid">
+          <div class="form-grid admin-only">
             <div><label>Area</label><input id="new-area" placeholder="e.g. Phase-1 WTP"></div>
             <div><label>Motor / Pump Name</label><input id="new-motor" placeholder="e.g. Raw Water Pump 1"></div>
             <div><label>Category</label><select id="new-cat"><option value="A">A · Critical</option><option value="B">B · Important</option><option value="C" selected>C · Standard</option></select></div>
@@ -462,7 +557,7 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
           <div class="filters" style="margin-top:0">
             <div class="filter"><span class="filter-label">Search</span><input id="mng-search" type="text" placeholder="Filter motors…" style="min-width:220px"></div>
             <div class="filter"><span class="filter-label">Area</span><select id="mng-area"><option value="">All Areas</option></select></div>
-            <button class="btn secondary" onclick="regenerateSchedule()" style="align-self:flex-end">↻ Regenerate Schedule</button>
+            <button class="btn secondary admin-only" onclick="regenerateSchedule()" style="align-self:flex-end">↻ Regenerate Schedule</button>
           </div>
 
           <div class="tbl-wrap" style="max-height:500px;overflow-y:auto;margin-top:14px"><div class="tbl-inner">
@@ -476,8 +571,8 @@ tr:hover td{background:rgba(0,217,255,0.02);color:var(--text)}
         <!-- Quick actions -->
         <div class="grid grid-3">
           <div class="action-tile" onclick="exportFullState()"><div class="action-tile-icon">⤓</div><div class="action-tile-text"><div class="action-tile-title">Backup Everything</div><div class="action-tile-sub">Download motors + executions + FY data as JSON</div></div></div>
-          <div class="action-tile" onclick="document.getElementById('restore-input').click()"><div class="action-tile-icon">⤒</div><div class="action-tile-text"><div class="action-tile-title">Restore Backup</div><div class="action-tile-sub">Load previously exported JSON state</div></div><input type="file" id="restore-input" accept=".json" style="display:none"></div>
-          <div class="action-tile" onclick="resetEverything()" style="border-color:rgba(255,59,107,0.3)"><div class="action-tile-icon" style="color:var(--accent-3)">⊘</div><div class="action-tile-text"><div class="action-tile-title">Factory Reset</div><div class="action-tile-sub">Restore default 274-motor master & re-create FY26-27</div></div></div>
+          <div class="action-tile admin-only" onclick="document.getElementById('restore-input').click()"><div class="action-tile-icon">⤒</div><div class="action-tile-text"><div class="action-tile-title">Restore Backup</div><div class="action-tile-sub">Load previously exported JSON state</div></div><input type="file" id="restore-input" accept=".json" style="display:none"></div>
+          <div class="action-tile admin-only" onclick="resetEverything()" style="border-color:rgba(255,59,107,0.3)"><div class="action-tile-icon" style="color:var(--accent-3)">⊘</div><div class="action-tile-text"><div class="action-tile-title">Factory Reset</div><div class="action-tile-sub">Restore default 274-motor master & re-create FY26-27</div></div></div>
         </div>
       </section>
     </div>
@@ -659,6 +754,33 @@ function freqFor(area, cat){
   return (cat==='A' || cat==='B') ? 'Q' : 'HY';
 }
 
+// ─── ROLE-BASED ACCESS ─────────────────────────────────────────────────
+function isAdmin(){ return window.__pmRole === 'admin'; }
+function requireAdmin(actionName){
+  if(!isAdmin()){
+    toast('Admin only', `"${actionName}" requires admin rights. Contact your admin.`, 'warn');
+    return false;
+  }
+  return true;
+}
+function applyRoleUI(){
+  const role = window.__pmRole || 'viewer';
+  document.body.classList.toggle('role-admin', role === 'admin');
+  document.body.classList.toggle('role-viewer', role === 'viewer');
+  const badge = document.getElementById('role-badge');
+  if(badge){
+    badge.textContent = role === 'admin' ? 'ADMIN' : 'VIEWER';
+    badge.className = 'role-pill ' + (role === 'admin' ? 'role-admin-pill' : 'role-viewer-pill');
+  }
+  const hint = document.getElementById('role-hint');
+  if(hint){
+    hint.textContent = role === 'admin'
+      ? 'Full rights · edit, delete, manage all data'
+      : 'Read-only · can upload weekly data + export reports';
+  }
+}
+document.addEventListener('pm-firebase-ready', applyRoleUI);
+
 function generateSchedule(motors, weekCap=20, weeks=52){
   // Build ideal placements
   const ideal = [];
@@ -776,7 +898,46 @@ function buildWorkload(fyKey){
    =================================================================== */
 function isoDate(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
 function isoToDate(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
-function dateFmt(d){ if(!d) return '—'; return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function dateFmt(d){
+  if(!d) return '—';
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+// Format date with time DD-MM-YYYY HH:MM
+function dateTimeFmt(d){
+  if(!d) return '—';
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  return `${dd}-${mm}-${yyyy} ${hh}:${mi}`;
+}
+// Parse a DD-MM-YYYY string back to Date
+function parseDMY(s){
+  if(!s) return null;
+  // already a Date?
+  if(s instanceof Date) return s;
+  s = String(s).trim();
+  // ISO (YYYY-MM-DD) — already there
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  // DD-MM-YYYY or DD/MM/YYYY
+  m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})/);
+  if(m){
+    let y = +m[3]; if(y < 100) y += 2000;
+    return new Date(y, +m[2]-1, +m[1]);
+  }
+  // DD-MMM-YYYY (15-Apr-2026)
+  m = s.match(/^(\d{1,2})[-\s](\w{3})[-\s](\d{2,4})/i);
+  if(m){
+    const mo = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[2].toLowerCase());
+    if(mo>=0){ let y=+m[3]; if(y<100) y+=2000; return new Date(y, mo, +m[1]); }
+  }
+  return null;
+}
 function fmt(n){ if(n===null||n===undefined||isNaN(n))return '—'; return Number(n).toLocaleString('en-IN'); }
 function pct(n){ return (Math.round(n*10)/10).toFixed(1) + '%'; }
 function startOfWeek(d){ const x = new Date(d); const day = x.getDay(); const diff = (day===0?-6:1-day); x.setDate(x.getDate()+diff); x.setHours(0,0,0,0); return x; }
@@ -870,6 +1031,7 @@ function setActiveFY(fyKey){
 }
 
 function addFY(){
+  if(!requireAdmin('Add FY')) return;
   const sel = document.getElementById('add-fy-year');
   const fyKey = sel.value;
   if(!fyKey){ toast('No FY selected','','warn'); return; }
@@ -883,6 +1045,7 @@ function addFY(){
 }
 
 function deleteFY(fyKey){
+  if(!requireAdmin('Delete FY')) return;
   if(!confirm(`Delete ${fyKey}? This will also remove all execution data logged against it.`)) return;
   delete STATE.fys[fyKey];
   Object.keys(STATE.executions).forEach(id=>{ if(id.endsWith('-'+fyKey)) delete STATE.executions[id]; });
@@ -948,7 +1111,6 @@ function processExecutionImport(rows){
   const preview = document.getElementById('import-preview');
   const fyKey = STATE.activeFY;
   const validIds = new Set(buildRows(fyKey).map(r=>r.pmId));
-  // Try to find headers (case insensitive)
   function pick(row, options){
     for(const k of Object.keys(row)){
       const kl = k.toLowerCase().trim().replace(/\s+/g,'');
@@ -958,43 +1120,80 @@ function processExecutionImport(rows){
     }
     return '';
   }
+
+  // Parse a date string or value to a Date (DD-MM-YYYY preferred)
+  function parseDate(v){
+    if(!v) return null;
+    if(v instanceof Date) return v;
+    return parseDMY(v);
+  }
+  // Parse datetime (DD-MM-YYYY HH:MM) — returns Date or null
+  function parseDateTime(v){
+    if(!v) return null;
+    if(v instanceof Date) return v;
+    const s = String(v).trim();
+    // Try splitting on space
+    const parts = s.split(/\s+/);
+    if(parts.length >= 2){
+      const dpart = parseDMY(parts[0]);
+      if(dpart){
+        const tm = parts[1].match(/^(\d{1,2}):(\d{2})/);
+        if(tm){ dpart.setHours(+tm[1], +tm[2], 0, 0); }
+        return dpart;
+      }
+    }
+    return parseDMY(s);  // fallback — date only
+  }
+
   let ok=0, warn=0, err=0;
   const out = rows.map(r=>{
     const pmId = String(pick(r,['PM ID','pmid','id','pm_id'])).trim();
-    let actual = pick(r,['Actual Date','actualdate','date','done on','completion date','completed']);
+    const actualRaw = pick(r,['Actual Date','actualdate','date','done on','completion date','completed']);
+    const pmStartRaw = pick(r,['PM Start','pmstart','start','starttime','starttimestamp']);
+    const pmStopRaw = pick(r,['PM Stop','pmstop','stop','stoptime','stoptimestamp','endtime','end']);
+    const bdStartRaw = pick(r,['B/D Start','bdstart','breakdownstart','breakdown start','failurestart']);
+    const bdStopRaw = pick(r,['B/D Stop','bdstop','breakdownstop','breakdown stop','failureend','failurestop']);
     const remarks = String(pick(r,['Remarks','remark','notes','comment'])||'').trim();
-    // Normalize date
-    let parsed = null;
-    if(actual){
-      if(actual instanceof Date) parsed = actual;
-      else {
-        const s = String(actual).trim();
-        // Try several formats
-        const tryParse = [
-          // ISO
-          ()=>{ if(/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s); return null; },
-          // dd-mmm-yyyy / dd/mm/yyyy
-          ()=>{
-            const m = s.match(/^(\d{1,2})[-\/\s](\w{3,9}|\d{1,2})[-\/\s](\d{2,4})/);
-            if(!m) return null;
-            const dd = parseInt(m[1]); let mm; const my = m[2];
-            if(/^\d+$/.test(my)){ mm = parseInt(my)-1; }
-            else { mm = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(my.toLowerCase().slice(0,3)); }
-            let yyyy = parseInt(m[3]); if(yyyy < 100) yyyy += 2000;
-            if(mm<0||mm>11) return null;
-            return new Date(yyyy, mm, dd);
-          },
-        ];
-        for(const fn of tryParse){ const x = fn(); if(x && !isNaN(x)){ parsed = x; break; } }
-      }
+
+    const actualParsed = parseDate(actualRaw);
+    const pmStart = parseDateTime(pmStartRaw);
+    const pmStop = parseDateTime(pmStopRaw);
+    const bdStart = parseDateTime(bdStartRaw);
+    const bdStop = parseDateTime(bdStopRaw);
+
+    let mttrMin = null;
+    if(pmStart && pmStop && pmStop > pmStart){
+      mttrMin = Math.round((pmStop - pmStart) / 60000);
+    }
+    let bdHrs = null;
+    if(bdStart && bdStop && bdStop > bdStart){
+      bdHrs = +((bdStop - bdStart) / 3600000).toFixed(2);
     }
 
     let status, statusClass;
     if(!pmId){ status='ERR · Missing PM ID'; statusClass='import-row-err'; err++; }
     else if(!validIds.has(pmId)){ status='ERR · Unknown PM ID'; statusClass='import-row-err'; err++; }
-    else if(!parsed){ status='WARN · Bad date'; statusClass='import-row-warn'; warn++; }
-    else { status='OK'; statusClass='import-row-ok'; ok++; }
-    return {pmId, actual: parsed?isoDate(parsed):'', remarks, status, statusClass};
+    else if(!actualParsed){ status='WARN · Bad date'; statusClass='import-row-warn'; warn++; }
+    else {
+      const extras = [];
+      if(mttrMin !== null) extras.push(`MTTR ${mttrMin}m`);
+      if(bdHrs !== null) extras.push(`BD ${bdHrs}h`);
+      status = 'OK' + (extras.length ? ' · '+extras.join(', ') : '');
+      statusClass='import-row-ok';
+      ok++;
+    }
+    return {
+      pmId,
+      actual: actualParsed ? isoDate(actualParsed) : '',
+      pmStart: pmStart ? pmStart.toISOString() : '',
+      pmStop: pmStop ? pmStop.toISOString() : '',
+      mttrMin: mttrMin,
+      bdStart: bdStart ? bdStart.toISOString() : '',
+      bdStop: bdStop ? bdStop.toISOString() : '',
+      bdHrs: bdHrs,
+      remarks,
+      status, statusClass,
+    };
   });
 
   preview.innerHTML = `
@@ -1005,19 +1204,20 @@ function processExecutionImport(rows){
         <span class="import-row-err"><b>${err}</b> errors</span>
       </div>
       <table>
-        <thead><tr><th>PM ID</th><th>Actual Date</th><th>Remarks</th><th>Status</th></tr></thead>
+        <thead><tr><th>PM ID</th><th>Actual Date</th><th>MTTR (min)</th><th>B/D (hrs)</th><th>Status</th></tr></thead>
         <tbody>
           ${out.slice(0,200).map(r=>`<tr>
             <td><code>${r.pmId||'—'}</code></td>
             <td>${r.actual?dateFmt(isoToDate(r.actual)):'<span class="import-row-warn">—</span>'}</td>
-            <td>${r.remarks||''}</td>
+            <td>${r.mttrMin!=null?r.mttrMin:'—'}</td>
+            <td>${r.bdHrs!=null?r.bdHrs:'—'}</td>
             <td><span class="${r.statusClass}">${r.status}</span></td>
           </tr>`).join('')}
         </tbody>
       </table>
       ${out.length>200?'<div style="text-align:center;color:var(--text-muted);padding:10px;font-size:11px">… '+(out.length-200)+' more rows hidden</div>':''}
       <div style="margin-top:14px;display:flex;gap:10px">
-        <button class="btn" onclick='commitExecutionImport(${JSON.stringify(out.filter(r=>r.status==="OK")).replace(/'/g,"&apos;")})'>Commit ${ok} entries</button>
+        <button class="btn" onclick='commitExecutionImport(${JSON.stringify(out.filter(r=>r.status.startsWith("OK"))).replace(/'/g,"&apos;")})'>Commit ${ok} entries</button>
         <button class="btn secondary" onclick="document.getElementById('import-preview').innerHTML=''">Cancel</button>
       </div>
     </div>
@@ -1025,45 +1225,86 @@ function processExecutionImport(rows){
 }
 
 function commitExecutionImport(items){
+  if(!requireAdmin('Commit execution import')) return;
   let saved = 0;
   items.forEach(it=>{
-    STATE.executions[it.pmId] = {actualDate: it.actual, remarks: it.remarks||''};
+    STATE.executions[it.pmId] = {
+      actualDate: it.actual,
+      pmStart: it.pmStart || '',
+      pmStop: it.pmStop || '',
+      mttrMin: it.mttrMin,
+      bdStart: it.bdStart || '',
+      bdStop: it.bdStop || '',
+      bdHrs: it.bdHrs,
+      remarks: it.remarks || ''
+    };
     saved++;
   });
   saveState();
   document.getElementById('import-preview').innerHTML = '';
   renderAll();
-  toast('Import complete', `${saved} executions logged. Compliance updated.`);
+  toast('Import complete', `${saved} executions logged. MTTR/MTBF & Compliance updated.`);
 }
 
 function downloadTemplate(){
-  // CSV template for the active FY
+  if(!isAdmin() && !confirm('You are signed in as VIEWER. You can still download the template to give to the team. Continue?')) return;
   const fyKey = STATE.activeFY;
   const rows = buildRows(fyKey);
-  const lines = ['PM ID,Area,Motor,Frequency,Planned Date,Actual Date,Remarks'];
+  const lines = ['PM ID,Area,Motor,Frequency,Planned Date,Actual Date,PM Start,PM Stop,B/D Start,B/D Stop,Remarks'];
   rows.forEach(r=>{
     const safe = s => '"'+String(s||'').replace(/"/g,'""')+'"';
-    lines.push([r.pmId, safe(r.area), safe(r.motor), r.freq, r.date, '', ''].join(','));
+    // Planned date in DD-MM-YYYY
+    const plannedDMY = dateFmt(isoToDate(r.date));
+    lines.push([r.pmId, safe(r.area), safe(r.motor), r.freq, plannedDMY, '', '', '', '', '', ''].join(','));
   });
-  download('ITC_PM_Template_'+fyKey+'.csv', lines.join('\n'), 'text/csv');
+  download('ITC_COT_PM_Template_'+fyKey+'.csv', lines.join('\n'), 'text/csv');
 }
 
 function exportExecLog(){
-  const lines = ['PM ID,Actual Date,Remarks'];
+  const lines = ['PM ID,Actual Date,PM Start,PM Stop,MTTR (min),B/D Start,B/D Stop,B/D (hrs),Remarks'];
   Object.entries(STATE.executions).forEach(([pmId, ex])=>{
     const safe = s => '"'+String(s||'').replace(/"/g,'""')+'"';
-    lines.push([pmId, ex.actualDate, safe(ex.remarks)].join(','));
+    const ad = ex.actualDate ? dateFmt(isoToDate(ex.actualDate)) : '';
+    const ps = ex.pmStart ? dateTimeFmt(new Date(ex.pmStart)) : '';
+    const pp = ex.pmStop ? dateTimeFmt(new Date(ex.pmStop)) : '';
+    const bs = ex.bdStart ? dateTimeFmt(new Date(ex.bdStart)) : '';
+    const bp = ex.bdStop ? dateTimeFmt(new Date(ex.bdStop)) : '';
+    lines.push([pmId, ad, ps, pp, ex.mttrMin ?? '', bs, bp, ex.bdHrs ?? '', safe(ex.remarks||'')].join(','));
   });
-  download('ITC_PM_Executions_'+(new Date().toISOString().slice(0,10))+'.csv', lines.join('\n'), 'text/csv');
+  const today = dateFmt(new Date()).replace(/-/g,'');
+  download('ITC_COT_PM_Executions_'+today+'.csv', lines.join('\n'), 'text/csv');
 }
 
 function exportMotors(){
-  const lines = ['Sr No,Area,Motor / Pump,Category'];
+  const lines = ['Area,Motor / Pump,Category'];
   STATE.motors.forEach(m=>{
     const safe = s => '"'+String(s||'').replace(/"/g,'""')+'"';
-    lines.push([m.sr, safe(m.area), safe(m.motor), m.cat].join(','));
+    lines.push([safe(m.area), safe(m.motor), m.cat].join(','));
   });
-  download('ITC_Motor_Master.csv', lines.join('\n'), 'text/csv');
+  download('ITC_COT_Motor_Master_Current.csv', lines.join('\n'), 'text/csv');
+}
+
+function downloadMotorTemplate(){
+  // Blank template with column headers + a few example rows + instructions row
+  const lines = [
+    '# Instructions: Fill rows below with new motors. Category must be A B or C.',
+    '# Area names must match existing areas EXACTLY (case-sensitive) — or new areas will be created.',
+    '# Frequency is auto-determined: A/B → Q (Quarterly) · C → HY (Half-Yearly) · "Fire Pump" areas → BM (Bimonthly).',
+    '# Delete these instruction lines (lines starting with #) before importing.',
+    'Area,Motor / Pump,Category',
+    'Phase-1 WTP,Raw Water Pump 3,A',
+    'Phase-2 WTP,Backwash Pump 2,B',
+    'CETP,Aeration Blower 5,C',
+    'Boiler House,Feed Water Pump 3,A',
+    'Fire Pump House,Jockey Pump 2,A',
+    ',,',
+    ',,',
+    ',,',
+    ',,',
+    ',,',
+  ];
+  download('ITC_COT_Motor_Template_BLANK.csv', lines.join('\n'), 'text/csv');
+  toast('Template downloaded', 'Fill the blank rows and import via "Import Motors"');
 }
 
 function exportFullState(){
@@ -1082,6 +1323,7 @@ function download(name, content, type){
 }
 
 function clearExecData(){
+  if(!requireAdmin('Clear execution data')) return;
   if(!confirm('Remove ALL logged executions? Motor master and FY schedules stay intact.')) return;
   STATE.executions = {};
   saveState();
@@ -1090,6 +1332,7 @@ function clearExecData(){
 }
 
 function resetEverything(){
+  if(!requireAdmin('Factory reset')) return;
   if(!confirm('Reset to factory defaults? This wipes all motors, executions, and FYs added.')) return;
   localStorage.removeItem(LS_KEY);
   STATE = buildDefaultState();
@@ -1099,8 +1342,7 @@ function resetEverything(){
 }
 
 function processMotorImport(rows){
-  let added=0, updated=0;
-  // Expect: Area, Motor, Category
+  if(!requireAdmin('Import motors')) return;
   function pick(r, opts){
     for(const k of Object.keys(r)){
       const kl = k.toLowerCase().trim();
@@ -1108,25 +1350,58 @@ function processMotorImport(rows){
     }
     return '';
   }
-  rows.forEach(r=>{
+
+  // Pre-scan: classify each row
+  const preview = [];
+  rows.forEach((r,idx)=>{
     const area = String(pick(r,['area'])||'').trim();
     const motor = String(pick(r,['motor','motor / pump','pump','name'])||'').trim();
-    const cat = String(pick(r,['category','cat','rank'])||'C').trim().toUpperCase();
-    if(!area || !motor) return;
+    const catRaw = String(pick(r,['category','cat','rank'])||'').trim().toUpperCase();
+    // Skip comment rows (starts with #) or fully empty
+    if(area.startsWith('#') || (!area && !motor)) return;
+    if(!area || !motor){
+      preview.push({area, motor, cat:catRaw, action:'SKIP — missing field', cls:'import-row-warn'});
+      return;
+    }
+    const cat = ['A','B','C'].includes(catRaw) ? catRaw : 'C';
     const existing = STATE.motors.find(m => m.area===area && m.motor===motor);
-    if(existing){ existing.cat = ['A','B','C'].includes(cat)?cat:'C'; updated++; }
-    else {
+    if(existing){
+      const change = existing.cat !== cat ? `update cat ${existing.cat}→${cat}` : 'no change';
+      preview.push({area, motor, cat, action: existing.cat !== cat ? 'UPDATE · '+change : 'EXISTS · no change',
+                    cls: existing.cat !== cat ? 'import-row-ok' : 'import-row-warn'});
+    } else {
+      preview.push({area, motor, cat, action:'ADD new', cls:'import-row-ok'});
+    }
+  });
+
+  // Show preview UI in a toast-like inline panel (reuse import-preview area if visible, else alert)
+  const willAdd = preview.filter(p=>p.action.startsWith('ADD')).length;
+  const willUpdate = preview.filter(p=>p.action.startsWith('UPDATE')).length;
+  const willSkip = preview.filter(p=>p.action.startsWith('SKIP') || p.action.startsWith('EXISTS')).length;
+
+  const msg = `${willAdd} new · ${willUpdate} updates · ${willSkip} skipped/no-change\n\nFirst 5 rows:\n` +
+              preview.slice(0,5).map(p=>`  • ${p.action} — ${p.motor} (${p.area})`).join('\n') +
+              `\n\nProceed with import?`;
+  if(!confirm(msg)) return;
+
+  let added=0, updated=0;
+  preview.forEach(p=>{
+    if(p.action === 'ADD new'){
       const sr = (STATE.motors.reduce((mx,m)=>Math.max(mx,m.sr),0)) + 1;
-      STATE.motors.push({sr, area, motor, cat: ['A','B','C'].includes(cat)?cat:'C'});
+      STATE.motors.push({sr, area: p.area, motor: p.motor, cat: p.cat});
       added++;
+    } else if(p.action.startsWith('UPDATE')){
+      const ex = STATE.motors.find(m => m.area===p.area && m.motor===p.motor);
+      if(ex){ ex.cat = p.cat; updated++; }
     }
   });
   saveState();
   regenerateSchedule(true);
-  toast('Motors imported', `${added} added, ${updated} updated`);
+  toast('Motors imported', `${added} added · ${updated} updated · schedule regenerated`);
 }
 
 function restoreBackup(rows){
+  if(!requireAdmin('Restore backup')) return;
   // rows is the parsed JSON object
   if(!rows.motors || !rows.fys){ toast('Invalid backup file','Missing required keys','error'); return; }
   STATE = rows;
@@ -1139,6 +1414,7 @@ function restoreBackup(rows){
    MOTOR CRUD
    =================================================================== */
 function addMotor(){
+  if(!requireAdmin('Add motor')) return;
   const area = document.getElementById('new-area').value.trim();
   const motor = document.getElementById('new-motor').value.trim();
   const cat = document.getElementById('new-cat').value;
@@ -1154,6 +1430,7 @@ function addMotor(){
 }
 
 function deleteMotor(sr){
+  if(!requireAdmin('Delete motor')) return;
   const m = STATE.motors.find(x=>x.sr===sr);
   if(!m) return;
   if(!confirm(`Delete "${m.motor}" from ${m.area}?`)) return;
@@ -1167,6 +1444,7 @@ function deleteMotor(sr){
 }
 
 function updateMotor(sr, field, value){
+  if(!requireAdmin('Update motor')) return;
   const m = STATE.motors.find(x=>x.sr===sr); if(!m) return;
   m[field] = value;
   saveState();
@@ -1230,9 +1508,10 @@ function renderAll(){
   refreshFYSelector();
   // refresh dropdowns
   const areaNames = [...new Set(STATE.motors.map(m=>m.area))].sort();
-  ['ov-area','sch-area','cmp-area','daily-area','m-area','mng-area'].forEach(id=>fillSelect(id, areaNames));
+  ['ov-area','sch-area','cmp-area','daily-area','m-area','mng-area','rel-area'].forEach(id=>fillSelect(id, areaNames));
   ['ov-month','cmp-month'].forEach(id=>fillSelect(id, cachedMonths, 'idx', 'label'));
-  document.getElementById('topbar-date').textContent = TODAY.toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+  // Topbar date — DD-MM-YYYY
+  document.getElementById('topbar-date').textContent = dateFmt(TODAY).slice(0,5);  // DD-MM
   const wkN = weekOfFY(TODAY, STATE.activeFY);
   document.getElementById('topbar-week').textContent = (wkN<1?'pre-FY':wkN>52?'post-FY':'W'+wkN);
   document.getElementById('ov-fy-tag').textContent = STATE.activeFY;
@@ -1245,6 +1524,7 @@ function renderAll(){
   renderDaily();
   renderMotors();
   renderManageMotors();
+  renderReliability();
 }
 
 function renderOverview(){
@@ -1262,10 +1542,13 @@ function renderOverview(){
   const eow = new Date(sow); eow.setDate(eow.getDate()+6);
   const dueWeek = rows.filter(r=>{ const d=isoToDate(r.date); return d>=sow && d<=eow && !r.actualDate; }).length;
   const overdue = rows.filter(r=>isoToDate(r.date) < sow && !r.actualDate).length;
+  // Critical: PMs due in the next 3 days (NOT yet done)
+  const in3 = new Date(TODAY); in3.setDate(in3.getDate()+3);
+  const dueCritical = rows.filter(r=>{ const d=isoToDate(r.date); return d>=TODAY && d<=in3 && !r.actualDate; }).length;
   // Compliance: rows whose planned date <= today, executed = actualDate filled
   const planned = rows.filter(r=>isoToDate(r.date) <= TODAY).length;
-  const executed = rows.filter(r=>r.actualDate).length;
-  const compl = planned > 0 ? (executed/planned*100) : 0;
+  const executed = rows.filter(r=>r.actualDate && isoToDate(r.date) <= TODAY).length;  // only count executions whose planned date already passed
+  const compl = planned > 0 ? Math.min((executed/planned*100), 100) : 0;
 
   document.getElementById('kpi-motors').textContent = fmt(motors.length);
   document.getElementById('kpi-areas-n').textContent = new Set(motors.map(m=>m.area)).size;
@@ -1277,11 +1560,26 @@ function renderOverview(){
 
   const host = document.getElementById('notify-host');
   host.innerHTML = '';
-  if(dueWeek > 0 || overdue > 0){
+  if(overdue > 0){
     const bnr = document.createElement('div');
     bnr.className = 'notify-banner';
-    bnr.innerHTML = `<div class="notify-icon">⚠</div><div class="notify-content"><div class="notify-title">${overdue} overdue · ${dueWeek} due this week</div><div class="notify-msg">Open Daily View to mark them done.</div></div><button class="notify-cta" onclick="document.querySelector('[data-page=daily]').click()">Daily View →</button>`;
+    bnr.innerHTML = `<div class="notify-icon">⚠</div><div class="notify-content"><div class="notify-title">${overdue} PMs OVERDUE — action required</div><div class="notify-msg">These PMs are past their planned date. Open Daily View to act.</div></div><button class="notify-cta" onclick="document.querySelector('[data-page=daily]').click()">Daily View →</button>`;
     host.appendChild(bnr);
+  }
+  if(dueCritical > 0){
+    const bnr2 = document.createElement('div');
+    bnr2.className = 'notify-banner';
+    bnr2.style.background = 'linear-gradient(90deg,rgba(255,176,0,0.18),rgba(255,138,61,0.05))';
+    bnr2.style.borderColor = 'var(--accent-2)';
+    bnr2.innerHTML = `<div class="notify-icon" style="color:var(--accent-2)">⏰</div><div class="notify-content"><div class="notify-title">${dueCritical} PMs due in next 3 days</div><div class="notify-msg">Plan resources now to execute before due date.</div></div><button class="notify-cta" style="background:var(--accent-2);color:#1a0e00" onclick="document.querySelector('[data-page=daily]').click()">Plan →</button>`;
+    host.appendChild(bnr2);
+  } else if(dueWeek > 0 && overdue === 0){
+    const bnr3 = document.createElement('div');
+    bnr3.className = 'notify-banner';
+    bnr3.style.background = 'linear-gradient(90deg,rgba(0,217,255,0.12),rgba(61,139,255,0.04))';
+    bnr3.style.borderColor = 'var(--accent)';
+    bnr3.innerHTML = `<div class="notify-icon" style="color:var(--accent)">▸</div><div class="notify-content"><div class="notify-title">${dueWeek} PMs due this week</div><div class="notify-msg">All within planned window. Good shape.</div></div><button class="notify-cta" style="background:var(--accent);color:#0a0e1a" onclick="document.querySelector('[data-page=daily]').click()">View →</button>`;
+    host.appendChild(bnr3);
   }
 
   const monthly = cachedMonths.map(m=>{
@@ -1332,6 +1630,41 @@ function renderOverview(){
     type:'bar',
     data:{labels:Array.from({length:52},(_,i)=>'W'+(i+1)),datasets:[{label:'PMs Scheduled',data:Object.values(wlByWeek),backgroundColor:Object.values(wlByWeek).map(v=>v>20?COLORS.coral:v>=17?COLORS.amber:COLORS.q),borderRadius:2}]},
     options:{maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:COLORS.border},suggestedMax:25}},plugins:{legend:{display:false}}}
+  });
+
+  // ─── Reliability glance widgets ───
+  const fyKey = STATE.activeFY;
+  const execMttrs = [], execBdHrs = [];
+  let bdCount = 0;
+  for(const pmId in STATE.executions){
+    if(!pmId.endsWith('-'+fyKey)) continue;
+    const ex = STATE.executions[pmId];
+    if(typeof ex.mttrMin === 'number' && ex.mttrMin > 0) execMttrs.push(ex.mttrMin);
+    if(typeof ex.bdHrs === 'number' && ex.bdHrs > 0){ execBdHrs.push(ex.bdHrs); bdCount++; }
+  }
+  const avgMttr = execMttrs.length ? Math.round(execMttrs.reduce((a,b)=>a+b,0)/execMttrs.length) : 0;
+  const avgMtbf = execBdHrs.length ? +(execBdHrs.reduce((a,b)=>a+b,0)/execBdHrs.length).toFixed(1) : 0;
+  document.getElementById('ov-mttr').textContent = avgMttr || '0';
+  document.getElementById('ov-mtbf').textContent = avgMtbf || '0';
+  document.getElementById('ov-bd').textContent = bdCount;
+  document.getElementById('ov-tot-motors').textContent = STATE.motors.length;
+
+  // Motors-by-area chart
+  const motorsByArea = {};
+  STATE.motors.forEach(m=>{ motorsByArea[m.area] = (motorsByArea[m.area]||0) + 1; });
+  const sortedAreas = Object.entries(motorsByArea).sort((a,b)=>b[1]-a[1]);
+  if(chartRefs.ovMotors) chartRefs.ovMotors.destroy();
+  chartRefs.ovMotors = new Chart(document.getElementById('ch-ov-motors'),{
+    type:'bar',
+    data:{
+      labels: sortedAreas.map(a=>a[0]),
+      datasets:[{label:'Motors', data: sortedAreas.map(a=>a[1]),
+                 backgroundColor: sortedAreas.map((_,i)=>`hsl(${42+i*4},85%,55%)`),
+                 borderRadius:3}]
+    },
+    options:{indexAxis:'y',maintainAspectRatio:false,
+      scales:{x:{grid:{color:COLORS.border},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10}}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.x+' motors'}}}}
   });
 }
 ['ov-month','ov-area','ov-cat'].forEach(id=>document.getElementById(id).addEventListener('change',renderOverview));
@@ -1394,8 +1727,8 @@ function renderCompliance(){
 
   const planned = scoped.length;
   const executed = scoped.filter(r=>r.actualDate).length;
-  const pending = planned - executed;
-  const pctVal = planned>0 ? (executed/planned*100) : 0;
+  const pending = Math.max(planned - executed, 0);
+  const pctVal = planned>0 ? Math.min((executed/planned*100), 100) : 0;
   document.getElementById('cmp-planned').textContent = fmt(planned);
   document.getElementById('cmp-executed').textContent = fmt(executed);
   document.getElementById('cmp-pending').textContent = fmt(pending);
@@ -1404,7 +1737,8 @@ function renderCompliance(){
   const monthly = cachedMonths.map(m=>{
     const r = rows.filter(x=>x.monthIdx===m.idx);
     const e = r.filter(x=>x.actualDate).length;
-    return {label:m.label.split('-')[0], planned:r.length, executed:e, pct:r.length>0 ? (e/r.length*100) : 0};
+    return {label:m.label.split('-')[0], planned:r.length, executed:e,
+            pct: r.length>0 ? Math.min((e/r.length*100), 100) : 0};
   });
 
   if(chartRefs.cmpTrend) chartRefs.cmpTrend.destroy();
@@ -1506,7 +1840,7 @@ function renderDaily(){
     const stPill = `status-${st.toLowerCase()}`;
     const isDone = !!r.actualDate;
     return `<div class="daily-item ${cls}">
-      <div class="daily-date">${r.date}</div>
+      <div class="daily-date">${dateFmt(isoToDate(r.date))}</div>
       <div><div class="daily-area">${r.area}</div><div class="daily-motor">${r.motor}</div></div>
       <div><span class="freq-pill freq-${r.freq}">${r.freq}</span></div>
       <div><span class="cat-pill cat-${r.cat}">${r.cat}</span></div>
@@ -1519,10 +1853,12 @@ function renderDaily(){
 ['daily-window','daily-status','daily-area'].forEach(id=>document.getElementById(id).addEventListener('change',renderDaily));
 
 function markDone(pmId){
+  if(!requireAdmin('Mark PM as done')) return;
   STATE.executions[pmId] = {actualDate: isoDate(TODAY), remarks: ''};
   saveState(); renderAll(); toast('Marked done', pmId);
 }
 function markUndo(pmId){
+  if(!requireAdmin('Undo PM completion')) return;
   delete STATE.executions[pmId]; saveState(); renderAll(); toast('Undone', pmId);
 }
 
@@ -1556,6 +1892,135 @@ function renderMotors(){
 }
 ['m-search','m-area','m-cat','m-freq'].forEach(id=>document.getElementById(id).addEventListener('input',renderMotors));
 ['mng-search','mng-area'].forEach(id=>document.getElementById(id).addEventListener('input',renderManageMotors));
+
+/* ===================================================================
+   RELIABILITY — MTTR / MTBF / Motor count widgets
+   =================================================================== */
+function renderReliability(){
+  const area = document.getElementById('rel-area').value;
+  const method = document.getElementById('rel-method').value;  // 'avg' or 'median'
+
+  // Gather execution entries for this FY only (pmId ends with active FY)
+  const fyKey = STATE.activeFY;
+  const execEntries = [];  // [{pmId, motorSr, area, motor, actualDate, mttrMin, bdHrs}]
+  for(const pmId in STATE.executions){
+    if(!pmId.endsWith('-'+fyKey)) continue;
+    const ex = STATE.executions[pmId];
+    // Extract motor sr from pmId: M001-01-FY26-27
+    const m = pmId.match(/^M(\d+)-/);
+    if(!m) continue;
+    const sr = parseInt(m[1]);
+    const motor = STATE.motors.find(x=>x.sr===sr);
+    if(!motor) continue;
+    if(area && motor.area !== area) continue;
+    execEntries.push({
+      pmId, motorSr: sr, area: motor.area, motor: motor.motor,
+      actualDate: ex.actualDate,
+      mttrMin: typeof ex.mttrMin === 'number' ? ex.mttrMin : null,
+      bdHrs: typeof ex.bdHrs === 'number' ? ex.bdHrs : null,
+    });
+  }
+
+  const mttrVals = execEntries.map(e=>e.mttrMin).filter(v=>v!=null && !isNaN(v) && v>0);
+  const mtbfVals = execEntries.map(e=>e.bdHrs).filter(v=>v!=null && !isNaN(v) && v>0);
+  const bdCount = mtbfVals.length;
+  const pmDone = execEntries.filter(e=>e.actualDate).length;
+
+  function agg(vals){
+    if(!vals.length) return 0;
+    if(method === 'median'){
+      const s = [...vals].sort((a,b)=>a-b);
+      const n = s.length;
+      return n%2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2;
+    }
+    return vals.reduce((a,b)=>a+b,0) / vals.length;
+  }
+
+  const mttrAgg = agg(mttrVals);
+  const mtbfAgg = agg(mtbfVals);
+
+  // Motors count
+  let motors = STATE.motors;
+  if(area) motors = motors.filter(m=>m.area===area);
+
+  document.getElementById('rel-mttr').textContent = mttrAgg ? Math.round(mttrAgg) : '0';
+  document.getElementById('rel-mtbf').textContent = mtbfAgg ? mtbfAgg.toFixed(1) : '0';
+  document.getElementById('rel-bd').textContent = bdCount;
+  document.getElementById('rel-done').textContent = pmDone;
+  document.getElementById('rel-motors').textContent = motors.length;
+
+  // Per-area summary
+  const allAreas = [...new Set(STATE.motors.map(m=>m.area))].sort();
+  const summary = allAreas.map(a=>{
+    const aMotors = STATE.motors.filter(m=>m.area===a);
+    const aExec = [];
+    for(const pmId in STATE.executions){
+      if(!pmId.endsWith('-'+fyKey)) continue;
+      const m = pmId.match(/^M(\d+)-/);
+      if(!m) continue;
+      const sr = parseInt(m[1]);
+      const mot = STATE.motors.find(x=>x.sr===sr);
+      if(!mot || mot.area !== a) continue;
+      const ex = STATE.executions[pmId];
+      aExec.push({...ex});
+    }
+    const aMttrs = aExec.map(e=>e.mttrMin).filter(v=>typeof v==='number' && v>0);
+    const aBds = aExec.map(e=>e.bdHrs).filter(v=>typeof v==='number' && v>0);
+    return {
+      area: a,
+      motors: aMotors.length,
+      done: aExec.filter(e=>e.actualDate).length,
+      bds: aBds.length,
+      mttr: aMttrs.length ? Math.round(aMttrs.reduce((x,y)=>x+y,0)/aMttrs.length) : 0,
+      mtbf: aBds.length ? +(aBds.reduce((x,y)=>x+y,0)/aBds.length).toFixed(1) : 0,
+    };
+  }).sort((a,b)=>b.motors-a.motors);
+
+  // Table
+  document.getElementById('rel-tbody').innerHTML = summary.map(s => `
+    <tr>
+      <td style="color:var(--text);font-weight:500">${s.area}</td>
+      <td><b style="font-family:'JetBrains Mono',monospace">${s.motors}</b></td>
+      <td>${s.done}</td>
+      <td>${s.bds>0 ? `<span style="color:var(--accent-3)">${s.bds}</span>` : s.bds}</td>
+      <td>${s.mttr || '—'}</td>
+      <td>${s.mtbf || '—'}</td>
+    </tr>
+  `).join('');
+
+  // Chart: Total motors by area
+  if(chartRefs.relMotors) chartRefs.relMotors.destroy();
+  chartRefs.relMotors = new Chart(document.getElementById('ch-rel-motors'),{
+    type:'bar',
+    data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.motors),backgroundColor:summary.map((_,i)=>`hsl(${42+i*4},85%,55%)`),borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border}},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+
+  // Chart: Breakdowns by area
+  if(chartRefs.relBd) chartRefs.relBd.destroy();
+  chartRefs.relBd = new Chart(document.getElementById('ch-rel-bd'),{
+    type:'bar',
+    data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.bds),backgroundColor:COLORS.coral,borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+
+  // Chart: MTTR by area
+  if(chartRefs.relMttr) chartRefs.relMttr.destroy();
+  chartRefs.relMttr = new Chart(document.getElementById('ch-rel-mttr'),{
+    type:'bar',
+    data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.mttr),backgroundColor:COLORS.q,borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+
+  // Chart: MTBF by area
+  if(chartRefs.relMtbf) chartRefs.relMtbf.destroy();
+  chartRefs.relMtbf = new Chart(document.getElementById('ch-rel-mtbf'),{
+    type:'bar',
+    data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.mtbf),backgroundColor:COLORS.mint,borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+}
+['rel-area','rel-method'].forEach(id=>document.getElementById(id).addEventListener('change',renderReliability));
 
 /* ===================================================================
    File I/O wiring
