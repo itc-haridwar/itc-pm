@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The shared PM state is readable and writable by any signed-in user.
+    // Lock down further if you want role-based access in future.
+    match /itc_pm/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Default deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
