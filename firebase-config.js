@@ -7,10 +7,10 @@
 // (see firestore.rules) and Firebase Authentication.
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY_HERE",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcd1234"
+  apiKey: "AIzaSyAe-GOamaO_prlZT-OnKV_5zNY6o8j64iM",
+  authDomain: "itc-cot-pm.firebaseapp.com",
+  projectId: "itc-cot-pm",
+  storageBucket: "itc-cot-pm.firebasestorage.app",
+  messagingSenderId: "800904563015",
+  appId: "1:800904563015:web:de7b23a15452623404e462"
 };
