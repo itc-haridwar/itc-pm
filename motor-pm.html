@@ -373,8 +373,8 @@ body.role-user #mng-tbody .btn.danger{display:none}
     </div>
     <div class="fy-tag">
       <div class="fy-tag-label">Capacity</div>
-      <div class="fy-tag-val" id="cap-val">24<span style="font-size:11px;color:var(--text-dim);margin-left:4px">/ wk</span></div>
-      <div class="fy-tag-meta">Planning rate · 4 motors / day · 6 days</div>
+      <div class="fy-tag-val" id="cap-val">20<span style="font-size:11px;color:var(--text-dim);margin-left:4px">/ wk</span></div>
+      <div class="fy-tag-meta">Planning rate · 4 motors / day</div>
     </div>
     <div class="fy-tag">
       <div class="fy-tag-label">Your Access</div>
@@ -415,7 +415,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
           <div class="kpi"><div class="kpi-label">Total Motors</div><div class="kpi-value" id="kpi-motors">—</div><div class="kpi-meta">across <b id="kpi-areas-n">—</b> areas</div></div>
           <div class="kpi violet"><div class="kpi-label">Annual PMs</div><div class="kpi-value" id="kpi-pms">—</div><div class="kpi-meta">in scope</div></div>
           <div class="kpi good"><div class="kpi-label">Compliance YTD</div><div class="kpi-value" id="kpi-compl">—</div><div class="kpi-meta"><span id="kpi-compl-meta">—</span></div></div>
-          <div class="kpi warn"><div class="kpi-label">Due This Week</div><div class="kpi-value" id="kpi-week">—</div><div class="kpi-meta">cap <b>24</b></div></div>
+          <div class="kpi warn"><div class="kpi-label">Due This Week</div><div class="kpi-value" id="kpi-week">—</div><div class="kpi-meta">cap <b>20</b></div></div>
           <div class="kpi danger"><div class="kpi-label">Overdue</div><div class="kpi-value" id="kpi-overdue">—</div><div class="kpi-meta">action required</div></div>
         </div>
         <div class="grid grid-2-1" style="margin-bottom:20px">
@@ -426,7 +426,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
           <div class="card"><div class="card-header"><div><div class="card-title">Annual PMs by Area · Top 12</div></div></div><div class="chart-wrap tall"><canvas id="ch-area-load"></canvas></div></div>
           <div class="card"><div class="card-header"><div><div class="card-title">Category Mix</div></div></div><div class="chart-wrap tall"><canvas id="ch-cat"></canvas></div></div>
         </div>
-        <div class="card"><div class="card-header"><div><div class="card-title">Weekly Workload Profile</div><div class="card-subtitle">52-week rolling — capacity ceiling at 24/week (4/day × 6 days)</div></div></div><div class="chart-wrap"><canvas id="ch-week"></canvas></div></div>
+        <div class="card"><div class="card-header"><div><div class="card-title">Weekly Workload Profile</div><div class="card-subtitle">52-week rolling — capacity ceiling at 20/week</div></div></div><div class="chart-wrap"><canvas id="ch-week"></canvas></div></div>
 
         <!-- Reliability glance — quick KPIs at-a-glance. Detailed view: Reliability page -->
         <div style="margin-top:24px;display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
@@ -676,7 +676,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
             <div class="dropzone" id="dropzone">
               <div class="dropzone-icon">⇪</div>
               <div class="dropzone-title">Drop CSV / Excel file or click to browse</div>
-              <div class="dropzone-sub">Required: <code>PM ID</code> · One of <code>Actual Date</code> OR a changed <code>Planned Date</code> (DD-MM-YYYY) &nbsp;·&nbsp; Optional: <code>PM Start</code>, <code>PM Stop</code>, <code>B/D Start</code>, <code>B/D Stop</code>, <code>Remarks</code> · Edit <code>Planned Date</code> in the template to reschedule a PM (admin only)</div>
+              <div class="dropzone-sub">Required: <code>PM ID</code>, <code>Actual Date</code> (DD-MM-YYYY) &nbsp;·&nbsp; Optional: <code>PM Start</code>, <code>PM Stop</code>, <code>B/D Start</code>, <code>B/D Stop</code>, <code>Remarks</code></div>
               <input type="file" id="file-input" accept=".csv,.xlsx,.xls" style="display:none">
             </div>
             <div class="btn-row">
@@ -862,8 +862,8 @@ function setupCloudSync(){
       // Only update if remote is newer (avoid echo)
       const localStr = JSON.stringify(STATE);
       if(localStr !== data.payload){
-        STATE = migrateState(parsed);   // Phase-2: SFB merge + schedule regen if older shape
-        try{ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }catch(e){}
+        STATE = parsed;
+        try{ localStorage.setItem(LS_KEY, data.payload); }catch(e){}
         if(typeof renderAll === 'function') renderAll();
         if(data.updatedBy && data.updatedBy !== (window.__pmCurrentUser ? window.__pmCurrentUser.email : '')){
           toast('Synced', 'Updated by ' + data.updatedBy);
@@ -899,24 +899,24 @@ setTimeout(initCloudStorage, 100);
 function buildDefaultState(){
   const motors = DEFAULT_PAYLOAD.motors.map(m => ({sr: m.sr, area: m.area, motor: m.motor, cat: m.cat}));
   const fyKey = DEFAULT_PAYLOAD.fyLabel;
-  // Append SFB Biomass Boiler motors to default seed
-  let maxSr = motors.reduce((mx,m)=>Math.max(mx, m.sr||0), 0);
-  SFB_SEED_MOTORS.forEach(s=>{
-    maxSr++;
-    motors.push({sr:maxSr, area:SFB_AREA, motor:s.motor, cat:s.cat});
+  const schedule = DEFAULT_PAYLOAD.rows.map(r=>({sr:r.sr, week:r.week, freq:r.freq, occ:1}));
+  // Need occ — recompute from rows ordered by date per motor
+  const byMotor = {};
+  DEFAULT_PAYLOAD.rows.forEach(r=>{ (byMotor[r.sr] = byMotor[r.sr]||[]).push(r); });
+  const sched = [];
+  Object.keys(byMotor).forEach(sr=>{
+    byMotor[sr].sort((a,b)=>a.week-b.week);
+    byMotor[sr].forEach((r,i)=>sched.push({sr:+sr, week:r.week, freq:r.freq, occ:i+1}));
   });
-  // Build schedule using the new area-clustered, day-aware generator (24/wk cap)
-  const sched = generateSchedule(motors, 24, 52);
   return {
     motors,
     fys: {[fyKey]: {fyStart: DEFAULT_PAYLOAD.fyStart, schedule: sched}},
     executions: {},
     activeFY: fyKey,
-    areaOwners: [],
-    checklistFields: defaultChecklistFields(),
-    confirmations: {},
-    reschedules: [],
-    plannedDateOverrides: {},  // pmId -> 'YYYY-MM-DD' admin-edited planned date
+    areaOwners: [],           // [{area, name, email, phone}]
+    checklistFields: defaultChecklistFields(),  // configurable
+    confirmations: {},        // pmId -> {status:'pending'|'confirmed'|'rescheduled', confirmedBy, confirmedAt, rescheduledTo, reason, reasonNote, count}
+    reschedules: [],          // log of all reschedule events
   };
 }
 
@@ -944,22 +944,6 @@ function migrateState(s){
   if(!s.checklistFields) s.checklistFields = defaultChecklistFields();
   if(!s.confirmations) s.confirmations = {};
   if(!s.reschedules) s.reschedules = [];
-  if(!s.plannedDateOverrides) s.plannedDateOverrides = {};
-  // Phase-2: ensure SFB motors present and re-generate schedule with day slots
-  const sfbAdded = ensureSFBMotors(s);
-  let needsRegen = sfbAdded > 0;
-  // If any schedule entry lacks a `day` field, schedule was made before Phase-2 — regenerate
-  Object.keys(s.fys||{}).forEach(fyKey=>{
-    const fy = s.fys[fyKey];
-    if(fy && fy.schedule && fy.schedule.length && typeof fy.schedule[0].day !== 'number'){
-      needsRegen = true;
-    }
-  });
-  if(needsRegen){
-    Object.keys(s.fys||{}).forEach(fyKey=>{
-      try{ s.fys[fyKey].schedule = generateSchedule(s.motors, 24, 52); }catch(e){}
-    });
-  }
   return s;
 }
 
@@ -969,64 +953,7 @@ function migrateState(s){
 const FREQ_RULES = {BM:{n:6,sp:9}, Q:{n:4,sp:13}, HY:{n:2,sp:26}};
 function freqFor(area, cat){
   if(area && area.indexOf('Fire Pump') !== -1) return 'BM';
-  // SFB (Biomass Boiler) — all A category motors are Bimonthly (per SFB sheet rules)
-  if(area && area.indexOf('SFB') !== -1 && cat === 'A') return 'BM';
   return (cat==='A' || cat==='B') ? 'Q' : 'HY';
-}
-
-// ─── SFB SEED MOTORS — Biomass Boiler area (added Phase-2) ─────────────
-const SFB_AREA = 'SFB - Biomass Boiler';
-const SFB_SEED_MOTORS = [
-  {motor:"BIOMASS BOILER # 1: Fuel Feeding Conveyor Motor",cat:"B"},{motor:"BIOMASS BOILER # 1: Twin Screw Crusher Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 1: FD Fans Motor",cat:"A"},{motor:"BIOMASS BOILER # 1: Hydrolic Power Pack Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 1: Grate Ash Screw Motor",cat:"B"},{motor:"BIOMASS BOILER # 1: Grate Ash Screw Ralv Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 1: Cooling Fan Motor",cat:"B"},{motor:"BIOMASS BOILER # 1: Economizer Ralv Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 1: SSK Ralv Motor",cat:"A"},{motor:"BIOMASS BOILER # 1: SSK-1 Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 1: SSK-2 Motor",cat:"A"},{motor:"BIOMASS BOILER # 1: Hopper Vibro Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 1: Metering Screw Motor",cat:"A"},{motor:"BIOMASS BOILER # 1: Bucket Elevator Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 1: MDC Motor",cat:"B"},{motor:"BIOMASS BOILER # 1: Bag Filter Ralv Motor",cat:"C"},
-  {motor:"BIOMASS BOILER # 1: Bag Filter Vibro Motor",cat:"C"},{motor:"BIOMASS BOILER # 1: ID Fan Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 1: Feed Water pump Motor -1",cat:"B"},{motor:"BIOMASS BOILER # 1: Feed Water pump Motor -2",cat:"B"},
-  {motor:"BIOMASS BOILER # 2: Fuel Feeding Conveyor Motor",cat:"B"},{motor:"BIOMASS BOILER # 2: Twin Screw Crusher Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 2: FD Fans Motor",cat:"A"},{motor:"BIOMASS BOILER # 2: Hydrolic Power Pack Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 2: Grate Ash Screw Motor",cat:"B"},{motor:"BIOMASS BOILER # 2: Grate Ash Screw Ralv Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 2: Cooling Fan Motor",cat:"B"},{motor:"BIOMASS BOILER # 2: Economizer Ralv Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 2: SSK Ralv Motor",cat:"A"},{motor:"BIOMASS BOILER # 2: SSK-1 Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 2: SSK-2 Motor",cat:"A"},{motor:"BIOMASS BOILER # 2: Hopper Vibro Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 2: Metering Screw Motor",cat:"A"},{motor:"BIOMASS BOILER # 2: Bucket Elevator Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 2: MDC Motor",cat:"B"},{motor:"BIOMASS BOILER # 2: Bag Filter Ralv Motor",cat:"C"},
-  {motor:"BIOMASS BOILER # 2: Bag Filter Vibro Motor",cat:"C"},{motor:"BIOMASS BOILER # 2: ID Fan Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 2: Feed Water pump Motor -1",cat:"B"},{motor:"BIOMASS BOILER # 2: Feed Water pump Motor -2",cat:"B"},
-  {motor:"BIOMASS BOILER # 3: Fuel Feeding Conveyor Motor",cat:"B"},{motor:"BIOMASS BOILER # 3: Twin Screw Crusher Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 3: FD Fans Motor",cat:"A"},{motor:"BIOMASS BOILER # 3: Hydrolic Power Pack Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 3: Grate Ash Screw Motor",cat:"B"},{motor:"BIOMASS BOILER # 3: Grate Ash Screw Ralv Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 3: Cooling Fan Motor",cat:"B"},{motor:"BIOMASS BOILER # 3: Economizer Ralv Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 3: SSK Ralv Motor",cat:"A"},{motor:"BIOMASS BOILER # 3: SSK-1 Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 3: SSK-2 Motor",cat:"A"},{motor:"BIOMASS BOILER # 3: Hopper Vibro Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 3: Metering Screw Motor",cat:"A"},{motor:"BIOMASS BOILER # 3: Bucket Elevator Motor",cat:"B"},
-  {motor:"BIOMASS BOILER # 3: MDC Motor",cat:"B"},{motor:"BIOMASS BOILER # 3: Bag Filter Ralv Motor",cat:"C"},
-  {motor:"BIOMASS BOILER # 3: Bag Filter Vibro Motor",cat:"C"},{motor:"BIOMASS BOILER # 3: ID Fan Motor",cat:"A"},
-  {motor:"BIOMASS BOILER # 3: Feed Water pump Motor -1",cat:"B"},{motor:"BIOMASS BOILER # 3: Feed Water pump Motor -2",cat:"B"},
-  {motor:"COMMON MOTORS: Pit pump Motor -1",cat:"C"},{motor:"COMMON MOTORS: Pit pump Motor -2",cat:"C"},
-  {motor:"COMMON MOTORS: DE System ID Fan Motors",cat:"B"},{motor:"COMMON MOTORS: DE System Ralv Motors",cat:"B"},
-  {motor:"COMMON MOTORS: Booster pump Motor -1",cat:"B"},{motor:"COMMON MOTORS: Booster pump Motor -2",cat:"B"},
-  {motor:"COMMON MOTORS: Common Ash Belt Motor-2",cat:"B"},{motor:"COMMON MOTORS: Common Ash Belt Motor -1",cat:"B"},
-  {motor:"COMMON MOTORS: ASH Bucket Elevator Motor",cat:"B"},{motor:"COMMON MOTORS: Ash Silo Motor",cat:"B"},
-  {motor:"COMMON MOTORS: Cooling Pump-1",cat:"B"},{motor:"COMMON MOTORS: Cooling Pump-2",cat:"B"}
-];
-function ensureSFBMotors(state){
-  // Append any SFB motors not already in state. Idempotent.
-  const have = new Set(state.motors.filter(m=>m.area===SFB_AREA).map(m=>m.motor.trim().toLowerCase()));
-  let maxSr = state.motors.reduce((mx,m)=>Math.max(mx, m.sr||0), 0);
-  let added = 0;
-  SFB_SEED_MOTORS.forEach(s=>{
-    const key = s.motor.trim().toLowerCase();
-    if(have.has(key)) return;
-    maxSr++;
-    state.motors.push({sr:maxSr, area:SFB_AREA, motor:s.motor, cat:s.cat});
-    added++;
-  });
-  return added;
 }
 
 // ─── ROLE-BASED ACCESS ─────────────────────────────────────────────────
@@ -1067,70 +994,45 @@ function applyRoleUI(){
 }
 document.addEventListener('pm-firebase-ready', applyRoleUI);
 
-// Schedule capacity: 4 motors/day × 6 working days (Mon–Sat) = 24 motors/week
-const PER_DAY_CAP = 4;
-const WORKING_DAYS_PER_WEEK = 6;
-function generateSchedule(motors, weekCap=24, weeks=52){
-  // Per-area base offset — all motors in an area share an "ideal week" so they cluster naturally
-  const areaList = [...new Set(motors.map(m=>m.area||''))].sort();
-  const areaBase = {};
-  areaList.forEach((a, idx)=>{ areaBase[a] = (idx % 13) + 1; });  // stagger across 13 weeks
-  // Step 1 — explode every motor into its occurrences with an "ideal" week
-  const occs = [];
-  motors.forEach((m)=>{
+function generateSchedule(motors, weekCap=20, weeks=52){
+  // Build ideal placements
+  const ideal = [];
+  motors.forEach((m,i)=>{
     const f = freqFor(m.area, m.cat);
     const {n, sp} = FREQ_RULES[f];
-    // Normalize the area's base into this freq's spacing window
-    const base = ((areaBase[m.area||''] - 1) % sp) + 1;
-    for(let k=0; k<n; k++){
-      const wk = Math.min(base + k*sp, weeks);
-      occs.push({sr:m.sr, area:m.area||'', freq:f, occ:k+1, idealWeek:wk});
+    const start = (i % sp) + 1;
+    for(let occ=0; occ<n; occ++){
+      const wk = Math.min(start + occ*sp, weeks);
+      ideal.push({srIdx: i, sr: m.sr, week: wk, occ: occ+1, freq: f});
     }
   });
-  // Step 2 — sort by (idealWeek, area, sr) so clusters land naturally within a week
-  occs.sort((a,b)=> a.idealWeek!==b.idealWeek ? a.idealWeek-b.idealWeek
-                  : (a.area<b.area?-1:a.area>b.area?1:a.sr-b.sr));
-  // Step 3 — placement trackers
-  const dayLoad = {};     // 'w-d' -> count
-  const dayArea = {};     // 'w-d' -> area "owning" this day (first to claim)
-  const daySrs  = {};     // 'w-d' -> Set of motor sr already placed (block duplicates)
-  const c = (w,d)=> dayLoad[`${w}-${d}`]||0;
-  const claim = (w,d,sr,area)=>{
-    const k=`${w}-${d}`;
-    dayLoad[k] = c(w,d)+1;
-    if(!dayArea[k]) dayArea[k]=area;
-    if(!daySrs[k]) daySrs[k]=new Set();
-    daySrs[k].add(sr);
-  };
-  function placeOcc(o){
-    const order = [o.idealWeek];
-    for(let off=1; off<weeks; off++){
-      if(o.idealWeek+off<=weeks) order.push(o.idealWeek+off);
-      if(o.idealWeek-off>=1)     order.push(o.idealWeek-off);
-    }
-    const hasSr = (w,d)=> { const s=daySrs[`${w}-${d}`]; return s && s.has(o.sr); };
-    for(const w of order){
-      // 1) Cluster: same-area day with capacity, not already containing this motor
-      for(let d=0; d<WORKING_DAYS_PER_WEEK; d++){
-        if(dayArea[`${w}-${d}`]===o.area && c(w,d)<PER_DAY_CAP && !hasSr(w,d)){ claim(w,d,o.sr,o.area); return {w,d}; }
-      }
-      // 2) Fresh empty day — claim it for this area
-      for(let d=0; d<WORKING_DAYS_PER_WEEK; d++){
-        if(c(w,d)===0){ claim(w,d,o.sr,o.area); return {w,d}; }
-      }
-      // 3) Any partially-full day with capacity, no duplicate motor
-      for(let d=0; d<WORKING_DAYS_PER_WEEK; d++){
-        if(c(w,d)<PER_DAY_CAP && !hasSr(w,d)){ claim(w,d,o.sr,o.area); return {w,d}; }
+  // load-balance: shift earlier when over cap
+  const weekLoad = {}; for(let w=1;w<=weeks;w++) weekLoad[w] = [];
+  ideal.forEach((slot,idx)=>weekLoad[slot.week].push(idx));
+  function shiftEarlier(slotIdx){
+    const cur = ideal[slotIdx].week;
+    for(let nw=cur-1; nw>=1; nw--){
+      if(weekLoad[nw].length < weekCap){
+        weekLoad[cur] = weekLoad[cur].filter(x=>x!==slotIdx);
+        weekLoad[nw].push(slotIdx);
+        ideal[slotIdx].week = nw;
+        return true;
       }
     }
-    return null;
+    return false;
   }
-  const placements = [];
-  occs.forEach(o=>{
-    const slot = placeOcc(o);
-    if(slot) placements.push({sr:o.sr, week:slot.w, day:slot.d, occ:o.occ, freq:o.freq});
-  });
-  return placements;
+  let changed = true; let passes = 0;
+  while(changed && passes < 10){
+    changed = false; passes++;
+    for(let w=1; w<=weeks; w++){
+      while(weekLoad[w].length > weekCap){
+        const last = weekLoad[w][weekLoad[w].length-1];
+        if(!shiftEarlier(last)) break;
+        else changed = true;
+      }
+    }
+  }
+  return ideal.map(s => ({sr: s.sr, week: s.week, occ: s.occ, freq: s.freq}));
 }
 
 function fyStartDate(fyLabel){
@@ -1147,33 +1049,22 @@ function fyEndDate(fyLabel){
 }
 
 function buildRows(fyKey){
-  // From schedule + motors, build long rows. Date = fyStart + (week-1)*7 + day,
-  // optionally overridden per-PM via STATE.plannedDateOverrides[pmId] (admin can edit).
+  // From schedule + motors, build long rows
   const fy = STATE.fys[fyKey];
   if(!fy) return [];
   const start = new Date(fy.fyStart);
   const motorMap = Object.fromEntries(STATE.motors.map(m=>[m.sr, m]));
-  const overrides = STATE.plannedDateOverrides || {};
   const rows = [];
   fy.schedule.forEach(s=>{
     const m = motorMap[s.sr]; if(!m) return;
-    // Base date = Monday of (week) + day offset (0=Mon..5=Sat)
-    const dayOff = (typeof s.day === 'number') ? s.day : 0;
-    let d = new Date(start); d.setDate(d.getDate() + (s.week-1)*7 + dayOff);
-    const pmId = `M${String(s.sr).padStart(3,'0')}-${String(s.occ).padStart(2,'0')}-${fyKey}`;
-    const ov = overrides[pmId];
-    if(ov){
-      const parsed = parseDMY(ov) || new Date(ov);
-      if(parsed && !isNaN(parsed.getTime())) d = parsed;
-    }
+    const d = new Date(start); d.setDate(d.getDate() + (s.week-1)*7);
     const monthLabel = d.toLocaleString('en-US',{month:'short'}) + '-' + d.getFullYear();
     const monthIdx = (d.getFullYear() - start.getFullYear())*12 + (d.getMonth() - start.getMonth());
-    // Re-derive week from the date so heatmap/workload stay in sync with overrides
-    const weekFromDate = Math.max(1, Math.floor((d - start)/(7*86400000)) + 1);
+    const pmId = `M${String(s.sr).padStart(3,'0')}-${String(s.occ).padStart(2,'0')}-${fyKey}`;
     const exec = STATE.executions[pmId];
     rows.push({
       sr: s.sr, area: m.area, motor: m.motor, cat: m.cat, freq: s.freq,
-      date: isoDate(d), week: weekFromDate, day: dayOff, month: monthLabel, monthIdx,
+      date: isoDate(d), week: s.week, month: monthLabel, monthIdx,
       pmId, actualDate: exec?exec.actualDate:'', remarks: exec?exec.remarks:''
     });
   });
@@ -1467,14 +1358,9 @@ function processExecutionImport(rows){
     return parseDMY(s);  // fallback — date only
   }
 
-  // Build map of existing planned dates to detect user-edited ones
-  const fyRowsList = buildRows(fyKey);
-  const baseDates = {}; fyRowsList.forEach(r=>{ baseDates[r.pmId] = r.date; });
-
   let ok=0, warn=0, err=0;
   const out = rows.map(r=>{
     const pmId = String(pick(r,['PM ID','pmid','id','pm_id'])).trim();
-    const plannedRaw = pick(r,['Planned Date','planned date','planneddate','plandate','plan']);
     const actualRaw = pick(r,['Actual Date','actualdate','date','done on','completion date','completed']);
     const pmStartRaw = pick(r,['PM Start','pmstart','start','starttime','starttimestamp']);
     const pmStopRaw = pick(r,['PM Stop','pmstop','stop','stoptime','stoptimestamp','endtime','end']);
@@ -1483,13 +1369,6 @@ function processExecutionImport(rows){
     const remarks = String(pick(r,['Remarks','remark','notes','comment'])||'').trim();
 
     const actualParsed = parseDate(actualRaw);
-    const plannedParsed = parseDate(plannedRaw);
-    // Override only when user changed planned date from base (non-empty AND different)
-    let plannedOverrideISO = '';
-    if(plannedParsed){
-      const planISO = isoDate(plannedParsed);
-      if(baseDates[pmId] && planISO !== baseDates[pmId]) plannedOverrideISO = planISO;
-    }
     const pmStart = parseDateTime(pmStartRaw);
     const pmStop = parseDateTime(pmStopRaw);
     const bdStart = parseDateTime(bdStartRaw);
@@ -1507,10 +1386,9 @@ function processExecutionImport(rows){
     let status, statusClass;
     if(!pmId){ status='ERR · Missing PM ID'; statusClass='import-row-err'; err++; }
     else if(!validIds.has(pmId)){ status='ERR · Unknown PM ID'; statusClass='import-row-err'; err++; }
-    else if(!actualParsed && !plannedOverrideISO){ status='WARN · No Actual or new Planned date'; statusClass='import-row-warn'; warn++; }
+    else if(!actualParsed){ status='WARN · Bad date'; statusClass='import-row-warn'; warn++; }
     else {
       const extras = [];
-      if(plannedOverrideISO) extras.push('Plan→'+plannedOverrideISO);
       if(mttrMin !== null) extras.push(`MTTR ${mttrMin}m`);
       if(bdHrs !== null) extras.push(`BD ${bdHrs}h`);
       status = 'OK' + (extras.length ? ' · '+extras.join(', ') : '');
@@ -1520,7 +1398,6 @@ function processExecutionImport(rows){
     return {
       pmId,
       actual: actualParsed ? isoDate(actualParsed) : '',
-      plannedOverride: plannedOverrideISO,
       pmStart: pmStart ? pmStart.toISOString() : '',
       pmStop: pmStop ? pmStop.toISOString() : '',
       mttrMin: mttrMin,
@@ -1562,35 +1439,24 @@ function processExecutionImport(rows){
 
 function commitExecutionImport(items){
   if(!requireSignedIn('Commit execution import')) return;
-  STATE.plannedDateOverrides = STATE.plannedDateOverrides || {};
-  let savedExec = 0, savedPlan = 0;
+  let saved = 0;
   items.forEach(it=>{
-    // Apply planned-date override if user changed Planned Date in CSV (admin only)
-    if(it.plannedOverride){
-      if(isAdmin()){
-        STATE.plannedDateOverrides[it.pmId] = it.plannedOverride;
-        savedPlan++;
-      }
-    }
-    if(it.actual){
-      STATE.executions[it.pmId] = {
-        actualDate: it.actual,
-        pmStart: it.pmStart || '',
-        pmStop: it.pmStop || '',
-        mttrMin: it.mttrMin,
-        bdStart: it.bdStart || '',
-        bdStop: it.bdStop || '',
-        bdHrs: it.bdHrs,
-        remarks: it.remarks || ''
-      };
-      savedExec++;
-    }
+    STATE.executions[it.pmId] = {
+      actualDate: it.actual,
+      pmStart: it.pmStart || '',
+      pmStop: it.pmStop || '',
+      mttrMin: it.mttrMin,
+      bdStart: it.bdStart || '',
+      bdStop: it.bdStop || '',
+      bdHrs: it.bdHrs,
+      remarks: it.remarks || ''
+    };
+    saved++;
   });
   saveState();
   document.getElementById('import-preview').innerHTML = '';
   renderAll();
-  const planMsg = savedPlan ? ` · ${savedPlan} planned date(s) updated` : '';
-  toast('Import complete', `${savedExec} execution(s) logged${planMsg}.`);
+  toast('Import complete', `${saved} executions logged. MTTR/MTBF & Compliance updated.`);
 }
 
 function downloadTemplate(){
@@ -1802,13 +1668,11 @@ function updateMotor(sr, field, value){
 
 function regenerateSchedule(silent){
   Object.keys(STATE.fys).forEach(fyKey=>{
-    STATE.fys[fyKey].schedule = generateSchedule(STATE.motors, 24, 52);
+    STATE.fys[fyKey].schedule = generateSchedule(STATE.motors);
   });
-  // Regenerating clears manual planned-date overrides (they were tied to old slot ids)
-  STATE.plannedDateOverrides = {};
   saveState();
   renderAll();
-  if(!silent) toast('Schedule regenerated', `All ${Object.keys(STATE.fys).length} FY(s) updated · 4/day × 6 days = 24/wk`);
+  if(!silent) toast('Schedule regenerated', `All ${Object.keys(STATE.fys).length} FY(s) updated`);
 }
 
 /* ===================================================================
@@ -2927,11 +2791,8 @@ function renderDaily(){
     const cls = st==='OVERDUE'?'overdue':st==='DUE'?'due':st==='UPCOMING'?'upcoming':st==='DONE'?'done':'scheduled';
     const stPill = `status-${st.toLowerCase()}`;
     const isDone = !!r.actualDate;
-    const dateCell = isAdmin()
-      ? `<div class="daily-date" title="Click to edit planned date" style="cursor:pointer;text-decoration:underline dotted" onclick="editPlannedDate('${r.pmId}','${r.date}')">${dateFmt(isoToDate(r.date))}</div>`
-      : `<div class="daily-date">${dateFmt(isoToDate(r.date))}</div>`;
     return `<div class="daily-item ${cls}">
-      ${dateCell}
+      <div class="daily-date">${dateFmt(isoToDate(r.date))}</div>
       <div><div class="daily-area">${r.area}</div><div class="daily-motor">${r.motor}</div></div>
       <div><span class="freq-pill freq-${r.freq}">${r.freq}</span></div>
       <div><span class="cat-pill cat-${r.cat}">${r.cat}</span></div>
@@ -2946,27 +2807,6 @@ function renderDaily(){
 function markDone(pmId){
   // Both admin and user can mark done. User restricted to today only — enforced inside modal.
   openChecklistModal(pmId);
-}
-
-// Admin-only: edit a single PM's planned date. Persists in STATE.plannedDateOverrides.
-function editPlannedDate(pmId, currentIso){
-  if(!requireAdmin('Edit planned date')) return;
-  const today = isoDate(TODAY);
-  const cur = currentIso || today;
-  const v = prompt('New planned date (YYYY-MM-DD) for ' + pmId + '\nLeave empty to reset.', cur);
-  if(v === null) return;  // cancelled
-  STATE.plannedDateOverrides = STATE.plannedDateOverrides || {};
-  if(!v.trim()){
-    delete STATE.plannedDateOverrides[pmId];
-    toast('Reset', 'Planned date reverted to auto-computed');
-  } else {
-    const d = parseDMY(v) || new Date(v);
-    if(!d || isNaN(d.getTime())){ toast('Bad date', 'Use YYYY-MM-DD or DD-MM-YYYY', 'error'); return; }
-    STATE.plannedDateOverrides[pmId] = isoDate(d);
-    toast('Planned date updated', dateFmt(d));
-  }
-  saveState();
-  renderAll();
 }
 
 function commitMarkDone(pmId, data){
@@ -3003,4 +2843,231 @@ function commitMarkDone(pmId, data){
     loggedBy: (window.__pmCurrentUser ? (window.__pmCurrentUser.email || window.__pmCurrentUser.uid) : 'unknown'),
     loggedAt: new Date().toISOString(),
   };
-  saveState(); closeChecklistModal(
+  saveState(); closeChecklistModal(); renderAll();
+  toast('PM logged', `${pmId} · MTTR ${mttrMin ?? '—'} min`);
+}
+function markUndo(pmId){
+  if(!requireAdmin('Undo PM completion')) return;
+  delete STATE.executions[pmId]; saveState(); renderAll(); toast('Undone', pmId);
+}
+
+function renderMotors(){
+  const q = (document.getElementById('m-search').value||'').toLowerCase();
+  const area = document.getElementById('m-area').value;
+  const cat = document.getElementById('m-cat').value;
+  const freq = document.getElementById('m-freq').value;
+
+  let rows = STATE.motors.map(m=>({...m, freq: freqFor(m.area,m.cat), pmsPerYear: FREQ_RULES[freqFor(m.area,m.cat)].n}));
+  if(q) rows = rows.filter(m=>m.motor.toLowerCase().includes(q) || m.area.toLowerCase().includes(q));
+  if(area) rows = rows.filter(m=>m.area===area);
+  if(cat) rows = rows.filter(m=>m.cat===cat);
+  if(freq) rows = rows.filter(m=>m.freq===freq);
+  document.getElementById('m-count').textContent = rows.length;
+
+  const tbody = document.getElementById('m-tbody');
+  tbody.innerHTML = rows.slice(0,500).map(m=>{
+    const futures = cachedRows.filter(r=>r.sr===m.sr && isoToDate(r.date) >= TODAY).map(r=>r.date).sort();
+    const next = futures.length ? dateFmt(isoToDate(futures[0])) : '—';
+    return `<tr>
+      <td style="color:var(--text-muted);font-family:'JetBrains Mono',monospace">${m.sr}</td>
+      <td>${m.area}</td>
+      <td style="color:var(--text)">${m.motor}</td>
+      <td><span class="cat-pill cat-${m.cat}">${m.cat}</span></td>
+      <td><span class="freq-pill freq-${m.freq}">${m.freq}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--text)">${m.pmsPerYear}</td>
+      <td style="font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:11px">${next}</td>
+    </tr>`;
+  }).join('');
+}
+['m-search','m-area','m-cat','m-freq'].forEach(id=>document.getElementById(id).addEventListener('input',renderMotors));
+['mng-search','mng-area'].forEach(id=>document.getElementById(id).addEventListener('input',renderManageMotors));
+
+/* ===================================================================
+   RELIABILITY — MTTR / MTBF / Motor count widgets
+   =================================================================== */
+function renderReliability(){
+  const area = document.getElementById('rel-area').value;
+  const method = document.getElementById('rel-method').value;  // 'avg' or 'median'
+
+  // Gather execution entries for this FY only (pmId ends with active FY)
+  const fyKey = STATE.activeFY;
+  const execEntries = [];  // [{pmId, motorSr, area, motor, actualDate, mttrMin, bdHrs}]
+  for(const pmId in STATE.executions){
+    if(!pmId.endsWith('-'+fyKey)) continue;
+    const ex = STATE.executions[pmId];
+    // Extract motor sr from pmId: M001-01-FY26-27
+    const m = pmId.match(/^M(\d+)-/);
+    if(!m) continue;
+    const sr = parseInt(m[1]);
+    const motor = STATE.motors.find(x=>x.sr===sr);
+    if(!motor) continue;
+    if(area && motor.area !== area) continue;
+    execEntries.push({
+      pmId, motorSr: sr, area: motor.area, motor: motor.motor,
+      actualDate: ex.actualDate,
+      mttrMin: typeof ex.mttrMin === 'number' ? ex.mttrMin : null,
+      bdHrs: typeof ex.bdHrs === 'number' ? ex.bdHrs : null,
+    });
+  }
+
+  const mttrVals = execEntries.map(e=>e.mttrMin).filter(v=>v!=null && !isNaN(v) && v>0);
+  const mtbfVals = execEntries.map(e=>e.bdHrs).filter(v=>v!=null && !isNaN(v) && v>0);
+  const bdCount = mtbfVals.length;
+  const pmDone = execEntries.filter(e=>e.actualDate).length;
+
+  function agg(vals){
+    if(!vals.length) return 0;
+    if(method === 'median'){
+      const s = [...vals].sort((a,b)=>a-b);
+      const n = s.length;
+      return n%2 ? s[(n-1)/2] : (s[n/2-1]+s[n/2])/2;
+    }
+    return vals.reduce((a,b)=>a+b,0) / vals.length;
+  }
+
+  const mttrAgg = agg(mttrVals);
+  const mtbfAgg = agg(mtbfVals);
+
+  // Motors count
+  let motors = STATE.motors;
+  if(area) motors = motors.filter(m=>m.area===area);
+
+  document.getElementById('rel-mttr').textContent = mttrAgg ? Math.round(mttrAgg) : '0';
+  document.getElementById('rel-mtbf').textContent = mtbfAgg ? mtbfAgg.toFixed(1) : '0';
+  document.getElementById('rel-bd').textContent = bdCount;
+  document.getElementById('rel-done').textContent = pmDone;
+  document.getElementById('rel-motors').textContent = motors.length;
+
+  // Per-area summary
+  const allAreas = [...new Set(STATE.motors.map(m=>m.area))].sort();
+  const summary = allAreas.map(a=>{
+    const aMotors = STATE.motors.filter(m=>m.area===a);
+    const aExec = [];
+    for(const pmId in STATE.executions){
+      if(!pmId.endsWith('-'+fyKey)) continue;
+      const m = pmId.match(/^M(\d+)-/);
+      if(!m) continue;
+      const sr = parseInt(m[1]);
+      const mot = STATE.motors.find(x=>x.sr===sr);
+      if(!mot || mot.area !== a) continue;
+      const ex = STATE.executions[pmId];
+      aExec.push({...ex});
+    }
+    const aMttrs = aExec.map(e=>e.mttrMin).filter(v=>typeof v==='number' && v>0);
+    const aBds = aExec.map(e=>e.bdHrs).filter(v=>typeof v==='number' && v>0);
+    return {
+      area: a,
+      motors: aMotors.length,
+      done: aExec.filter(e=>e.actualDate).length,
+      bds: aBds.length,
+      mttr: aMttrs.length ? Math.round(aMttrs.reduce((x,y)=>x+y,0)/aMttrs.length) : 0,
+      mtbf: aBds.length ? +(aBds.reduce((x,y)=>x+y,0)/aBds.length).toFixed(1) : 0,
+    };
+  }).sort((a,b)=>b.motors-a.motors);
+
+  // Table
+  document.getElementById('rel-tbody').innerHTML = summary.map(s => `
+    <tr>
+      <td style="color:var(--text);font-weight:500">${s.area}</td>
+      <td><b style="font-family:'JetBrains Mono',monospace">${s.motors}</b></td>
+      <td>${s.done}</td>
+      <td>${s.bds>0 ? `<span style="color:var(--accent-3)">${s.bds}</span>` : s.bds}</td>
+      <td>${s.mttr || '—'}</td>
+      <td>${s.mtbf || '—'}</td>
+    </tr>
+  `).join('');
+
+  // Chart: Total motors by area
+  if(chartRefs.relMotors) chartRefs.relMotors.destroy();
+  chartRefs.relMotors = new Chart(document.getElementById('ch-rel-motors'),{
+    type:'bar',
+    data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.motors),backgroundColor:summary.map((_,i)=>`hsl(${42+i*4},85%,55%)`),borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border}},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+
+  // Chart: Breakdowns by area
+  if(chartRefs.relBd) chartRefs.relBd.destroy();
+  chartRefs.relBd = new Chart(document.getElementById('ch-rel-bd'),{
+    type:'bar',
+    data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.bds),backgroundColor:COLORS.coral,borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+
+  // Chart: MTTR by area
+  if(chartRefs.relMttr) chartRefs.relMttr.destroy();
+  chartRefs.relMttr = new Chart(document.getElementById('ch-rel-mttr'),{
+    type:'bar',
+    data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.mttr),backgroundColor:COLORS.q,borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+
+  // Chart: MTBF by area
+  if(chartRefs.relMtbf) chartRefs.relMtbf.destroy();
+  chartRefs.relMtbf = new Chart(document.getElementById('ch-rel-mtbf'),{
+    type:'bar',
+    data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.mtbf),backgroundColor:COLORS.mint,borderRadius:3}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
+  });
+}
+['rel-area','rel-method'].forEach(id=>document.getElementById(id).addEventListener('change',renderReliability));
+
+/* ===================================================================
+   File I/O wiring
+   =================================================================== */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+dropzone.addEventListener('click',()=>fileInput.click());
+dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('drag');});
+dropzone.addEventListener('dragleave',()=>dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop',e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files.length) readFile(e.dataTransfer.files[0], processExecutionImport);
+});
+fileInput.addEventListener('change',e=>{
+  if(e.target.files.length) readFile(e.target.files[0], processExecutionImport);
+  e.target.value = '';
+});
+
+document.getElementById('owners-import').addEventListener('change',e=>{
+  if(e.target.files.length) readFile(e.target.files[0], processOwnersImport);
+  e.target.value = '';
+});
+
+document.getElementById('motor-import').addEventListener('change',e=>{
+  if(e.target.files.length) readFile(e.target.files[0], processMotorImport);
+  e.target.value = '';
+});
+
+document.getElementById('restore-input').addEventListener('change',e=>{
+  if(!e.target.files.length) return;
+  const f = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{ restoreBackup(JSON.parse(ev.target.result)); }
+    catch(err){ toast('Invalid file', 'Could not parse JSON', 'error'); }
+  };
+  reader.readAsText(f);
+  e.target.value = '';
+});
+
+document.getElementById('fy-select').addEventListener('change',e=>setActiveFY(e.target.value));
+
+/* Navigation */
+document.querySelectorAll('.nav-item').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+    const page = el.dataset.page;
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+page).classList.add('active');
+    document.getElementById('page-title').textContent = el.textContent.trim().split(' ').slice(1).join(' ') || el.textContent.trim();
+    document.getElementById('crumb').textContent = page === 'overview' ? 'Dashboard' : 'Page';
+    setTimeout(()=>{ if(page==='overview') renderOverview(); if(page==='compliance') renderCompliance(); if(page==='areas') renderAreas(); }, 50);
+  });
+});
+
+/* Initial */
+renderAll();
+</script>
+</body>
+</html>
