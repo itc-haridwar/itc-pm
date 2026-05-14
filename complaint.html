@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Complaints · ITC Haridwar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+window.__pmFirebase = { db, auth, doc, getDoc, setDoc, onSnapshot };
+window.__pmFirebaseReady = false;
+window.__pmRole = 'user';
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){ if(window.parent === window) window.location.href = './index.html'; return; }
+  window.__pmCurrentUser = user;
+  try{
+    const adminSnap = await getDoc(doc(db, 'admins', user.uid));
+    window.__pmRole = adminSnap.exists() ? 'admin' : 'user';
+  } catch(e){ window.__pmRole = 'user'; }
+  window.__pmFirebaseReady = true;
+  document.dispatchEvent(new CustomEvent('pm-firebase-ready'));
+});
+</script>
+
+<style>
+:root{
+  --bg-0:#0c0c0e; --bg-1:#111114; --bg-2:#18181d; --bg-3:#222227;
+  --line:#26262d; --line-2:#34343d;
+  --text:#ededee; --text-2:#9e9ea4; --text-3:#5d5d65;
+  --accent:#fb923c; --accent-soft:rgba(251,146,60,0.12);
+  --green:#22c55e; --green-soft:rgba(34,197,94,0.12);
+  --amber:#f59e0b; --amber-soft:rgba(245,158,11,0.12);
+  --red:#ef4444; --red-soft:rgba(239,68,68,0.12);
+  --blue:#60a5fa; --blue-soft:rgba(96,165,250,0.12);
+  --violet:#a78bfa; --violet-soft:rgba(167,139,250,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-apple-system,sans-serif;font-size:13px;line-height:1.5}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+::selection{background:var(--accent);color:#000}
+
+.wrap{max-width:1280px;margin:0 auto;padding:24px 28px 60px}
+
+/* Top bar */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--bg-1);margin:-24px -28px 24px}
+.crumb{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.12em;text-transform:uppercase;font-weight:500}
+.crumb b{color:var(--text);font-weight:600}
+.crumb::before{content:'';width:4px;height:4px;background:var(--red);border-radius:50%;box-shadow:0 0 0 3px rgba(239,68,68,0.18);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.topbar-meta{display:flex;gap:22px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-2);font-weight:500;align-items:center}
+.topbar-meta b{color:var(--text);font-weight:600}
+.role-tag{padding:3px 8px;border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;border:1px solid var(--accent);color:var(--accent);background:var(--accent-soft)}
+.role-tag.user{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+
+.page-head{margin-bottom:22px}
+.page-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--red);letter-spacing:0.22em;text-transform:uppercase;font-weight:600;margin-bottom:5px}
+.page-title{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:30px;letter-spacing:-0.01em;line-height:1.05;margin-bottom:6px}
+.page-title span{color:var(--red)}
+.page-desc{color:var(--text-2);font-size:13px;max-width:640px}
+
+/* KPI strip */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--bg-1);border:1px solid var(--line);border-radius:3px;margin-bottom:22px;overflow:hidden}
+.kpi{padding:16px 18px;border-right:1px solid var(--line);transition:background 0.15s}
+.kpi:last-child{border-right:none}
+.kpi:hover{background:var(--bg-2)}
+.kpi-label{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.kpi-label::before{content:'';width:6px;height:1px;background:var(--text-3)}
+.kpi-value{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:28px;line-height:1;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+.kpi-value.up{color:var(--green)}
+.kpi-value.down{color:var(--red)}
+.kpi-value.warn{color:var(--amber)}
+.kpi-value.accent{color:var(--accent)}
+.kpi-suffix{font-size:13px;color:var(--text-3);font-weight:400;margin-left:3px}
+.kpi-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);margin-top:6px;letter-spacing:0.04em}
+.kpi-meta b{color:var(--text-2);font-weight:500}
+
+/* Grid */
+.row{display:grid;gap:14px;margin-bottom:14px}
+.row.cols-2{grid-template-columns:1.4fr 1fr}
+.row.cols-3{grid-template-columns:repeat(3,1fr)}
+
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.card-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card-title{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;color:var(--text);display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:11px;background:var(--red);display:inline-block}
+.card-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.06em}
+.card-meta b{color:var(--text-2);font-weight:500}
+.card-body{padding:16px}
+.card-body.no-pad{padding:0}
+
+/* Form */
+.field{margin-bottom:12px}
+.field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:5px;font-weight:500}
+.field label.req::after{content:' •';color:var(--red);font-size:11px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg-2);border:1px solid var(--line);border-radius:2px;padding:9px 11px;color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;transition:border 0.12s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:80px;line-height:1.5}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.btn{background:var(--red);color:#fff;border:none;padding:9px 16px;border-radius:2px;font-weight:600;cursor:pointer;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-family:'IBM Plex Sans',sans-serif;transition:all 0.12s}
+.btn:hover{filter:brightness(1.1)}
+.btn.ghost{background:transparent;color:var(--text-2);border:1px solid var(--line)}
+.btn.ghost:hover{color:var(--text);border-color:var(--line-2);background:var(--bg-2)}
+.btn.success{background:var(--green);color:#0c0c0e}
+.btn.warn{background:var(--amber);color:#0c0c0e}
+.btn.accent{background:var(--accent);color:#0c0c0e}
+.btn.sm{padding:6px 11px;font-size:10px}
+.btn-row{display:flex;gap:8px;margin-top:14px}
+
+/* Area chips manager */
+.area-mgr-input{display:flex;gap:8px;margin-bottom:14px}
+.area-mgr-input input{flex:1;background:var(--bg-2);border:1px solid var(--line);border-radius:2px;padding:8px 11px;color:var(--text);font-size:12.5px;font-family:'IBM Plex Sans',sans-serif}
+.area-mgr-input input:focus{outline:none;border-color:var(--accent)}
+.area-list{display:flex;flex-wrap:wrap;gap:6px}
+.area-chip{background:var(--bg-2);border:1px solid var(--line);border-radius:2px;padding:5px 9px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-2);display:inline-flex;align-items:center;gap:7px;transition:all 0.12s}
+.area-chip:hover{border-color:var(--line-2);color:var(--text)}
+.area-chip .rm{cursor:pointer;color:var(--red);font-weight:700;font-size:12px;line-height:1;opacity:0.6;transition:opacity 0.12s}
+.area-chip .rm:hover{opacity:1}
+
+/* Rules */
+.rules{background:var(--bg-2);border-left:3px solid var(--blue);padding:14px 16px;border-radius:2px}
+.rules-title{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue);letter-spacing:0.18em;text-transform:uppercase;font-weight:600;margin-bottom:10px}
+.rules ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.rules li{font-size:12px;color:var(--text-2);line-height:1.6;padding-left:18px;position:relative}
+.rules li::before{content:'›';color:var(--blue);font-weight:700;position:absolute;left:0;top:-1px;font-size:14px}
+.rules li b{color:var(--text);font-weight:600}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl thead th{background:var(--bg-2);color:var(--text-3);padding:9px 14px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1;white-space:nowrap}
+.tbl thead th.num,.tbl tbody td.num{text-align:right;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl tbody td{padding:11px 14px;border-bottom:1px solid var(--line);color:var(--text);vertical-align:top}
+.tbl tbody tr:hover td{background:var(--bg-2)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl-scroll{max-height:560px;overflow:auto}
+.row-num{color:var(--text-3);font-family:'IBM Plex Mono',monospace;font-size:11px}
+.unit-tag{color:var(--accent);font-weight:500;font-size:12px}
+.issue-text{font-size:12.5px;color:var(--text);line-height:1.5;max-width:380px}
+.issue-action{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-3);margin-top:4px;letter-spacing:0.02em}
+.issue-action::before{content:'↳ ';color:var(--green)}
+
+/* Pills */
+.pill{display:inline-block;padding:2px 8px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;border-radius:2px;border:1px solid transparent}
+.pill.open{color:var(--red);background:var(--red-soft);border-color:rgba(239,68,68,0.3)}
+.pill.closed{color:var(--green);background:var(--green-soft);border-color:rgba(34,197,94,0.3)}
+
+/* Filters */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
+.filters .ctrl{display:flex;flex-direction:column;gap:4px}
+.filters .ctrl label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-3);letter-spacing:0.15em;text-transform:uppercase;font-weight:500}
+.filters .ctrl select,.filters .ctrl input{background:var(--bg-1);border:1px solid var(--line);border-radius:2px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;min-width:150px}
+.filters .ctrl select:focus,.filters .ctrl input:focus{outline:none;border-color:var(--accent)}
+
+/* Empty */
+.empty{padding:60px 20px;text-align:center;color:var(--text-3)}
+.empty-icon{font-family:'IBM Plex Mono',monospace;font-size:24px;margin-bottom:8px;letter-spacing:0.15em;opacity:0.5}
+.empty-text{font-size:13px;color:var(--text-2)}
+
+/* Toasts */
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:3000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg-1);border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:2px;padding:12px 16px;color:var(--text);font-size:12.5px;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:slideIn 0.2s ease-out}
+.toast.warn{border-left-color:var(--amber)}
+.toast.error{border-left-color:var(--red)}
+.toast.good{border-left-color:var(--green)}
+.toast .ts-title{font-weight:600;margin-bottom:2px}
+.toast .ts-msg{color:var(--text-2);font-size:11.5px}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+body.role-user .admin-only{display:none !important}
+
+@media (max-width:900px){
+  .wrap{padding:14px}
+  .topbar{padding:12px 14px;flex-wrap:wrap;gap:8px}
+  .topbar-meta{font-size:9.5px;gap:12px}
+  .kpi-strip{grid-template-columns:repeat(2,1fr)}
+  .kpi{border-right:none;border-bottom:1px solid var(--line)}
+  .kpi:nth-child(odd){border-right:1px solid var(--line)}
+  .row.cols-2,.row.cols-3{grid-template-columns:1fr}
+  .f-row{grid-template-columns:1fr}
+  .filters .ctrl select,.filters .ctrl input{min-width:140px}
+  .page-title{font-size:22px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="crumb">SYSTEM <b>LIVE</b> · COMPLAINTS MODULE</div>
+    <div class="topbar-meta">
+      <span>Today <b id="tb-date">—</b></span>
+      <span id="tb-by">…</span>
+      <span class="role-tag" id="u-role">USER</span>
+    </div>
+  </div>
+
+  <div class="page-head">
+    <div class="page-eyebrow">▍ Module · Complaints</div>
+    <h1 class="page-title">Complaint <span>Register</span></h1>
+    <p class="page-desc">Log equipment / utility issues with downtime tracking. Open and resolved complaints, all units, real-time sync.</p>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">Total Complaints</div><div class="kpi-value accent" id="s-total">0</div><div class="kpi-meta">all time</div></div>
+    <div class="kpi"><div class="kpi-label">Open</div><div class="kpi-value down" id="s-open">0</div><div class="kpi-meta">requires action</div></div>
+    <div class="kpi"><div class="kpi-label">Resolved</div><div class="kpi-value up" id="s-closed">0</div><div class="kpi-meta">closed</div></div>
+    <div class="kpi"><div class="kpi-label">Total Downtime</div><div class="kpi-value warn" id="s-down">0<span class="kpi-suffix">m</span></div><div class="kpi-meta">cumulative</div></div>
+  </div>
+
+  <div class="row cols-2">
+    <div class="card">
+      <div class="card-head"><div class="card-title">Log New Complaint</div><div class="card-meta">all fields</div></div>
+      <div class="card-body">
+        <div class="field"><label class="req">Area / Section</label><select id="c-area"></select></div>
+        <div class="field"><label class="req">Issue Description</label><textarea id="c-issue" placeholder="Describe the problem in detail..."></textarea></div>
+        <div class="f-row">
+          <div class="field"><label class="req">Start Time</label><input type="datetime-local" id="c-start"/></div>
+          <div class="field"><label>Stop Time <span style="color:var(--text-3);font-weight:400;text-transform:none;letter-spacing:0">(blank = ongoing)</span></label><input type="datetime-local" id="c-stop"/></div>
+        </div>
+        <div class="f-row">
+          <div class="field"><label>Attended By</label><input type="text" id="c-by" placeholder="Name"/></div>
+          <div class="field"><label>Action Taken</label><input type="text" id="c-action" placeholder="What was done"/></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn" onclick="logComplaint()">↑ Submit Complaint</button>
+          <button class="btn ghost" onclick="clearForm()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card admin-only" style="margin-bottom:14px">
+        <div class="card-head"><div class="card-title">Manage Areas</div><div class="card-meta" id="ar-count">—</div></div>
+        <div class="card-body">
+          <p style="font-size:11.5px;color:var(--text-3);margin-bottom:12px;line-height:1.5">Add or remove area options shown in the dropdown.</p>
+          <div class="area-mgr-input">
+            <input type="text" id="new-area" placeholder="New area (e.g. CHP House)" onkeydown="if(event.key==='Enter') addArea()"/>
+            <button class="btn accent sm" onclick="addArea()">+ Add</button>
+          </div>
+          <div class="area-list" id="area-list"></div>
+        </div>
+      </div>
+
+      <div class="card" id="user-rules-card" style="display:none">
+        <div class="card-head"><div class="card-title">Rules</div></div>
+        <div class="card-body">
+          <div class="rules">
+            <div class="rules-title">▍ Logging Guidelines</div>
+            <ul>
+              <li>Log complaints honestly — mark as open or closed.</li>
+              <li>For ongoing issues, leave <b>Stop Time</b> blank.</li>
+              <li>Downtime calculates automatically from start → stop.</li>
+              <li>Only <b>admin</b> can edit or delete entries.</li>
+              <li>Only <b>admin</b> can add new areas to the dropdown.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="card-title">Complaint Log</div>
+      <div class="card-meta" id="t-count">0 complaints</div>
+    </div>
+    <div class="card-body">
+      <div class="filters">
+        <div class="ctrl"><label>Area</label><select id="f-area"><option value="">All Areas</option></select></div>
+        <div class="ctrl"><label>Status</label><select id="f-status"><option value="">All</option><option value="open">Open</option><option value="closed">Resolved</option></select></div>
+        <div class="ctrl"><label>Search Issue</label><input type="text" id="f-search" placeholder="text in issue..."/></div>
+        <button class="btn ghost sm" onclick="exportCSV()">⤓ Export CSV</button>
+      </div>
+    </div>
+    <div class="card-body no-pad"><div class="tbl-scroll"><table class="tbl" id="t-comp"></table></div></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+let STATE = { complaints:[], complaintAreas:[] };
+
+function defaultAreas(){
+  return ['Phase-1 Fuel Yard','Phase-1 Fire Pump House','Phase-1 WTP','HVAC','DG Cooling Tower','CETP','Snacks ETP','Boiler House','DG House Phase-1','Phase-2 Fuel Yard','STP-1','STP-2','ETP Phase-2','Phase-2 Fire Pump House','Phase-2 WTP','Phase-2 DG House','SFB · BIOMASS BOILER # 1','SFB · BIOMASS BOILER # 2','SFB · BIOMASS BOILER # 3','SFB · COMMON MOTORS','PANEL · Biscuit Unit','PANEL · Snacks Unit','PANEL · Noodles Unit','PANEL · Soap Unit','PANEL · CLS Unit','PANEL · TALC Unit','Utility','Admin','Canteen','Gate house','Other / Miscellaneous'];
+}
+
+function isAdmin(){ return window.__pmRole === 'admin'; }
+function toast(t, m, type){
+  const wrap = document.getElementById('toast-wrap');
+  const e = document.createElement('div');
+  e.className = 'toast' + (type ? ' '+type : '');
+  e.innerHTML = `<div class="ts-title">${t}</div>${m?'<div class="ts-msg">'+m+'</div>':''}`;
+  wrap.appendChild(e);
+  setTimeout(()=>{ e.style.opacity='0'; e.style.transform='translateX(20px)'; e.style.transition='all 0.2s'; setTimeout(()=>e.remove(),200); }, 3200);
+}
+function nowDT(){ const d=new Date(); const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; }
+function fmtDT(s){ if(!s) return '—'; const d=new Date(s); const z=n=>String(n).padStart(2,'0'); return `${z(d.getDate())}·${z(d.getMonth()+1)}·${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; }
+function fmtDate(d){ const z=n=>String(n).padStart(2,'0'); return `${z(d.getDate())}·${z(d.getMonth()+1)}·${d.getFullYear()}`; }
+function downtimeMin(start, stop){ if(!start || !stop) return null; return Math.round((new Date(stop) - new Date(start))/60000); }
+function fmtMin(m){ if(m==null) return '—'; if(m<60) return m+'m'; const h=Math.floor(m/60),mm=m%60; return h+'h '+mm+'m'; }
+
+async function loadFromFirebase(){
+  if(!window.__pmFirebase) return;
+  const fb = window.__pmFirebase;
+  try{
+    const ref = fb.doc(fb.db, 'shared_state', 'main');
+    const snap = await fb.getDoc(ref);
+    if(snap.exists()){
+      const d = snap.data();
+      STATE.complaints = d.complaints || [];
+      STATE.complaintAreas = d.complaintAreas && d.complaintAreas.length ? d.complaintAreas : defaultAreas();
+    } else {
+      STATE.complaintAreas = defaultAreas();
+      await saveToFirebase();
+    }
+    fb.onSnapshot(ref, (snap2)=>{
+      if(!snap2.exists()) return;
+      const d = snap2.data();
+      STATE.complaints = d.complaints || [];
+      STATE.complaintAreas = d.complaintAreas && d.complaintAreas.length ? d.complaintAreas : defaultAreas();
+      renderAll();
+    });
+    document.body.className = isAdmin() ? 'role-admin' : 'role-user';
+    if(!isAdmin()) document.getElementById('user-rules-card').style.display = 'block';
+    document.getElementById('tb-by').innerHTML = '<b>' + (window.__pmCurrentUser ? window.__pmCurrentUser.email.split('@')[0] : '') + '</b>';
+    const rb = document.getElementById('u-role');
+    rb.textContent = window.__pmRole.toUpperCase();
+    rb.className = 'role-tag ' + window.__pmRole;
+    if(window.__pmCurrentUser){
+      const by = document.getElementById('c-by');
+      if(!by.value) by.value = window.__pmCurrentUser.email.split('@')[0];
+    }
+    document.getElementById('c-start').value = nowDT();
+    document.getElementById('tb-date').textContent = fmtDate(new Date());
+    renderAll();
+  } catch(e){
+    console.error('load failed', e);
+    STATE.complaintAreas = defaultAreas();
+    renderAll();
+  }
+}
+async function saveToFirebase(){
+  if(!window.__pmFirebase || !window.__pmCurrentUser) return;
+  const fb = window.__pmFirebase;
+  try{
+    const ref = fb.doc(fb.db, 'shared_state', 'main');
+    const snap = await fb.getDoc(ref);
+    const base = snap.exists() ? snap.data() : {};
+    base.complaints = STATE.complaints;
+    base.complaintAreas = STATE.complaintAreas;
+    await fb.setDoc(ref, base);
+  } catch(e){ console.error('save failed', e); toast('Save error','Not synced','error'); }
+}
+
+function renderAreaSelects(){
+  const opts = '<option value="">— select area —</option>' + STATE.complaintAreas.map(a=>`<option value="${a}">${a}</option>`).join('');
+  document.getElementById('c-area').innerHTML = opts;
+  const fa = document.getElementById('f-area');
+  const cur = fa.value;
+  fa.innerHTML = '<option value="">All Areas</option>' + STATE.complaintAreas.map(a=>`<option value="${a}">${a}</option>`).join('');
+  fa.value = cur;
+}
+
+function renderAreaChips(){
+  const el = document.getElementById('area-list');
+  el.innerHTML = STATE.complaintAreas.map((a,i)=>`<div class="area-chip">${a}<span class="rm" onclick="removeArea(${i})" title="Remove">✕</span></div>`).join('');
+  document.getElementById('ar-count').textContent = STATE.complaintAreas.length + ' areas';
+}
+
+function addArea(){
+  if(!isAdmin()){ toast('Admin only','','warn'); return; }
+  const v = document.getElementById('new-area').value.trim();
+  if(!v){ toast('Empty','Enter area name','warn'); return; }
+  if(STATE.complaintAreas.includes(v)){ toast('Duplicate','Already in list','warn'); return; }
+  STATE.complaintAreas.push(v);
+  document.getElementById('new-area').value = '';
+  saveToFirebase();
+  renderAreaSelects();
+  renderAreaChips();
+  toast('Added', v, 'good');
+}
+function removeArea(idx){
+  if(!isAdmin()){ toast('Admin only','','warn'); return; }
+  if(!confirm(`Remove "${STATE.complaintAreas[idx]}"?`)) return;
+  STATE.complaintAreas.splice(idx,1);
+  saveToFirebase();
+  renderAreaSelects();
+  renderAreaChips();
+}
+
+function logComplaint(){
+  if(!window.__pmCurrentUser){ toast('Sign in required','','warn'); return; }
+  const area = document.getElementById('c-area').value;
+  const issue = document.getElementById('c-issue').value.trim();
+  const start = document.getElementById('c-start').value;
+  const stop = document.getElementById('c-stop').value;
+  const by = document.getElementById('c-by').value.trim() || (window.__pmCurrentUser ? window.__pmCurrentUser.email.split('@')[0] : 'unknown');
+  const action = document.getElementById('c-action').value.trim();
+  if(!area){ toast('Missing','Select area','warn'); return; }
+  if(!issue){ toast('Missing','Describe issue','warn'); return; }
+  if(!start){ toast('Missing','Start time required','warn'); return; }
+  if(stop && new Date(stop) <= new Date(start)){ toast('Invalid','Stop must be after start','warn'); return; }
+  const dt = downtimeMin(start, stop);
+  STATE.complaints.push({
+    id: 'C' + Date.now() + Math.floor(Math.random()*100),
+    area, issue, start, stop: stop || '',
+    downtimeMin: dt,
+    attendedBy: by,
+    actionTaken: action,
+    status: stop ? 'closed' : 'open',
+    loggedBy: window.__pmCurrentUser.email,
+    loggedAt: new Date().toISOString()
+  });
+  saveToFirebase();
+  clearForm();
+  renderAll();
+  toast('Logged', area + (dt!=null ? ' · '+fmtMin(dt)+' downtime' : ' · ongoing'), 'good');
+}
+
+function clearForm(){
+  document.getElementById('c-area').value = '';
+  document.getElementById('c-issue').value = '';
+  document.getElementById('c-start').value = nowDT();
+  document.getElementById('c-stop').value = '';
+  document.getElementById('c-action').value = '';
+}
+
+function renderStats(){
+  const t = STATE.complaints.length;
+  const op = STATE.complaints.filter(c=>c.status==='open').length;
+  const cl = STATE.complaints.filter(c=>c.status==='closed').length;
+  const tot = STATE.complaints.reduce((sum,c)=>sum+(c.downtimeMin||0),0);
+  document.getElementById('s-total').textContent = t;
+  document.getElementById('s-open').textContent = op;
+  document.getElementById('s-closed').textContent = cl;
+  const dEl = document.getElementById('s-down');
+  if(tot < 60){
+    dEl.firstChild.textContent = tot;
+    dEl.lastChild.textContent = 'm';
+  } else {
+    dEl.firstChild.textContent = Math.floor(tot/60);
+    dEl.lastChild.textContent = 'h';
+  }
+}
+
+function renderTable(){
+  const af = document.getElementById('f-area').value;
+  const sf = document.getElementById('f-status').value;
+  const q = document.getElementById('f-search').value.toLowerCase();
+  let rows = STATE.complaints.slice().sort((a,b)=>(b.loggedAt||'').localeCompare(a.loggedAt||''));
+  if(af) rows = rows.filter(c=>c.area===af);
+  if(sf) rows = rows.filter(c=>c.status===sf);
+  if(q) rows = rows.filter(c=>(c.issue||'').toLowerCase().includes(q) || (c.area||'').toLowerCase().includes(q));
+  document.getElementById('t-count').textContent = rows.length + ' complaint' + (rows.length===1?'':'s');
+  let h = '<thead><tr><th class="num">#</th><th>Area</th><th>Issue</th><th class="num">Start</th><th class="num">Stop</th><th class="num">Downtime</th><th>By</th><th>Status</th>' + (isAdmin()?'<th></th>':'') + '</tr></thead><tbody>';
+  if(!rows.length){
+    h += `<tr><td colspan="${isAdmin()?9:8}"><div class="empty"><div class="empty-icon">∅</div><div class="empty-text">No complaints logged yet</div></div></td></tr>`;
+  } else {
+    rows.forEach((c,i)=>{
+      const issueShort = (c.issue||'').length > 100 ? (c.issue.substring(0,100)+'…') : (c.issue||'');
+      h += `<tr>
+        <td class="row-num">${String(i+1).padStart(3,'0')}</td>
+        <td class="unit-tag">${c.area}</td>
+        <td><div class="issue-text" title="${(c.issue||'').replace(/"/g,'&quot;')}">${issueShort}</div>${c.actionTaken?'<div class="issue-action">'+c.actionTaken+'</div>':''}</td>
+        <td class="num mono" style="font-size:10.5px">${fmtDT(c.start)}</td>
+        <td class="num mono" style="font-size:10.5px">${c.stop?fmtDT(c.stop):'<span style="color:var(--amber)">ongoing</span>'}</td>
+        <td class="num" style="font-weight:600">${fmtMin(c.downtimeMin)}</td>
+        <td class="mono" style="font-size:11px;color:var(--text-2)">${c.attendedBy||'—'}</td>
+        <td><span class="pill ${c.status}">${c.status==='open'?'OPEN':'RESOLVED'}</span></td>`;
+      if(isAdmin()){
+        h += `<td style="white-space:nowrap"><button class="btn ghost sm" onclick="editComplaint('${c.id}')">Edit</button> <button class="btn ghost sm" onclick="deleteComplaint('${c.id}')" style="color:var(--red)">✕</button></td>`;
+      }
+      h += '</tr>';
+    });
+  }
+  h += '</tbody>';
+  document.getElementById('t-comp').innerHTML = h;
+}
+
+function editComplaint(id){
+  if(!isAdmin()){ toast('Admin only','','warn'); return; }
+  const c = STATE.complaints.find(x=>x.id===id); if(!c) return;
+  document.getElementById('c-area').value = c.area;
+  document.getElementById('c-issue').value = c.issue;
+  document.getElementById('c-start').value = c.start;
+  document.getElementById('c-stop').value = c.stop || '';
+  document.getElementById('c-by').value = c.attendedBy || '';
+  document.getElementById('c-action').value = c.actionTaken || '';
+  if(confirm('Edit complaint?\n\nForm has been pre-filled. The original will be removed when you click Submit. Cancel to keep both.')){
+    STATE.complaints = STATE.complaints.filter(x=>x.id!==id);
+    saveToFirebase();
+    renderAll();
+    toast('Edit mode','Form pre-filled — submit to save','warn');
+    window.scrollTo({top:0, behavior:'smooth'});
+  } else { clearForm(); }
+}
+function deleteComplaint(id){
+  if(!isAdmin()){ toast('Admin only','','warn'); return; }
+  if(!confirm('Delete this complaint?')) return;
+  STATE.complaints = STATE.complaints.filter(c=>c.id!==id);
+  saveToFirebase();
+  renderAll();
+  toast('Deleted','','warn');
+}
+
+function exportCSV(){
+  const h = ['Area','Issue','Start','Stop','Downtime (min)','Attended By','Action Taken','Status','Logged By','Logged At'];
+  const rows = STATE.complaints.map(c=>[c.area,c.issue,c.start,c.stop||'',c.downtimeMin||'',c.attendedBy||'',c.actionTaken||'',c.status,c.loggedBy||'',c.loggedAt||''].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+  const csv = h.join(',') + '\n' + rows.join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  const z=n=>String(n).padStart(2,'0'); const d=new Date();
+  a.download = `Complaints_${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}.csv`;
+  a.click();
+}
+
+function renderAll(){
+  renderAreaSelects();
+  renderAreaChips();
+  renderStats();
+  renderTable();
+}
+
+['f-area','f-status','f-search'].forEach(id=>document.getElementById(id).addEventListener('input', renderTable));
+
+document.addEventListener('pm-firebase-ready', loadFromFirebase);
+if(window.__pmFirebaseReady) loadFromFirebase();
+STATE.complaintAreas = defaultAreas();
+renderAll();
+</script>
+</body>
+</html>

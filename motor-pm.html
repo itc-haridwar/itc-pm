@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -951,9 +950,53 @@ function migrateState(s){
   if(!s.panelConfirmations) s.panelConfirmations = {};
   if(!s.areaOwners) s.areaOwners = [];
   if(!s.checklistFields) s.checklistFields = defaultChecklistFields();
+  if(!s.panelChecklistFields) s.panelChecklistFields = defaultPanelChecklistFields();
   if(!s.confirmations) s.confirmations = {};
   if(!s.reschedules) s.reschedules = [];
+  if(!s.complaints) s.complaints = [];
+  if(!s.complaintAreas) s.complaintAreas = defaultComplaintAreas();
+  // Phase 2: Auto-merge ANY new motors from DEFAULT_PAYLOAD that aren't in saved state
+  // (so SFB motors appear without forcing manual regenerate)
+  if(s.motors && typeof DEFAULT_PAYLOAD !== 'undefined' && DEFAULT_PAYLOAD.motors){
+    const existingSrs = new Set(s.motors.map(m=>m.sr));
+    let added = 0;
+    for(const dm of DEFAULT_PAYLOAD.motors){
+      if(!existingSrs.has(dm.sr)){
+        s.motors.push({sr:dm.sr, area:dm.area, motor:dm.motor, cat:dm.cat});
+        added++;
+      }
+    }
+    if(added > 0){
+      console.log(`[migrate] Auto-added ${added} new motors from DEFAULT_PAYLOAD`);
+      // Force re-generation of schedule for active FY
+      if(s.fys && s.activeFY && s.fys[s.activeFY]){
+        try{
+          s.fys[s.activeFY].schedule = generateSchedule(s.motors);
+          console.log('[migrate] Schedule regenerated to include new motors');
+        }catch(e){ console.warn('Schedule regen failed:', e); }
+      }
+    }
+  }
   return s;
+}
+
+function defaultPanelChecklistFields(){
+  return [
+    {id:'pi_value', label:'PI Value', type:'number', step:'0.01', required:true},
+    {id:'ir_value', label:'IR Value', type:'number', step:'0.1', unit:'MΩ', required:true},
+    {id:'busbar_torque', label:'Busbar Torque Check', type:'select', options:['Pass','Fail'], required:true},
+    {id:'cable_term', label:'Cable Termination', type:'select', options:['Good','Loose','Damaged'], required:true},
+    {id:'thermal_scan', label:'Thermal Scan (Hot Spots)', type:'select', options:['None','Minor','Major'], required:true},
+    {id:'breaker_op', label:'Breaker Operation', type:'select', options:['OK','Issue Found'], required:true},
+    {id:'meter_check', label:'Meter Calibration Check', type:'select', options:['OK','Out of Range'], required:false},
+    {id:'cleaning', label:'Panel Cleaning', type:'select', options:['Done','Pending'], required:true},
+    {id:'observation', label:'Observation / Remarks', type:'text', required:false},
+  ];
+}
+
+function defaultComplaintAreas(){
+  // Free-form area dropdown for complaints; admin can add/remove
+  return ['Phase-1 Fuel Yard','Phase-1 Fire Pump House','Phase-1 WTP','HVAC','DG Cooling Tower','CETP','Snacks ETP','Boiler House','DG House Phase-1','Phase-2 Fuel Yard','STP-1','STP-2','ETP Phase-2','Phase-2 Fire Pump House','Phase-2 WTP','Phase-2 DG House','SFB · BIOMASS BOILER # 1','SFB · BIOMASS BOILER # 2','SFB · BIOMASS BOILER # 3','SFB · COMMON MOTORS','PANEL · Biscuit Unit','PANEL · Snacks Unit','PANEL · Noodles Unit','PANEL · Soap Unit','PANEL · CLS Unit','PANEL · TALC Unit','Utility','Admin','Canteen','Gate house','Other / Miscellaneous'];
 }
 
 /* ===================================================================

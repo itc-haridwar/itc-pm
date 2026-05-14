@@ -118,14 +118,16 @@ iframe{width:100%;height:100%;border:none;background:var(--bg-deep)}
   </header>
 
   <nav class="tabbar">
-    <div class="tab active" data-tab="motor"><span class="tab-icon">⚙</span> Motor PM Module <span class="tab-badge">LIVE</span></div>
-    <div class="tab" data-tab="panel"><span class="tab-icon">▤</span> Panel PM Module <span class="tab-badge">LIVE</span></div>
+    <div class="tab active" data-tab="motor"><span class="tab-icon">⚙</span> Motor PM <span class="tab-badge">LIVE</span></div>
+    <div class="tab" data-tab="panel"><span class="tab-icon">▤</span> Panel PM <span class="tab-badge">LIVE</span></div>
+    <div class="tab" data-tab="complaint"><span class="tab-icon">🛠</span> Complaints <span class="tab-badge">NEW</span></div>
   </nav>
 
   <main class="tab-content">
     <div class="loader" id="app-loader"><div class="spinner"></div></div>
     <div class="tab-pane active" id="pane-motor"><iframe src="about:blank" id="motor-frame" title="Motor PM"></iframe></div>
     <div class="tab-pane" id="pane-panel"><iframe src="about:blank" id="panel-frame" title="Panel PM"></iframe></div>
+    <div class="tab-pane" id="pane-complaint"><iframe src="about:blank" id="complaint-frame" title="Complaints"></iframe></div>
   </main>
 </div>
 
@@ -152,8 +154,9 @@ window.doSignOut = async () => {
   window.location.href = './index.html';
 };
 
-// Tab switching — lazy-load Panel PM iframe on first click
+// Tab switching — lazy-load Panel PM and Complaint iframes on first click
 let panelLoaded = false;
+let complaintLoaded = false;
 document.querySelectorAll('.tab').forEach(t=>{
   t.addEventListener('click',()=>{
     if(t.classList.contains('locked')) return;
@@ -165,6 +168,11 @@ document.querySelectorAll('.tab').forEach(t=>{
       const pf = document.getElementById('panel-frame');
       pf.src = './panel-pm.html';
       panelLoaded = true;
+    }
+    if(t.dataset.tab === 'complaint' && !complaintLoaded){
+      const cf = document.getElementById('complaint-frame');
+      cf.src = './complaint.html';
+      complaintLoaded = true;
     }
   });
 });

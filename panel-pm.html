@@ -3,236 +3,582 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ITC Haridwar · Panel PM Module</title>
+<title>Panel PM · ITC Haridwar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<!-- Firebase: same pattern as motor-pm.html -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
 window.__pmFirebase = { db, auth, doc, getDoc, setDoc, onSnapshot };
 window.__pmFirebaseReady = false;
 window.__pmRole = 'user';
-
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){
-    if(window.parent === window) window.location.href = './index.html';
-    return;
-  }
+  if(!user){ if(window.parent === window) window.location.href = './index.html'; return; }
   window.__pmCurrentUser = user;
   try{
-    const adminRef = doc(db, 'admins', user.uid);
-    const adminSnap = await getDoc(adminRef);
+    const adminSnap = await getDoc(doc(db, 'admins', user.uid));
     window.__pmRole = adminSnap.exists() ? 'admin' : 'user';
   } catch(e){ window.__pmRole = 'user'; }
   window.__pmFirebaseReady = true;
-  document.dispatchEvent(new CustomEvent('panel-firebase-ready'));
+  document.dispatchEvent(new CustomEvent('pm-firebase-ready'));
 });
 </script>
 
 <style>
 :root{
-  --bg-deep:#0a0e1a; --bg-panel:#111729; --bg-panel-2:#161e35;
-  --border:#1f2a44; --border-bright:#2d3d65;
-  --text:#e8ecf3; --text-dim:#8b96b1; --text-muted:#5b6584;
-  --accent:#00d9ff; --accent-2:#ffb000; --accent-3:#ff3b6b; --accent-4:#7cf28b; --accent-5:#a78bfa;
+  /* refined industrial dashboard palette — Bloomberg / Datadog / Linear inspired */
+  --bg-0:#0c0c0e;          /* deepest */
+  --bg-1:#111114;          /* panel */
+  --bg-2:#18181d;          /* elevated */
+  --bg-3:#222227;          /* hover */
+  --line:#26262d;
+  --line-2:#34343d;
+  --text:#ededee;
+  --text-2:#9e9ea4;
+  --text-3:#5d5d65;
+  --accent:#fb923c;        /* warm industrial orange */
+  --accent-soft:rgba(251,146,60,0.12);
+  --green:#22c55e;
+  --green-soft:rgba(34,197,94,0.12);
+  --amber:#f59e0b;
+  --amber-soft:rgba(245,158,11,0.12);
+  --red:#ef4444;
+  --red-soft:rgba(239,68,68,0.12);
+  --blue:#60a5fa;
+  --blue-soft:rgba(96,165,250,0.12);
+  --violet:#a78bfa;
+  --violet-soft:rgba(167,139,250,0.12);
 }
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{background:var(--bg-deep);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5}
-body{padding:24px;min-height:100vh}
-.container{max-width:1400px;margin:0 auto}
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
-.header h1{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;color:var(--text)}
-.header h1 span{color:var(--accent)}
-.header-sub{font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
-.user-info{font-size:11px;color:var(--text-dim);text-align:right}
-.user-role{display:inline-block;padding:2px 8px;border-radius:3px;background:var(--accent);color:var(--bg-deep);font-weight:700;font-size:10px;margin-top:4px}
-.user-role.user{background:var(--accent-5)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-apple-system,sans-serif;font-size:13px;line-height:1.5;font-weight:400}
 
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
-.stat-card{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:16px}
-.stat-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
-.stat-value{font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600;color:var(--text)}
-.stat-value.acc-1{color:var(--accent)}
-.stat-value.acc-2{color:var(--accent-2)}
-.stat-value.acc-3{color:var(--accent-3)}
-.stat-value.acc-4{color:var(--accent-4)}
+/* numeric tabular alignment */
+.mono,.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
 
-.controls{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
-.control-group{display:flex;flex-direction:column;gap:4px}
-.control-group label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
-.control-group select,.control-group input{background:var(--bg-panel-2);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--text);font-size:13px;font-family:inherit;min-width:140px}
-.btn{background:var(--accent);color:var(--bg-deep);border:none;padding:9px 16px;border-radius:5px;font-weight:600;cursor:pointer;font-size:12px;letter-spacing:0.5px;font-family:inherit}
-.btn:hover{filter:brightness(1.1)}
-.btn.secondary{background:var(--bg-panel-2);color:var(--text);border:1px solid var(--border)}
-.btn.warn{background:var(--accent-3);color:#fff}
+::selection{background:var(--accent);color:#000}
 
-.panel-list{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:18px}
-.panel-list-head{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
-.panel-list-head span.count{color:var(--text-muted);font-size:12px;font-family:'JetBrains Mono',monospace;letter-spacing:0}
-.panel-item{display:grid;grid-template-columns:110px 1fr 130px 80px 100px 100px;gap:12px;align-items:center;padding:12px 14px;background:var(--bg-panel-2);border:1px solid var(--border);border-radius:5px;border-left-width:4px;font-size:12px;margin-bottom:6px}
-.panel-item.overdue{border-left-color:var(--accent-3)}
-.panel-item.due{border-left-color:var(--accent-2)}
-.panel-item.upcoming{border-left-color:var(--accent)}
-.panel-item.scheduled{border-left-color:var(--text-muted)}
-.panel-item.done{border-left-color:var(--accent-4);opacity:0.78}
-.panel-date{font-family:'JetBrains Mono',monospace;color:var(--text);font-weight:600;font-size:11px;cursor:pointer;text-decoration:underline dotted}
-.panel-area{font-size:10px;color:var(--accent);font-weight:600;letter-spacing:0.5px}
-.panel-name{color:var(--text);font-weight:500;font-size:12px;margin-top:2px}
-.status-pill{display:inline-block;padding:3px 8px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase}
-.status-overdue{background:rgba(255,59,107,0.16);color:var(--accent-3)}
-.status-due{background:rgba(255,176,0,0.16);color:var(--accent-2)}
-.status-upcoming{background:rgba(0,217,255,0.14);color:var(--accent)}
-.status-scheduled{background:var(--bg-panel-2);color:var(--text-muted);border:1px solid var(--border)}
-.status-done{background:rgba(124,242,139,0.16);color:var(--accent-4)}
-.mark-btn{background:var(--accent);color:var(--bg-deep);border:none;padding:7px 12px;border-radius:4px;font-weight:600;cursor:pointer;font-size:11px}
-.mark-btn.undo{background:var(--bg-panel-2);color:var(--text-dim);border:1px solid var(--border)}
+.app{display:grid;grid-template-columns:228px 1fr;min-height:100vh}
+
+/* ─── Sidebar ─── */
+.sidebar{background:var(--bg-1);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.brand{padding:22px 22px 18px;border-bottom:1px solid var(--line)}
+.brand-mark{display:flex;align-items:center;gap:9px;margin-bottom:3px}
+.brand-dot{width:8px;height:8px;background:var(--accent);border-radius:1px}
+.brand-text{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text)}
+.brand-sub{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;padding-left:17px}
+
+.nav{padding:12px 0;display:flex;flex-direction:column;gap:1px;flex:1}
+.nav-section{padding:14px 22px 6px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500}
+.nav-item{padding:8px 22px;cursor:pointer;display:flex;align-items:center;gap:12px;color:var(--text-2);font-size:12.5px;font-weight:400;border-left:2px solid transparent;transition:all 0.12s;position:relative}
+.nav-item:hover{color:var(--text);background:var(--bg-2)}
+.nav-item.active{color:var(--text);border-left-color:var(--accent);background:linear-gradient(to right, var(--accent-soft), transparent 70%)}
+.nav-item.active::before{content:'';position:absolute;left:14px;width:3px;height:3px;background:var(--accent);border-radius:50%;top:50%;transform:translateY(-50%);display:none}
+.nav-num{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);margin-left:auto;font-weight:500}
+.nav-item.active .nav-num{color:var(--accent)}
+
+.signed-tile{margin:12px 14px 16px;padding:11px 12px;background:var(--bg-2);border:1px solid var(--line);border-radius:3px}
+.signed-tile .lbl{font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:4px;font-weight:500}
+.signed-tile .who{font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.role-tag{display:inline-block;margin-top:5px;padding:2px 6px;border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;border:1px solid var(--accent);color:var(--accent);background:var(--accent-soft)}
+.role-tag.user{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
+
+/* ─── Main ─── */
+.main{overflow-y:auto;background:var(--bg-0)}
+
+/* Header strip with live ticker feel */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--bg-1)}
+.crumb{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.12em;text-transform:uppercase;font-weight:500}
+.crumb b{color:var(--text);font-weight:600}
+.crumb::before{content:'';width:4px;height:4px;background:var(--green);border-radius:50%;box-shadow:0 0 0 3px rgba(34,197,94,0.18)}
+.topbar-meta{display:flex;gap:22px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-2);font-weight:500}
+.topbar-meta span b{color:var(--text);font-weight:600}
+
+/* Page surface */
+.page{display:none;padding:24px 28px 60px}
+.page.active{display:block}
+
+.page-head{margin-bottom:22px}
+.page-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:0.22em;text-transform:uppercase;font-weight:600;margin-bottom:5px}
+.page-title{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:30px;letter-spacing:-0.01em;line-height:1.05;margin-bottom:6px}
+.page-desc{color:var(--text-2);font-size:13px;max-width:640px}
+
+/* KPI strip — Bloomberg-style */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg-1);border:1px solid var(--line);border-radius:3px;margin-bottom:22px;overflow:hidden}
+.kpi{padding:16px 18px;border-right:1px solid var(--line);position:relative;transition:background 0.15s}
+.kpi:last-child{border-right:none}
+.kpi:hover{background:var(--bg-2)}
+.kpi-label{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.kpi-label::before{content:'';width:6px;height:1px;background:var(--text-3)}
+.kpi-value{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:26px;line-height:1;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+.kpi-value.up{color:var(--green)}
+.kpi-value.down{color:var(--red)}
+.kpi-value.warn{color:var(--amber)}
+.kpi-value.accent{color:var(--accent)}
+.kpi-suffix{font-size:13px;color:var(--text-3);font-weight:400;margin-left:3px}
+.kpi-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);margin-top:6px;letter-spacing:0.04em}
+.kpi-meta b{color:var(--text-2);font-weight:500}
+.kpi-trend{position:absolute;top:14px;right:18px;width:60px;height:18px;opacity:0.65}
+
+/* Chart grid */
+.row{display:grid;gap:14px;margin-bottom:14px}
+.row.cols-3{grid-template-columns:1.2fr 1fr 1fr}
+.row.cols-2{grid-template-columns:1fr 1fr}
+.row.cols-2-asym{grid-template-columns:1.6fr 1fr}
+
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.card-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card-title{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;color:var(--text);display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:11px;background:var(--accent);display:inline-block}
+.card-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.06em}
+.card-meta b{color:var(--text-2);font-weight:500}
+.card-body{padding:16px}
+.card-body.no-pad{padding:0}
+.chart-host{position:relative;height:240px}
+.chart-host.tall{height:280px}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl thead th{background:var(--bg-2);color:var(--text-3);padding:8px 14px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1}
+.tbl thead th.num,.tbl tbody td.num{text-align:right;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.tbl tbody td{padding:10px 14px;border-bottom:1px solid var(--line);color:var(--text)}
+.tbl tbody tr:hover td{background:var(--bg-2)}
+.tbl tbody tr:last-child td{border-bottom:none}
+.tbl-scroll{max-height:520px;overflow:auto}
+.unit-cell{display:flex;align-items:center;gap:8px}
+.unit-tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--accent);font-weight:600;letter-spacing:0.06em}
+
+/* Status pills */
+.pill{display:inline-block;padding:2px 7px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;border-radius:2px;border:1px solid transparent}
+.pill.overdue{color:var(--red);background:var(--red-soft);border-color:rgba(239,68,68,0.3)}
+.pill.due{color:var(--amber);background:var(--amber-soft);border-color:rgba(245,158,11,0.3)}
+.pill.upcoming{color:var(--blue);background:var(--blue-soft);border-color:rgba(96,165,250,0.3)}
+.pill.scheduled{color:var(--text-3);background:var(--bg-2);border-color:var(--line-2)}
+.pill.done{color:var(--green);background:var(--green-soft);border-color:rgba(34,197,94,0.3)}
+
+/* Compact data bar (sparkbar) inside table cells */
+.bar-cell{display:flex;align-items:center;gap:8px}
+.bar-track{flex:1;height:5px;background:var(--bg-3);border-radius:1px;overflow:hidden;min-width:80px}
+.bar-fill{height:100%;background:var(--accent);border-radius:1px}
+.bar-fill.good{background:var(--green)}
+.bar-fill.warn{background:var(--amber)}
+.bar-fill.bad{background:var(--red)}
+.bar-pct{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;min-width:38px;text-align:right}
+
+/* Controls */
+.controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-end}
+.ctrl{display:flex;flex-direction:column;gap:4px}
+.ctrl-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-3);letter-spacing:0.15em;text-transform:uppercase;font-weight:500}
+.ctrl select,.ctrl input,input.txt,select.sel{background:var(--bg-1);border:1px solid var(--line);border-radius:2px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;min-width:150px}
+.ctrl select:focus,.ctrl input:focus,input.txt:focus,select.sel:focus{outline:none;border-color:var(--accent)}
+
+.btn{background:var(--accent);color:#0c0c0e;border:none;padding:8px 14px;border-radius:2px;font-weight:600;cursor:pointer;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-family:'IBM Plex Sans',sans-serif;transition:all 0.12s}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--text-2);border:1px solid var(--line)}
+.btn.ghost:hover{color:var(--text);border-color:var(--line-2);background:var(--bg-2)}
+.btn.danger{background:var(--red);color:#fff}
+.btn.success{background:var(--green);color:#0c0c0e}
+.btn.sm{padding:5px 10px;font-size:10px}
+
+/* Daily list — refined ticker */
+.daily-list{display:flex;flex-direction:column}
+.daily-row{display:grid;grid-template-columns:90px 1fr 70px 90px 110px;gap:14px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line);transition:background 0.12s;border-left:2px solid transparent}
+.daily-row:last-child{border-bottom:none}
+.daily-row:hover{background:var(--bg-2)}
+.daily-row.overdue{border-left-color:var(--red)}
+.daily-row.due{border-left-color:var(--amber)}
+.daily-row.upcoming{border-left-color:var(--blue)}
+.daily-row.done{border-left-color:var(--green);opacity:0.7}
+.daily-row.scheduled{border-left-color:var(--line-2)}
+.dr-date{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--text);cursor:pointer}
+.dr-date:hover{color:var(--accent)}
+.dr-date .day{display:block;font-size:10px;color:var(--text-3);font-weight:400;text-transform:uppercase;letter-spacing:0.08em;margin-top:1px}
+.dr-name{font-size:12.5px;color:var(--text);font-weight:500;line-height:1.3}
+.dr-unit{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--accent);letter-spacing:0.05em;margin-top:2px}
+.dr-freq{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.08em}
 
 /* Modal */
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:none}
-.modal-backdrop.show{display:block}
-.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-panel);border:1px solid var(--border-bright);border-radius:8px;width:92%;max-width:560px;max-height:88vh;overflow:hidden;display:none;flex-direction:column;z-index:2001}
+.modal-bd{position:fixed;inset:0;background:rgba(8,8,10,0.7);backdrop-filter:blur(4px);z-index:2000;display:none}
+.modal-bd.show{display:block}
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-1);border:1px solid var(--line-2);border-radius:3px;width:92%;max-width:560px;max-height:88vh;overflow:hidden;display:none;flex-direction:column;z-index:2001;box-shadow:0 24px 64px rgba(0,0,0,0.5)}
 .modal.show{display:flex}
-.modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
-.modal-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--text)}
-.modal-subtitle{font-size:11px;color:var(--text-muted);margin-top:2px}
-.modal-close{background:transparent;border:none;color:var(--text-muted);font-size:24px;cursor:pointer;line-height:1}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;background:var(--bg-2)}
+.modal-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--accent);letter-spacing:0.2em;text-transform:uppercase;font-weight:600;margin-bottom:4px}
+.modal-title{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:18px;letter-spacing:-0.01em}
+.modal-close{background:transparent;border:none;color:var(--text-3);font-size:18px;cursor:pointer;line-height:1;padding:2px 6px}
+.modal-close:hover{color:var(--text)}
 .modal-body{padding:18px 20px;overflow-y:auto;flex:1}
-.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
-.field-group{margin-bottom:12px}
-.field-group label{display:block;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;font-weight:600}
-.field-group label.required::after{content:' *';color:var(--accent-3)}
-.field-group input,.field-group select,.field-group textarea{width:100%;background:var(--bg-panel-2);border:1px solid var(--border);border-radius:5px;padding:8px 10px;color:var(--text);font-size:13px;font-family:inherit}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.panel-info-card{background:var(--bg-panel-2);border:1px solid var(--border);border-radius:5px;padding:12px;margin-bottom:14px}
-.panel-info-card .name{font-weight:600;color:var(--text);font-size:14px}
-.panel-info-card .meta{font-size:11px;color:var(--text-dim);margin-top:3px}
-.gps-indicator{padding:8px 10px;border-radius:4px;font-size:11px;display:flex;align-items:center;gap:8px;margin-bottom:12px}
-.gps-indicator.pending{background:rgba(255,176,0,0.08);color:var(--accent-2);border:1px solid var(--accent-2)}
-.gps-indicator.ok{background:rgba(124,242,139,0.08);color:var(--accent-4);border:1px solid var(--accent-4)}
-.gps-indicator.fail{background:rgba(255,59,107,0.08);color:var(--accent-3);border:1px solid var(--accent-3)}
+.modal-foot{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;background:var(--bg-1)}
 
-.back-link{display:inline-block;padding:8px 14px;background:var(--bg-panel-2);border:1px solid var(--border);border-radius:5px;color:var(--text-dim);text-decoration:none;font-size:11px;margin-bottom:18px;letter-spacing:0.5px}
-.back-link:hover{color:var(--accent);border-color:var(--accent)}
+.field{margin-bottom:12px}
+.field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:5px;font-weight:500}
+.field label.req::after{content:' •';color:var(--red);font-size:11px}
+.field input,.field select,.field textarea{width:100%;background:var(--bg-2);border:1px solid var(--line);border-radius:2px;padding:8px 10px;color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:60px}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-.toast{position:fixed;bottom:24px;right:24px;background:var(--bg-panel);border:1px solid var(--border-bright);border-radius:6px;padding:12px 16px;color:var(--text);font-size:13px;z-index:3000;max-width:340px;animation:slideIn 0.2s;box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+.info-strip{background:var(--bg-2);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:2px;padding:11px 14px;margin-bottom:14px}
+.info-strip .ttl{font-size:13px;font-weight:600;color:var(--text)}
+.info-strip .meta{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-2);margin-top:3px;letter-spacing:0.04em}
+
+.gps-strip{padding:8px 12px;border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;display:flex;align-items:center;gap:8px;margin-bottom:14px;font-weight:500;letter-spacing:0.04em}
+.gps-strip.pending{background:var(--amber-soft);color:var(--amber);border:1px solid rgba(245,158,11,0.3)}
+.gps-strip.ok{background:var(--green-soft);color:var(--green);border:1px solid rgba(34,197,94,0.3)}
+.gps-strip.fail{background:var(--red-soft);color:var(--red);border:1px solid rgba(239,68,68,0.3)}
+
+.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:3000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg-1);border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:2px;padding:12px 16px;color:var(--text);font-size:12.5px;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.5);animation:slideIn 0.2s ease-out}
+.toast.warn{border-left-color:var(--amber)}
+.toast.error{border-left-color:var(--red)}
+.toast.good{border-left-color:var(--green)}
+.toast .ts-title{font-weight:600;font-size:12px;letter-spacing:0.02em;margin-bottom:2px}
+.toast .ts-msg{color:var(--text-2);font-size:11.5px}
 @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
-.toast.warn{border-left:3px solid var(--accent-2)}
-.toast.error{border-left:3px solid var(--accent-3)}
 
+/* sparkline svg style */
+svg.spark{stroke:currentColor;stroke-width:1.2;fill:none;color:var(--text-2)}
+
+/* Compliance table row highlighting */
+.tbl tbody td.unit-name{color:var(--accent);font-weight:500}
+
+/* Empty state */
+.empty{padding:60px 20px;text-align:center;color:var(--text-3)}
+.empty-icon{font-family:'IBM Plex Mono',monospace;font-size:28px;margin-bottom:8px;letter-spacing:0.15em;opacity:0.5}
+.empty-text{font-size:13px;color:var(--text-2)}
+
+/* Role visibility */
 body.role-user .admin-only{display:none !important}
 
-@media (max-width:768px){
-  body{padding:14px}
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .panel-item{grid-template-columns:90px 1fr 100px;gap:8px}
-  .panel-item > div:nth-child(4),
-  .panel-item > div:nth-child(5){display:none}
-  .header h1{font-size:26px}
+/* responsive */
+@media (max-width:900px){
+  .app{grid-template-columns:60px 1fr}
+  .sidebar{padding:14px 0}
+  .brand-text,.brand-sub,.signed-tile,.nav-section,.nav-item span:not(.nav-num){display:none}
+  .brand{padding:10px;border-bottom:none}
+  .brand-mark{justify-content:center}
+  .nav-item{padding:10px;justify-content:center}
+  .topbar{padding:12px 16px;flex-wrap:wrap;gap:10px}
+  .topbar-meta{font-size:9.5px;gap:14px}
+  .page{padding:16px}
+  .kpi-strip{grid-template-columns:repeat(2,1fr)}
+  .kpi{border-right:none;border-bottom:1px solid var(--line)}
+  .kpi:nth-child(odd){border-right:1px solid var(--line)}
+  .row.cols-3,.row.cols-2,.row.cols-2-asym{grid-template-columns:1fr}
+  .daily-row{grid-template-columns:1fr 90px;gap:6px}
+  .daily-row > div:nth-child(3),
+  .daily-row > div:nth-child(4){display:none}
+  .page-title{font-size:22px}
+  .f-row{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
-<div class="container">
-  <a href="./app.html" class="back-link">← Back to Modules</a>
-  <div class="header">
-    <div>
-      <h1>PANEL <span>PM</span></h1>
-      <div class="header-sub">ITC HARIDWAR · YEARLY PANEL PREVENTIVE MAINTENANCE</div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <div class="brand-dot"></div>
+        <div class="brand-text">Panel PM</div>
+      </div>
+      <div class="brand-sub">ITC · Haridwar</div>
     </div>
-    <div class="user-info">
-      <div id="user-email">loading...</div>
-      <div class="user-role" id="user-role">USER</div>
+    <div class="nav">
+      <div class="nav-section">Analytics</div>
+      <div class="nav-item active" data-page="overview"><span>Overview</span><span class="nav-num" id="n-overview">—</span></div>
+      <div class="nav-item" data-page="compliance"><span>Compliance</span><span class="nav-num" id="n-comp">—</span></div>
+      <div class="nav-section">Operations</div>
+      <div class="nav-item" data-page="daily"><span>Daily View</span><span class="nav-num" id="n-daily">—</span></div>
+      <div class="nav-item" data-page="schedule"><span>Schedule</span><span class="nav-num">12mo</span></div>
+      <div class="nav-item" data-page="executions"><span>Execution Log</span><span class="nav-num" id="n-exec">0</span></div>
+      <div class="nav-section">Configuration</div>
+      <div class="nav-item" data-page="master"><span>Panel Master</span><span class="nav-num" id="n-master">—</span></div>
+      <div class="nav-item admin-only" data-page="checklist"><span>Checklist Config</span></div>
+      <div class="nav-item admin-only" data-page="import"><span>Import / Export</span></div>
     </div>
-  </div>
+    <div class="signed-tile">
+      <div class="lbl">Signed in</div>
+      <div class="who" id="u-email">…</div>
+      <span class="role-tag" id="u-role">USER</span>
+    </div>
+  </aside>
 
-  <div class="stats">
-    <div class="stat-card"><div class="stat-label">Total Panels</div><div class="stat-value" id="stat-total">—</div></div>
-    <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-value acc-4" id="stat-done">—</div></div>
-    <div class="stat-card"><div class="stat-label">Due This Month</div><div class="stat-value acc-2" id="stat-due">—</div></div>
-    <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-value acc-3" id="stat-overdue">—</div></div>
-    <div class="stat-card"><div class="stat-label">Compliance</div><div class="stat-value acc-1" id="stat-compl">—</div></div>
-  </div>
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb">SYSTEM <b>ONLINE</b> · PANEL PM MODULE</div>
+      <div class="topbar-meta">
+        <span>FY <b>26-27</b></span>
+        <span>Today <b id="tb-date">—</b></span>
+        <span>Panels <b id="tb-count">283</b></span>
+      </div>
+    </div>
 
-  <div class="controls">
-    <div class="control-group">
-      <label>Unit Filter</label>
-      <select id="filter-unit"><option value="">All Units</option></select>
-    </div>
-    <div class="control-group">
-      <label>Status</label>
-      <select id="filter-status"><option value="">All</option><option value="overdue">Overdue</option><option value="due">Due</option><option value="upcoming">Upcoming</option><option value="scheduled">Scheduled</option><option value="done">Done</option></select>
-    </div>
-    <div class="control-group">
-      <label>Month</label>
-      <select id="filter-month"><option value="">All Months</option></select>
-    </div>
-    <button class="btn secondary" onclick="exportPanelCSV()">⤓ Export CSV</button>
-  </div>
+    <!-- ─── OVERVIEW ─── -->
+    <section class="page active" id="page-overview">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 01</div>
+        <h1 class="page-title">Operations Overview</h1>
+        <p class="page-desc">Yearly preventive maintenance across 6 production units. Compliance, workload distribution, and trailing-12 trends at a glance.</p>
+      </div>
 
-  <div class="panel-list">
-    <div class="panel-list-head">
-      <div>📋 Panel Schedule (FY 2026-27)</div>
-      <span class="count" id="list-count">0 panels</span>
-    </div>
-    <div id="panel-rows"></div>
-  </div>
+      <div class="kpi-strip">
+        <div class="kpi"><div class="kpi-label">Total Panels</div><div class="kpi-value" id="k-total">—</div><div class="kpi-meta">across <b id="k-units">6</b> units</div></div>
+        <div class="kpi"><div class="kpi-label">Completed</div><div class="kpi-value up" id="k-done">—</div><div class="kpi-meta"><b id="k-done-pct">—</b> of plan</div></div>
+        <div class="kpi"><div class="kpi-label">Due This Month</div><div class="kpi-value warn" id="k-due">—</div><div class="kpi-meta">requires action</div></div>
+        <div class="kpi"><div class="kpi-label">Overdue</div><div class="kpi-value down" id="k-over">—</div><div class="kpi-meta">past planned date</div></div>
+        <div class="kpi"><div class="kpi-label">Compliance</div><div class="kpi-value accent" id="k-comp">—<span class="kpi-suffix">%</span></div><div class="kpi-meta">done ÷ total</div></div>
+      </div>
+
+      <div class="row cols-3">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Status Distribution</div><div class="card-meta" id="m-status">—</div></div>
+          <div class="card-body"><div class="chart-host"><canvas id="ch-status"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Panels by Unit</div><div class="card-meta">top 6</div></div>
+          <div class="card-body"><div class="chart-host"><canvas id="ch-unit"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Monthly Workload</div><div class="card-meta">FY 26-27</div></div>
+          <div class="card-body"><div class="chart-host"><canvas id="ch-month"></canvas></div></div>
+        </div>
+      </div>
+
+      <div class="row cols-2-asym">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Cumulative Trajectory</div><div class="card-meta">planned · executed</div></div>
+          <div class="card-body"><div class="chart-host tall"><canvas id="ch-trend"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">MTTR · Unit Average</div><div class="card-meta">minutes</div></div>
+          <div class="card-body"><div class="chart-host tall"><canvas id="ch-mttr"></canvas></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── DAILY ─── -->
+    <section class="page" id="page-daily">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 02</div>
+        <h1 class="page-title">Daily View</h1>
+        <p class="page-desc">PMs due in your selected window. Click any date to reschedule. Click "Mark Done" to file the checklist.</p>
+      </div>
+      <div class="controls">
+        <div class="ctrl"><div class="ctrl-label">Window</div><select id="d-window"><option value="7">7 days</option><option value="14">14 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="365">Full year</option></select></div>
+        <div class="ctrl"><div class="ctrl-label">Status</div><select id="d-status"><option value="">All statuses</option><option value="overdue">Overdue</option><option value="due">Due</option><option value="upcoming">Upcoming</option><option value="done">Done</option></select></div>
+        <div class="ctrl"><div class="ctrl-label">Unit</div><select id="d-unit"><option value="">All units</option></select></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Scheduled Panels</div><div class="card-meta" id="d-count">0</div></div>
+        <div class="card-body no-pad"><div class="daily-list" id="d-list"></div></div>
+      </div>
+    </section>
+
+    <!-- ─── SCHEDULE ─── -->
+    <section class="page" id="page-schedule">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 03</div>
+        <h1 class="page-title">Yearly Schedule</h1>
+        <p class="page-desc">Unit × Month workload matrix. Cells show panel count planned that month.</p>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Schedule Matrix</div><div class="card-meta" id="sch-meta">—</div></div>
+        <div class="card-body no-pad"><div class="tbl-scroll"><table class="tbl" id="sch-table"></table></div></div>
+      </div>
+    </section>
+
+    <!-- ─── COMPLIANCE ─── -->
+    <section class="page" id="page-compliance">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 04</div>
+        <h1 class="page-title">Compliance Analytics</h1>
+        <p class="page-desc">Performance versus plan, broken down by unit and month. MTTR and MTBF aggregate metrics.</p>
+      </div>
+      <div class="kpi-strip">
+        <div class="kpi"><div class="kpi-label">Overall</div><div class="kpi-value accent" id="c-overall">—<span class="kpi-suffix">%</span></div><div class="kpi-meta">cumulative</div></div>
+        <div class="kpi"><div class="kpi-label">Best Unit</div><div class="kpi-value up" id="c-best" style="font-size:15px">—</div><div class="kpi-meta" id="c-best-pct">—</div></div>
+        <div class="kpi"><div class="kpi-label">Worst Unit</div><div class="kpi-value down" id="c-worst" style="font-size:15px">—</div><div class="kpi-meta" id="c-worst-pct">—</div></div>
+        <div class="kpi"><div class="kpi-label">MTTR · Avg</div><div class="kpi-value warn" id="c-mttr">—<span class="kpi-suffix">m</span></div><div class="kpi-meta">minutes per PM</div></div>
+        <div class="kpi"><div class="kpi-label">MTBF · Plan</div><div class="kpi-value" id="c-mtbf">365<span class="kpi-suffix">d</span></div><div class="kpi-meta">yearly cycle</div></div>
+      </div>
+      <div class="row cols-2">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Compliance by Unit</div><div class="card-meta">% achieved</div></div>
+          <div class="card-body"><div class="chart-host tall"><canvas id="ch-comp-unit"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Monthly · Plan vs Done</div><div class="card-meta">paired bars</div></div>
+          <div class="card-body"><div class="chart-host tall"><canvas id="ch-comp-month"></canvas></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Unit Detail</div></div>
+        <div class="card-body no-pad"><div class="tbl-scroll"><table class="tbl" id="t-unit-comp"></table></div></div>
+      </div>
+    </section>
+
+    <!-- ─── MASTER ─── -->
+    <section class="page" id="page-master">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 05</div>
+        <h1 class="page-title">Panel Master</h1>
+        <p class="page-desc">Searchable register of every panel under PM coverage.</p>
+      </div>
+      <div class="controls">
+        <div class="ctrl"><div class="ctrl-label">Search</div><input type="text" id="m-search" class="txt" placeholder="panel name, unit..."/></div>
+        <div class="ctrl"><div class="ctrl-label">Unit Filter</div><select id="m-unit"><option value="">All units</option></select></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Master Register</div><div class="card-meta" id="m-count">—</div></div>
+        <div class="card-body no-pad"><div class="tbl-scroll"><table class="tbl" id="t-master"></table></div></div>
+      </div>
+    </section>
+
+    <!-- ─── EXECUTIONS ─── -->
+    <section class="page" id="page-executions">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 06</div>
+        <h1 class="page-title">Execution Log</h1>
+        <p class="page-desc">All completed Panel PMs with checklist data, GPS, and time-to-complete.</p>
+      </div>
+      <div class="controls">
+        <button class="btn ghost sm" onclick="exportExecCSV()">⤓ Export CSV</button>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Completed PMs</div><div class="card-meta" id="e-count">—</div></div>
+        <div class="card-body no-pad"><div class="tbl-scroll"><table class="tbl" id="t-exec"></table></div></div>
+      </div>
+    </section>
+
+    <!-- ─── CHECKLIST CONFIG ─── -->
+    <section class="page admin-only" id="page-checklist">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 07 · Admin</div>
+        <h1 class="page-title">Checklist Configuration</h1>
+        <p class="page-desc">Define the technical fields filed when marking a Panel PM done. Changes propagate to all users on next save.</p>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-head"><div class="card-title">Add Field</div></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 0.8fr 0.8fr 1.4fr auto;gap:10px;align-items:end">
+            <div class="ctrl"><div class="ctrl-label">Label</div><input type="text" id="ck-label" class="txt" placeholder="Phase Sequence"/></div>
+            <div class="ctrl"><div class="ctrl-label">Type</div><select id="ck-type" class="sel"><option value="number">Number</option><option value="text">Text</option><option value="select">Dropdown</option></select></div>
+            <div class="ctrl"><div class="ctrl-label">Unit</div><input type="text" id="ck-unit" class="txt" placeholder="V, MΩ"/></div>
+            <div class="ctrl"><div class="ctrl-label">Required</div><select id="ck-req" class="sel"><option value="false">No</option><option value="true">Yes</option></select></div>
+            <div class="ctrl"><div class="ctrl-label">Options (dropdown)</div><input type="text" id="ck-opts" class="txt" placeholder="Pass,Fail"/></div>
+            <button class="btn success" onclick="addChecklistField()">+ Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Active Fields</div><div class="card-meta" id="ck-count">—</div></div>
+        <div class="card-body no-pad"><table class="tbl" id="t-checklist"></table></div>
+      </div>
+    </section>
+
+    <!-- ─── IMPORT / EXPORT ─── -->
+    <section class="page admin-only" id="page-import">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 08 · Admin</div>
+        <h1 class="page-title">Import / Export</h1>
+        <p class="page-desc">Bulk-add panels via CSV or Excel. Export full data for offline analysis. Backup everything as JSON.</p>
+      </div>
+      <div class="row cols-2">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Template</div><div class="card-meta">CSV format</div></div>
+          <div class="card-body">
+            <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6">Download the template, fill it with your panels, then upload. Columns required: <b>Unit, Panel Name, PM Date</b> (YYYY-MM-DD).</p>
+            <button class="btn ghost" onclick="downloadPanelTemplate()">⤓ Download Template</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Upload Panels</div><div class="card-meta">CSV · XLSX · XLS</div></div>
+          <div class="card-body">
+            <p style="font-size:12.5px;color:var(--text-2);margin-bottom:14px;line-height:1.6">Existing panels (matched by <b>Unit + Name</b>) are updated. New rows are added.</p>
+            <input type="file" id="upload-file" accept=".csv,.xlsx,.xls" style="font-size:12px;color:var(--text-2);margin-bottom:10px"/>
+            <br/>
+            <button class="btn success" onclick="processUpload()">↑ Upload & Merge</button>
+            <div id="up-status" style="margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-2)"></div>
+          </div>
+        </div>
+      </div>
+      <div class="row cols-2">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Export</div></div>
+          <div class="card-body">
+            <button class="btn ghost sm" onclick="exportPanelCSV()">⤓ Panels CSV</button>
+            <button class="btn ghost sm" onclick="exportExecCSV()" style="margin-left:8px">⤓ Executions CSV</button>
+            <button class="btn ghost sm" onclick="exportJSON()" style="margin-left:8px">⤓ Full Backup JSON</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Danger Zone</div></div>
+          <div class="card-body">
+            <button class="btn danger sm" onclick="resetExecutions()">⚠ Clear Execution Log</button>
+            <p style="font-size:11px;color:var(--text-3);margin-top:8px;font-family:'IBM Plex Mono',monospace">Removes all Mark Done records. Panels remain.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
-<!-- Modal containers -->
-<div class="modal-backdrop" id="modal-backdrop" onclick="closeModal()"></div>
-<div class="modal" id="modal-host"></div>
+<div class="modal-bd" id="m-bd" onclick="closeModal()"></div>
+<div class="modal" id="m-host"></div>
+<div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
-// ─── State (loaded from Firebase shared doc, fallback to seed) ───────────────
-const FY_KEY = 'FY2026-27';
-let STATE = { panels: [], panelExecutions: {}, panelConfirmations: {}, areaOwners: [], checklistFields: [], reschedules: [] };
+const DEFAULT_PANELS = [{"id":1,"area":"PANEL \u00b7 Biscuit Unit","panel":"PCC - 1","pm_date":"2026-08-01"},{"id":2,"area":"PANEL \u00b7 Biscuit Unit","panel":"PCC - 2","pm_date":"2026-08-01"},{"id":3,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 1","pm_date":"2026-12-01"},{"id":4,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 2","pm_date":"2026-08-01"},{"id":5,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 3","pm_date":"2026-12-01"},{"id":6,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 4","pm_date":"2026-05-01"},{"id":7,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 4.1","pm_date":"2026-05-01"},{"id":8,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 5","pm_date":"2026-04-01"},{"id":9,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 6","pm_date":"2026-05-01"},{"id":10,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 7","pm_date":"2026-07-01"},{"id":11,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 8","pm_date":"2026-12-01"},{"id":12,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 9","pm_date":"2026-08-01"},{"id":13,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC-10","pm_date":"2026-08-01"},{"id":14,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 11","pm_date":"2026-08-01"},{"id":15,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 12","pm_date":"2026-10-01"},{"id":16,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 13","pm_date":"2026-08-01"},{"id":17,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 15","pm_date":"2026-07-01"},{"id":18,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 16","pm_date":"2026-12-01"},{"id":19,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 17","pm_date":"2026-08-01"},{"id":20,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 18","pm_date":"2026-08-01"},{"id":21,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 19","pm_date":"2026-07-01"},{"id":22,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 20","pm_date":"2026-08-01"},{"id":23,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 21","pm_date":"2026-08-01"},{"id":24,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 23","pm_date":"2026-12-01"},{"id":25,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 24","pm_date":"2026-10-01"},{"id":26,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 25","pm_date":"2026-10-01"},{"id":27,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 26","pm_date":"2026-08-01"},{"id":28,"area":"PANEL \u00b7 Biscuit Unit","panel":"Front side AHU chiller panel","pm_date":"2026-04-01"},{"id":29,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 1","pm_date":"2026-05-01"},{"id":30,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 2","pm_date":"2026-04-01"},{"id":31,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 3","pm_date":"2027-02-01"},{"id":32,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 4","pm_date":"2026-08-01"},{"id":33,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 5","pm_date":"2027-02-01"},{"id":34,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 6","pm_date":"2026-04-01"},{"id":35,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 7","pm_date":"2027-02-01"},{"id":36,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 8","pm_date":"2027-02-01"},{"id":37,"area":"PANEL \u00b7 Biscuit Unit","panel":"SDB 1.4","pm_date":"2026-10-01"},{"id":38,"area":"PANEL \u00b7 Biscuit Unit","panel":"APFC Panel-1","pm_date":"2026-10-01"},{"id":39,"area":"PANEL \u00b7 Biscuit Unit","panel":"APFC Panel-2","pm_date":"2026-10-01"},{"id":40,"area":"PANEL \u00b7 Snacks Unit","panel":"PDB U 2.1","pm_date":"2026-05-01"},{"id":41,"area":"PANEL \u00b7 Snacks Unit","panel":"PDB U 2.2","pm_date":"2026-05-01"},{"id":42,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC -U 2","pm_date":"2027-03-01"},{"id":43,"area":"PANEL \u00b7 Snacks Unit","panel":"SPOT COOLING(MCC-7)","pm_date":"2027-01-01"},{"id":44,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC PC-21","pm_date":"2027-01-01"},{"id":45,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel 9000 CFM For Noodles UPS Room & Exhaust Fan Supply","pm_date":"2026-12-01"},{"id":46,"area":"PANEL \u00b7 Snacks Unit","panel":"PCC-1","pm_date":"2027-01-01"},{"id":47,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC 1.1 & 1.2","pm_date":"2027-01-01"},{"id":48,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-1","pm_date":"2027-01-01"},{"id":49,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-2","pm_date":"2026-04-01"},{"id":50,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-3","pm_date":"2027-01-01"},{"id":51,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-4","pm_date":"2027-01-01"},{"id":52,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-5","pm_date":"2027-03-01"},{"id":53,"area":"PANEL \u00b7 Snacks Unit","panel":"SDB 1.2","pm_date":"2026-10-01"},{"id":54,"area":"PANEL \u00b7 Snacks Unit","panel":"MDB U","pm_date":"2026-05-01"},{"id":55,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-3A","pm_date":"2027-01-01"},{"id":56,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-2A","pm_date":"2027-01-01"},{"id":57,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (Air washer) (SN-FS/01) 30000 CFM For Process -2","pm_date":"2027-03-01"},{"id":58,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (Air washer) (SN-FS/02) 30000 CFM For Process -2","pm_date":"2027-03-01"},{"id":59,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (SN-FS/03) 30000 CFM For Process -1","pm_date":"2027-03-01"},{"id":60,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (SN-FS/04) 30000 CFM For Process -1","pm_date":"2027-03-01"},{"id":61,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/01)  8000 CFM For Gnd Floor UPS Room","pm_date":"2027-03-01"},{"id":62,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-4","pm_date":"2027-02-01"},{"id":63,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/02) 8000 CFM For Seasoning Ist","pm_date":"2026-12-01"},{"id":64,"area":"PANEL \u00b7 Snacks Unit","panel":"Spot Cooling AHU 14000 CFM Process Hall-1 and Spot Cooling AHU 14000 CFM Process Hall-2","pm_date":"2026-05-01"},{"id":65,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/03) 18000 CFM For Packaging-Ist PC-21","pm_date":"2027-01-01"},{"id":66,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/04) 18000 CFM For Packaging-Ist Bridge-1 and 31000 CFM For Packaging-Iind Bridge-2&4","pm_date":"2027-02-01"},{"id":67,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-1","pm_date":"2026-07-01"},{"id":68,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-3","pm_date":"2027-02-01"},{"id":69,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-2","pm_date":"2027-02-01"},{"id":70,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel 8000 CFM For Seasoning Blending","pm_date":"2027-03-01"},{"id":71,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks ETP Panel","pm_date":"2026-08-01"},{"id":72,"area":"PANEL \u00b7 Snacks Unit","panel":"APFC Panel","pm_date":"2027-02-01"},{"id":73,"area":"PANEL \u00b7 Noodles Unit","panel":"PCC-1","pm_date":"2027-02-01"},{"id":74,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Machine Panel","pm_date":"2026-04-01"},{"id":75,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB Lighting","pm_date":"2026-04-01"},{"id":76,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB Power","pm_date":"2027-03-01"},{"id":77,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- AHU","pm_date":"2027-02-01"},{"id":78,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Panel no.-2 Secondary packing","pm_date":"2026-08-01"},{"id":79,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Panel no.-1 Seasoning Machine (Topack)","pm_date":"2026-07-01"},{"id":80,"area":"PANEL \u00b7 Noodles Unit","panel":"VTPN DB-1","pm_date":"2026-07-01"},{"id":81,"area":"PANEL \u00b7 Noodles Unit","panel":"VTPN DB-2","pm_date":"2026-04-01"},{"id":82,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB UPS DB (LIGHTING)","pm_date":"2026-07-01"},{"id":83,"area":"PANEL \u00b7 Noodles Unit","panel":"AHU Control Panel (Noodles PCC room)","pm_date":"2027-02-01"},{"id":84,"area":"PANEL \u00b7 Soap Unit","panel":"PCC-1","pm_date":"2027-02-01"},{"id":85,"area":"PANEL \u00b7 Soap Unit","panel":"PCC-2","pm_date":"2027-02-01"},{"id":86,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-1","pm_date":"2027-03-01"},{"id":87,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-2","pm_date":"2027-03-01"},{"id":88,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-3","pm_date":"2026-10-01"},{"id":89,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-4","pm_date":"2026-06-01"},{"id":90,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-5","pm_date":"2026-06-01"},{"id":91,"area":"PANEL \u00b7 Soap Unit","panel":"SDB 1.3","pm_date":"2026-10-01"},{"id":92,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 3B","pm_date":"2026-06-01"},{"id":93,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 3A","pm_date":"2027-03-01"},{"id":94,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 5A","pm_date":"2027-03-01"},{"id":95,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 5B","pm_date":"2027-02-01"},{"id":96,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 1","pm_date":"2026-06-01"},{"id":97,"area":"PANEL \u00b7 Soap Unit","panel":"MDB-U","pm_date":"2026-10-01"},{"id":98,"area":"PANEL \u00b7 Soap Unit","panel":"MCC 5.2","pm_date":"2027-03-01"},{"id":99,"area":"PANEL \u00b7 Soap Unit","panel":"MCC 5.1","pm_date":"2026-04-01"},{"id":100,"area":"PANEL \u00b7 Soap Unit","panel":"MCC3.2","pm_date":"2027-03-01"},{"id":101,"area":"PANEL \u00b7 Soap Unit","panel":"APFC-1","pm_date":"2026-04-01"},{"id":102,"area":"PANEL \u00b7 Soap Unit","panel":"APFC-2","pm_date":"2026-04-01"},{"id":103,"area":"PANEL \u00b7 Soap Unit","panel":"Electrical Boiler panel","pm_date":"2026-06-01"},{"id":104,"area":"PANEL \u00b7 CLS Unit","panel":"PCC","pm_date":"2026-04-01"},{"id":105,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-1","pm_date":"2027-03-01"},{"id":106,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-2","pm_date":"2027-03-01"},{"id":107,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3","pm_date":"2027-03-01"},{"id":108,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3.1","pm_date":"2027-03-01"},{"id":109,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3.2","pm_date":"2027-03-01"},{"id":110,"area":"PANEL \u00b7 CLS Unit","panel":"MCC 3.4","pm_date":"2027-03-01"},{"id":111,"area":"PANEL \u00b7 CLS Unit","panel":"SDB 1.6","pm_date":"2026-10-01"},{"id":112,"area":"PANEL \u00b7 CLS Unit","panel":"Control Panels in FG & RM Area","pm_date":"2027-03-01"},{"id":113,"area":"PANEL \u00b7 CLS Unit","panel":"MDB U","pm_date":"2026-10-01"},{"id":114,"area":"PANEL \u00b7 CLS Unit","panel":"APFC","pm_date":"2026-04-01"},{"id":115,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #1 Main Panel","pm_date":"2026-09-01"},{"id":116,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #1 Control Panel","pm_date":"2026-09-01"},{"id":117,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #2 Main Panel","pm_date":"2026-09-01"},{"id":118,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #2 Control Panel","pm_date":"2026-09-01"},{"id":119,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #3 Main Panel (1TPH)","pm_date":"2026-09-01"},{"id":120,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #3 Control Panel (1TPH)","pm_date":"2026-09-01"},{"id":121,"area":"PANEL \u00b7 TALC Unit","panel":"PCC PANEL","pm_date":"2026-07-01"},{"id":122,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-1 PANEL","pm_date":"2026-04-01"},{"id":123,"area":"PANEL \u00b7 TALC Unit","panel":"CONTROL PANEL-1","pm_date":"2026-07-01"},{"id":124,"area":"PANEL \u00b7 TALC Unit","panel":"CONTROL PANEL-2","pm_date":"2026-07-01"},{"id":125,"area":"PANEL \u00b7 TALC Unit","panel":"SDB 1.5","pm_date":"2026-10-01"},{"id":126,"area":"PANEL \u00b7 TALC Unit","panel":"APFC","pm_date":"2026-05-01"},{"id":127,"area":"PANEL \u00b7 TALC Unit","panel":"HT panel","pm_date":"2026-08-01"},{"id":128,"area":"PANEL \u00b7 TALC Unit","panel":"HT Panel Eb Room","pm_date":"2026-08-01"},{"id":129,"area":"PANEL \u00b7 TALC Unit","panel":"HVAC # 1 Panel","pm_date":"2026-12-01"},{"id":130,"area":"PANEL \u00b7 TALC Unit","panel":"HVAC # 2 Panel","pm_date":"2026-12-01"},{"id":131,"area":"PANEL \u00b7 TALC Unit","panel":"MCC # 1 (DG Auxillary)","pm_date":"2026-10-01"},{"id":132,"area":"PANEL \u00b7 TALC Unit","panel":"MLTP Sec # 1","pm_date":"2027-01-01"},{"id":133,"area":"PANEL \u00b7 TALC Unit","panel":"MLTP Sec # 2","pm_date":"2027-01-01"},{"id":134,"area":"PANEL \u00b7 TALC Unit","panel":"MLTP Sec # 3","pm_date":"2027-01-01"},{"id":135,"area":"PANEL \u00b7 TALC Unit","panel":"MCC for Plumbing System","pm_date":"2026-08-01"},{"id":136,"area":"PANEL \u00b7 TALC Unit","panel":"New RO Panel","pm_date":"2026-09-01"},{"id":137,"area":"PANEL \u00b7 TALC Unit","panel":"Fire water MCC panel","pm_date":"2026-08-01"},{"id":138,"area":"PANEL \u00b7 TALC Unit","panel":"MDB # 1","pm_date":"2026-08-01"},{"id":139,"area":"PANEL \u00b7 TALC Unit","panel":"MDB # 2","pm_date":"2026-10-01"},{"id":140,"area":"PANEL \u00b7 TALC Unit","panel":"MDB # 3","pm_date":"2027-01-01"},{"id":141,"area":"PANEL \u00b7 TALC Unit","panel":"FO yard MCC Panel","pm_date":"2026-05-01"},{"id":142,"area":"PANEL \u00b7 TALC Unit","panel":"Lighting UPS in Utility","pm_date":"2027-01-01"},{"id":143,"area":"PANEL \u00b7 TALC Unit","panel":"Lighting UPS in Admin","pm_date":"2027-01-01"},{"id":144,"area":"PANEL \u00b7 TALC Unit","panel":"Admin PCC panel (SDB-3.2)","pm_date":"2027-01-01"},{"id":145,"area":"PANEL \u00b7 TALC Unit","panel":"Admin Server panel-1","pm_date":"2027-01-01"},{"id":146,"area":"PANEL \u00b7 TALC Unit","panel":"Admin HVAC panel","pm_date":"2027-01-01"},{"id":147,"area":"PANEL \u00b7 TALC Unit","panel":"Admin SDB Panel (U3)","pm_date":"2027-01-01"},{"id":148,"area":"PANEL \u00b7 TALC Unit","panel":"Admin UPS Reduant Panel","pm_date":"2027-01-01"},{"id":149,"area":"PANEL \u00b7 TALC Unit","panel":"Admin Server panels-2","pm_date":"2027-01-01"},{"id":150,"area":"PANEL \u00b7 TALC Unit","panel":"Boiler Panel (MAIN Panel)","pm_date":"2026-07-01"},{"id":151,"area":"PANEL \u00b7 TALC Unit","panel":"Common Utility Panel (4.5TPH)","pm_date":"2026-11-01"},{"id":152,"area":"PANEL \u00b7 TALC Unit","panel":"HSD/FO Transfer Panel","pm_date":"2026-11-01"},{"id":153,"area":"PANEL \u00b7 TALC Unit","panel":"Boiler Panel (4.5TPH)","pm_date":"2026-11-01"},{"id":154,"area":"PANEL \u00b7 TALC Unit","panel":"Common Utility Control Panel (8.0TPH)","pm_date":"2026-11-01"},{"id":155,"area":"PANEL \u00b7 TALC Unit","panel":"Boiler-1 Control Panel (8.0TPH)","pm_date":"2026-11-01"},{"id":156,"area":"PANEL \u00b7 TALC Unit","panel":"SDB Canteen","pm_date":"2026-10-01"},{"id":157,"area":"PANEL \u00b7 TALC Unit","panel":"Admin Lighting Panel","pm_date":"2027-01-01"},{"id":158,"area":"PANEL \u00b7 TALC Unit","panel":"Holiday Incomer Panel","pm_date":"2026-09-01"},{"id":159,"area":"PANEL \u00b7 TALC Unit","panel":"Street light Feeder Piller Utility #1","pm_date":"2026-11-01"},{"id":160,"area":"PANEL \u00b7 TALC Unit","panel":"Street light Feeder Piller  Admin #2","pm_date":"2026-11-01"},{"id":161,"area":"PANEL \u00b7 TALC Unit","panel":"Street light Feeder Piller FO yard #3","pm_date":"2026-11-01"},{"id":162,"area":"PANEL \u00b7 TALC Unit","panel":"Street light Feeder Piller Soap side #4","pm_date":"2026-11-01"},{"id":163,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers #1","pm_date":"2026-06-01"},{"id":164,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers #2","pm_date":"2026-06-01"},{"id":165,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers #3","pm_date":"2026-06-01"},{"id":166,"area":"PANEL \u00b7 TALC Unit","panel":"Change Over Panel","pm_date":"2027-02-01"},{"id":167,"area":"PANEL \u00b7 TALC Unit","panel":"Propane Panel PM","pm_date":"2026-08-01"},{"id":168,"area":"PANEL \u00b7 TALC Unit","panel":"Old RO Panel","pm_date":"2027-02-01"},{"id":169,"area":"PANEL \u00b7 TALC Unit","panel":"PH-1 Common ETP","pm_date":"2026-08-01"},{"id":170,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-2","pm_date":"2027-02-01"},{"id":171,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-3","pm_date":"2027-02-01"},{"id":172,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-4","pm_date":"2027-01-01"},{"id":173,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-5","pm_date":"2027-02-01"},{"id":174,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-6","pm_date":"2027-01-01"},{"id":175,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-7","pm_date":"2026-11-01"},{"id":176,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-8","pm_date":"2026-11-01"},{"id":177,"area":"PANEL \u00b7 TALC Unit","panel":"Canteen SDB","pm_date":"2026-08-01"},{"id":178,"area":"PANEL \u00b7 TALC Unit","panel":"MLTP DGLS PANEL","pm_date":"2026-10-01"},{"id":179,"area":"PANEL \u00b7 TALC Unit","panel":"Borewell Harvesting Pond","pm_date":"2026-11-01"},{"id":180,"area":"PANEL \u00b7 TALC Unit","panel":"Borewell Canteen","pm_date":"2026-11-01"},{"id":181,"area":"PANEL \u00b7 TALC Unit","panel":"Borewell ETP","pm_date":"2026-11-01"},{"id":182,"area":"PANEL \u00b7 TALC Unit","panel":"DG NO 01 NIS PANEL","pm_date":"2026-08-01"},{"id":183,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 02 NIS PANEL","pm_date":"2026-08-01"},{"id":184,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 03 NIS PANEL","pm_date":"2026-08-01"},{"id":185,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 04 NIS PANEL","pm_date":"2026-08-01"},{"id":186,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 05 NIS PANEL","pm_date":"2026-08-01"},{"id":187,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 06 NIS PANEL","pm_date":"2026-08-01"},{"id":188,"area":"PANEL \u00b7 TALC Unit","panel":"SFB RAW POWER PANEL -1","pm_date":"2027-01-01"},{"id":189,"area":"PANEL \u00b7 TALC Unit","panel":"SFB RAW POWER PANEL -2","pm_date":"2027-01-01"},{"id":190,"area":"PANEL \u00b7 TALC Unit","panel":"SFB UPS POWER PANEL","pm_date":"2027-01-01"},{"id":191,"area":"PANEL \u00b7 TALC Unit","panel":"SFB MCC-1","pm_date":"2027-01-01"},{"id":192,"area":"PANEL \u00b7 TALC Unit","panel":"SFB MCC-2","pm_date":"2026-08-01"},{"id":193,"area":"PANEL \u00b7 TALC Unit","panel":"SFB MCC-3","pm_date":"2026-08-01"},{"id":194,"area":"PANEL \u00b7 TALC Unit","panel":"SFB BAG FILTER PANEL","pm_date":"2026-08-01"},{"id":195,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-14","pm_date":"2026-08-01"},{"id":196,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-25","pm_date":"2026-08-01"},{"id":197,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-4","pm_date":"2027-01-01"},{"id":198,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-3","pm_date":"2027-01-01"},{"id":199,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-13","pm_date":"2027-01-01"},{"id":200,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-26","pm_date":"2027-01-01"},{"id":201,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-9","pm_date":"2026-08-01"},{"id":202,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-9B","pm_date":"2026-08-01"},{"id":203,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-2","pm_date":"2026-08-01"},{"id":204,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-15","pm_date":"2027-01-01"},{"id":205,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-20","pm_date":"2027-01-01"},{"id":206,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-19","pm_date":"2026-08-01"},{"id":207,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-18","pm_date":"2026-08-01"},{"id":208,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-17","pm_date":"2027-01-01"},{"id":209,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-16","pm_date":"2026-08-01"},{"id":210,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-9A","pm_date":"2027-01-01"},{"id":211,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-15","pm_date":"2027-01-01"},{"id":212,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-9C","pm_date":"2026-10-01"},{"id":213,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-11","pm_date":"2026-08-01"},{"id":214,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-14B","pm_date":"2026-10-01"},{"id":215,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-24","pm_date":"2026-08-01"},{"id":216,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-10","pm_date":"2026-10-01"},{"id":217,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-8","pm_date":"2027-01-01"},{"id":218,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-9","pm_date":"2026-10-01"},{"id":219,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-11","pm_date":"2026-08-01"},{"id":220,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-3","pm_date":"2026-10-01"},{"id":221,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-12","pm_date":"2026-08-01"},{"id":222,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-22","pm_date":"2026-10-01"},{"id":223,"area":"PANEL \u00b7 TALC Unit","panel":"CMD","pm_date":"2026-08-01"},{"id":224,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-5","pm_date":"2027-01-01"},{"id":225,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-2","pm_date":"2027-01-01"},{"id":226,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-3","pm_date":"2027-01-01"},{"id":227,"area":"PANEL \u00b7 TALC Unit","panel":"MVP-1","pm_date":"2027-01-01"},{"id":228,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-2","pm_date":"2027-01-01"},{"id":229,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-5C","pm_date":"2027-03-01"},{"id":230,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-4","pm_date":"2026-08-01"},{"id":231,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-5","pm_date":"2026-08-01"},{"id":232,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-5B","pm_date":"2026-08-01"},{"id":233,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-10","pm_date":"2026-08-01"},{"id":234,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-12","pm_date":"2026-08-01"},{"id":235,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-7","pm_date":"2026-10-01"},{"id":236,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-8","pm_date":"2026-08-01"},{"id":237,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-7","pm_date":"2026-08-01"},{"id":238,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-6","pm_date":"2026-08-01"},{"id":239,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-11","pm_date":"2026-08-01"},{"id":240,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-6","pm_date":"2026-10-01"},{"id":241,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-7(AHU)","pm_date":"2027-03-01"},{"id":242,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-6","pm_date":"2027-03-01"},{"id":243,"area":"PANEL \u00b7 TALC Unit","panel":"MPP2B","pm_date":"2027-01-01"},{"id":244,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-1A","pm_date":"2026-08-01"},{"id":245,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-1B","pm_date":"2026-08-01"},{"id":246,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-1C","pm_date":"2026-08-01"},{"id":247,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-1","pm_date":"2026-10-01"},{"id":248,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-3","pm_date":"2026-10-01"},{"id":249,"area":"PANEL \u00b7 TALC Unit","panel":"ACCP-1","pm_date":"2026-09-01"},{"id":250,"area":"PANEL \u00b7 TALC Unit","panel":"ACCP-2","pm_date":"2026-09-01"},{"id":251,"area":"PANEL \u00b7 TALC Unit","panel":"ACCP-3","pm_date":"2026-09-01"},{"id":252,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-1","pm_date":"2026-08-01"},{"id":253,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-2","pm_date":"2026-08-01"},{"id":254,"area":"PANEL \u00b7 TALC Unit","panel":"Fire Pump Panel","pm_date":"2026-08-01"},{"id":255,"area":"PANEL \u00b7 TALC Unit","panel":"STP-1","pm_date":"2026-12-01"},{"id":256,"area":"PANEL \u00b7 TALC Unit","panel":"STP-2","pm_date":"2026-12-01"},{"id":257,"area":"PANEL \u00b7 TALC Unit","panel":"HT panel,MRSS","pm_date":"2026-08-01"},{"id":258,"area":"PANEL \u00b7 TALC Unit","panel":"HT Panel near EB Room","pm_date":"2026-08-01"},{"id":259,"area":"PANEL \u00b7 TALC Unit","panel":"6.6 KV PANEL","pm_date":"2026-08-01"},{"id":260,"area":"PANEL \u00b7 TALC Unit","panel":"PCC 1","pm_date":"2027-01-01"},{"id":261,"area":"PANEL \u00b7 TALC Unit","panel":"PCC 2","pm_date":"2027-01-01"},{"id":262,"area":"PANEL \u00b7 TALC Unit","panel":"MLDB","pm_date":"2026-08-01"},{"id":263,"area":"PANEL \u00b7 TALC Unit","panel":"RTCC","pm_date":"2027-01-01"},{"id":264,"area":"PANEL \u00b7 TALC Unit","panel":"DG AUXLARY PANEL","pm_date":"2026-08-01"},{"id":265,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-1","pm_date":"2026-11-01"},{"id":266,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-2","pm_date":"2026-11-01"},{"id":267,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-3","pm_date":"2026-11-01"},{"id":268,"area":"PANEL \u00b7 TALC Unit","panel":"4 mva Traffo-1 NGR","pm_date":"2026-08-01"},{"id":269,"area":"PANEL \u00b7 TALC Unit","panel":"4 mva Traffo-2 NGR","pm_date":"2026-08-01"},{"id":270,"area":"PANEL \u00b7 TALC Unit","panel":"DG NGR","pm_date":"2026-08-01"},{"id":271,"area":"PANEL \u00b7 TALC Unit","panel":"DG NIS-1","pm_date":"2026-08-01"},{"id":272,"area":"PANEL \u00b7 TALC Unit","panel":"DG NIS-2","pm_date":"2026-08-01"},{"id":273,"area":"PANEL \u00b7 TALC Unit","panel":"DG NIS-3","pm_date":"2026-08-01"},{"id":274,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 4 mva  #1","pm_date":"2026-06-01"},{"id":275,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 4 mva  #2","pm_date":"2026-06-01"},{"id":276,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 2 mva  # 1","pm_date":"2026-06-01"},{"id":277,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 2 mva # 2","pm_date":"2026-06-01"},{"id":278,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 2 mva # 3","pm_date":"2026-06-01"},{"id":279,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 2 mva # 4","pm_date":"2026-06-01"},{"id":280,"area":"PANEL \u00b7 TALC Unit","panel":"Phase 2 feeder piller main gate","pm_date":"2026-09-01"},{"id":281,"area":"PANEL \u00b7 TALC Unit","panel":"Phase 2 feeder piller between b1,b2 building","pm_date":"2026-09-01"},{"id":282,"area":"PANEL \u00b7 TALC Unit","panel":"Phase 2 feeder piller near stp","pm_date":"2026-09-01"},{"id":283,"area":"PANEL \u00b7 TALC Unit","panel":"Phase-2 ETP","pm_date":"2027-01-01"}];
+
+let STATE = { panels:[], panelExecutions:{}, panelChecklistFields:[], panelOwners:[], reschedules:[] };
 let TODAY = new Date(); TODAY.setHours(0,0,0,0);
+let CHARTS = {};
 
-// ─── Default panel data (seed if Firebase has none) ─────────────────────────
-const DEFAULT_PANELS = [{"id":1,"area":"PANEL \u00b7 Biscuit Unit","panel":"PCC - 1","pm_date":"2026-08-01"},{"id":2,"area":"PANEL \u00b7 Biscuit Unit","panel":"PCC - 2","pm_date":"2026-08-01"},{"id":3,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 1","pm_date":"2026-12-01"},{"id":4,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 2","pm_date":"2026-08-01"},{"id":5,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 3","pm_date":"2026-12-01"},{"id":6,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 4","pm_date":"2026-05-01"},{"id":7,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 4.1","pm_date":"2026-05-01"},{"id":8,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 5","pm_date":"2026-04-01"},{"id":9,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 6","pm_date":"2026-05-01"},{"id":10,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 7","pm_date":"2026-07-01"},{"id":11,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 8","pm_date":"2026-12-01"},{"id":12,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 9","pm_date":"2026-08-01"},{"id":13,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC-10","pm_date":"2026-08-01"},{"id":14,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 11","pm_date":"2026-08-01"},{"id":15,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 12","pm_date":"2026-10-01"},{"id":16,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 13","pm_date":"2026-08-01"},{"id":17,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 15","pm_date":"2026-07-01"},{"id":18,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 16","pm_date":"2026-12-01"},{"id":19,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 17","pm_date":"2026-08-01"},{"id":20,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 18","pm_date":"2026-08-01"},{"id":21,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 19","pm_date":"2026-07-01"},{"id":22,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 20","pm_date":"2026-08-01"},{"id":23,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 21","pm_date":"2026-08-01"},{"id":24,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 23","pm_date":"2026-12-01"},{"id":25,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 24","pm_date":"2026-10-01"},{"id":26,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 25","pm_date":"2026-10-01"},{"id":27,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 26","pm_date":"2026-08-01"},{"id":28,"area":"PANEL \u00b7 Biscuit Unit","panel":"Front side AHU chiller panel","pm_date":"2026-04-01"},{"id":29,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 1","pm_date":"2026-05-01"},{"id":30,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 2","pm_date":"2026-04-01"},{"id":31,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 3","pm_date":"2027-02-01"},{"id":32,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 4","pm_date":"2026-08-01"},{"id":33,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 5","pm_date":"2027-02-01"},{"id":34,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 6","pm_date":"2026-04-01"},{"id":35,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 7","pm_date":"2027-02-01"},{"id":36,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 8","pm_date":"2027-02-01"},{"id":37,"area":"PANEL \u00b7 Biscuit Unit","panel":"SDB 1.4","pm_date":"2026-10-01"},{"id":38,"area":"PANEL \u00b7 Biscuit Unit","panel":"APFC Panel-1","pm_date":"2026-10-01"},{"id":39,"area":"PANEL \u00b7 Biscuit Unit","panel":"APFC Panel-2","pm_date":"2026-10-01"},{"id":40,"area":"PANEL \u00b7 Snacks Unit","panel":"PDB U 2.1","pm_date":"2026-05-01"},{"id":41,"area":"PANEL \u00b7 Snacks Unit","panel":"PDB U 2.2","pm_date":"2026-05-01"},{"id":42,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC -U 2","pm_date":"2027-03-01"},{"id":43,"area":"PANEL \u00b7 Snacks Unit","panel":"SPOT COOLING(MCC-7)","pm_date":"2027-01-01"},{"id":44,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC PC-21","pm_date":"2027-01-01"},{"id":45,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel 9000 CFM For Noodles UPS Room & Exhaust Fan Supply","pm_date":"2026-12-01"},{"id":46,"area":"PANEL \u00b7 Snacks Unit","panel":"PCC-1","pm_date":"2027-01-01"},{"id":47,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC 1.1 & 1.2","pm_date":"2027-01-01"},{"id":48,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-1","pm_date":"2027-01-01"},{"id":49,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-2","pm_date":"2026-04-01"},{"id":50,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-3","pm_date":"2027-01-01"},{"id":51,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-4","pm_date":"2027-01-01"},{"id":52,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-5","pm_date":"2027-03-01"},{"id":53,"area":"PANEL \u00b7 Snacks Unit","panel":"SDB 1.2","pm_date":"2026-10-01"},{"id":54,"area":"PANEL \u00b7 Snacks Unit","panel":"MDB U","pm_date":"2026-05-01"},{"id":55,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-3A","pm_date":"2027-01-01"},{"id":56,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-2A","pm_date":"2027-01-01"},{"id":57,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (Air washer) (SN-FS/01) 30000 CFM For Process -2","pm_date":"2027-03-01"},{"id":58,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (Air washer) (SN-FS/02) 30000 CFM For Process -2","pm_date":"2027-03-01"},{"id":59,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (SN-FS/03) 30000 CFM For Process -1","pm_date":"2027-03-01"},{"id":60,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (SN-FS/04) 30000 CFM For Process -1","pm_date":"2027-03-01"},{"id":61,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/01)  8000 CFM For Gnd Floor UPS Room","pm_date":"2027-03-01"},{"id":62,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-4","pm_date":"2027-02-01"},{"id":63,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/02) 8000 CFM For Seasoning Ist","pm_date":"2026-12-01"},{"id":64,"area":"PANEL \u00b7 Snacks Unit","panel":"Spot Cooling AHU 14000 CFM Process Hall-1 and Spot Cooling AHU 14000 CFM Process Hall-2","pm_date":"2026-05-01"},{"id":65,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/03) 18000 CFM For Packaging-Ist PC-21","pm_date":"2027-01-01"},{"id":66,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/04) 18000 CFM For Packaging-Ist Bridge-1 and 31000 CFM For Packaging-Iind Bridge-2&4","pm_date":"2027-02-01"},{"id":67,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-1","pm_date":"2026-07-01"},{"id":68,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-3","pm_date":"2027-02-01"},{"id":69,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-2","pm_date":"2027-02-01"},{"id":70,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel 8000 CFM For Seasoning Blending","pm_date":"2027-03-01"},{"id":71,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks ETP Panel","pm_date":"2026-08-01"},{"id":72,"area":"PANEL \u00b7 Snacks Unit","panel":"APFC Panel","pm_date":"2027-02-01"},{"id":73,"area":"PANEL \u00b7 Noodles Unit","panel":"PCC-1","pm_date":"2027-02-01"},{"id":74,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Machine Panel","pm_date":"2026-04-01"},{"id":75,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB Lighting","pm_date":"2026-04-01"},{"id":76,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB Power","pm_date":"2027-03-01"},{"id":77,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- AHU","pm_date":"2027-02-01"},{"id":78,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Panel no.-2 Secondary packing","pm_date":"2026-08-01"},{"id":79,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Panel no.-1 Seasoning Machine (Topack)","pm_date":"2026-07-01"},{"id":80,"area":"PANEL \u00b7 Noodles Unit","panel":"VTPN DB-1","pm_date":"2026-07-01"},{"id":81,"area":"PANEL \u00b7 Noodles Unit","panel":"VTPN DB-2","pm_date":"2026-04-01"},{"id":82,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB UPS DB (LIGHTING)","pm_date":"2026-07-01"},{"id":83,"area":"PANEL \u00b7 Noodles Unit","panel":"AHU Control Panel (Noodles PCC room)","pm_date":"2027-02-01"},{"id":84,"area":"PANEL \u00b7 Soap Unit","panel":"PCC-1","pm_date":"2027-02-01"},{"id":85,"area":"PANEL \u00b7 Soap Unit","panel":"PCC-2","pm_date":"2027-02-01"},{"id":86,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-1","pm_date":"2027-03-01"},{"id":87,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-2","pm_date":"2027-03-01"},{"id":88,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-3","pm_date":"2026-10-01"},{"id":89,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-4","pm_date":"2026-06-01"},{"id":90,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-5","pm_date":"2026-06-01"},{"id":91,"area":"PANEL \u00b7 Soap Unit","panel":"SDB 1.3","pm_date":"2026-10-01"},{"id":92,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 3B","pm_date":"2026-06-01"},{"id":93,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 3A","pm_date":"2027-03-01"},{"id":94,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 5A","pm_date":"2027-03-01"},{"id":95,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 5B","pm_date":"2027-02-01"},{"id":96,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 1","pm_date":"2026-06-01"},{"id":97,"area":"PANEL \u00b7 Soap Unit","panel":"MDB-U","pm_date":"2026-10-01"},{"id":98,"area":"PANEL \u00b7 Soap Unit","panel":"MCC 5.2","pm_date":"2027-03-01"},{"id":99,"area":"PANEL \u00b7 Soap Unit","panel":"MCC 5.1","pm_date":"2026-04-01"},{"id":100,"area":"PANEL \u00b7 Soap Unit","panel":"MCC3.2","pm_date":"2027-03-01"},{"id":101,"area":"PANEL \u00b7 Soap Unit","panel":"APFC-1","pm_date":"2026-04-01"},{"id":102,"area":"PANEL \u00b7 Soap Unit","panel":"APFC-2","pm_date":"2026-04-01"},{"id":103,"area":"PANEL \u00b7 Soap Unit","panel":"Electrical Boiler panel","pm_date":"2026-06-01"},{"id":104,"area":"PANEL \u00b7 CLS Unit","panel":"PCC","pm_date":"2026-04-01"},{"id":105,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-1","pm_date":"2027-03-01"},{"id":106,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-2","pm_date":"2027-03-01"},{"id":107,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3","pm_date":"2027-03-01"},{"id":108,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3.1","pm_date":"2027-03-01"},{"id":109,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3.2","pm_date":"2027-03-01"},{"id":110,"area":"PANEL \u00b7 CLS Unit","panel":"MCC 3.4","pm_date":"2027-03-01"},{"id":111,"area":"PANEL \u00b7 CLS Unit","panel":"SDB 1.6","pm_date":"2026-10-01"},{"id":112,"area":"PANEL \u00b7 CLS Unit","panel":"Control Panels in FG & RM Area","pm_date":"2027-03-01"},{"id":113,"area":"PANEL \u00b7 CLS Unit","panel":"MDB U","pm_date":"2026-10-01"},{"id":114,"area":"PANEL \u00b7 CLS Unit","panel":"APFC","pm_date":"2026-04-01"},{"id":115,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #1 Main Panel","pm_date":"2026-09-01"},{"id":116,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #1 Control Panel","pm_date":"2026-09-01"},{"id":117,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #2 Main Panel","pm_date":"2026-09-01"},{"id":118,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #2 Control Panel","pm_date":"2026-09-01"},{"id":119,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #3 Main Panel (1TPH)","pm_date":"2026-09-01"},{"id":120,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #3 Control Panel (1TPH)","pm_date":"2026-09-01"},{"id":121,"area":"PANEL \u00b7 TALC Unit","panel":"PCC PANEL","pm_date":"2026-07-01"},{"id":122,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-1 PANEL","pm_date":"2026-04-01"},{"id":123,"area":"PANEL \u00b7 TALC Unit","panel":"CONTROL PANEL-1","pm_date":"2026-07-01"},{"id":124,"area":"PANEL \u00b7 TALC Unit","panel":"CONTROL PANEL-2","pm_date":"2026-07-01"},{"id":125,"area":"PANEL \u00b7 TALC Unit","panel":"SDB 1.5","pm_date":"2026-10-01"},{"id":126,"area":"PANEL \u00b7 TALC Unit","panel":"APFC","pm_date":"2026-05-01"},{"id":127,"area":"PANEL \u00b7 TALC Unit","panel":"HT panel","pm_date":"2026-08-01"},{"id":128,"area":"PANEL \u00b7 TALC Unit","panel":"HT Panel Eb Room","pm_date":"2026-08-01"},{"id":129,"area":"PANEL \u00b7 TALC Unit","panel":"HVAC # 1 Panel","pm_date":"2026-12-01"},{"id":130,"area":"PANEL \u00b7 TALC Unit","panel":"HVAC # 2 Panel","pm_date":"2026-12-01"},{"id":131,"area":"PANEL \u00b7 TALC Unit","panel":"MCC # 1 (DG Auxillary)","pm_date":"2026-10-01"},{"id":132,"area":"PANEL \u00b7 TALC Unit","panel":"MLTP Sec # 1","pm_date":"2027-01-01"},{"id":133,"area":"PANEL \u00b7 TALC Unit","panel":"MLTP Sec # 2","pm_date":"2027-01-01"},{"id":134,"area":"PANEL \u00b7 TALC Unit","panel":"MLTP Sec # 3","pm_date":"2027-01-01"},{"id":135,"area":"PANEL \u00b7 TALC Unit","panel":"MCC for Plumbing System","pm_date":"2026-08-01"},{"id":136,"area":"PANEL \u00b7 TALC Unit","panel":"New RO Panel","pm_date":"2026-09-01"},{"id":137,"area":"PANEL \u00b7 TALC Unit","panel":"Fire water MCC panel","pm_date":"2026-08-01"},{"id":138,"area":"PANEL \u00b7 TALC Unit","panel":"MDB # 1","pm_date":"2026-08-01"},{"id":139,"area":"PANEL \u00b7 TALC Unit","panel":"MDB # 2","pm_date":"2026-10-01"},{"id":140,"area":"PANEL \u00b7 TALC Unit","panel":"MDB # 3","pm_date":"2027-01-01"},{"id":141,"area":"PANEL \u00b7 TALC Unit","panel":"FO yard MCC Panel","pm_date":"2026-05-01"},{"id":142,"area":"PANEL \u00b7 TALC Unit","panel":"Lighting UPS in Utility","pm_date":"2027-01-01"},{"id":143,"area":"PANEL \u00b7 TALC Unit","panel":"Lighting UPS in Admin","pm_date":"2027-01-01"},{"id":144,"area":"PANEL \u00b7 TALC Unit","panel":"Admin PCC panel (SDB-3.2)","pm_date":"2027-01-01"},{"id":145,"area":"PANEL \u00b7 TALC Unit","panel":"Admin Server panel-1","pm_date":"2027-01-01"},{"id":146,"area":"PANEL \u00b7 TALC Unit","panel":"Admin HVAC panel","pm_date":"2027-01-01"},{"id":147,"area":"PANEL \u00b7 TALC Unit","panel":"Admin SDB Panel (U3)","pm_date":"2027-01-01"},{"id":148,"area":"PANEL \u00b7 TALC Unit","panel":"Admin UPS Reduant Panel","pm_date":"2027-01-01"},{"id":149,"area":"PANEL \u00b7 TALC Unit","panel":"Admin Server panels-2","pm_date":"2027-01-01"},{"id":150,"area":"PANEL \u00b7 TALC Unit","panel":"Boiler Panel (MAIN Panel)","pm_date":"2026-07-01"},{"id":151,"area":"PANEL \u00b7 TALC Unit","panel":"Common Utility Panel (4.5TPH)","pm_date":"2026-11-01"},{"id":152,"area":"PANEL \u00b7 TALC Unit","panel":"HSD/FO Transfer Panel","pm_date":"2026-11-01"},{"id":153,"area":"PANEL \u00b7 TALC Unit","panel":"Boiler Panel (4.5TPH)","pm_date":"2026-11-01"},{"id":154,"area":"PANEL \u00b7 TALC Unit","panel":"Common Utility Control Panel (8.0TPH)","pm_date":"2026-11-01"},{"id":155,"area":"PANEL \u00b7 TALC Unit","panel":"Boiler-1 Control Panel (8.0TPH)","pm_date":"2026-11-01"},{"id":156,"area":"PANEL \u00b7 TALC Unit","panel":"SDB Canteen","pm_date":"2026-10-01"},{"id":157,"area":"PANEL \u00b7 TALC Unit","panel":"Admin Lighting Panel","pm_date":"2027-01-01"},{"id":158,"area":"PANEL \u00b7 TALC Unit","panel":"Holiday Incomer Panel","pm_date":"2026-09-01"},{"id":159,"area":"PANEL \u00b7 TALC Unit","panel":"Street light Feeder Piller Utility #1","pm_date":"2026-11-01"},{"id":160,"area":"PANEL \u00b7 TALC Unit","panel":"Street light Feeder Piller  Admin #2","pm_date":"2026-11-01"},{"id":161,"area":"PANEL \u00b7 TALC Unit","panel":"Street light Feeder Piller FO yard #3","pm_date":"2026-11-01"},{"id":162,"area":"PANEL \u00b7 TALC Unit","panel":"Street light Feeder Piller Soap side #4","pm_date":"2026-11-01"},{"id":163,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers #1","pm_date":"2026-06-01"},{"id":164,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers #2","pm_date":"2026-06-01"},{"id":165,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers #3","pm_date":"2026-06-01"},{"id":166,"area":"PANEL \u00b7 TALC Unit","panel":"Change Over Panel","pm_date":"2027-02-01"},{"id":167,"area":"PANEL \u00b7 TALC Unit","panel":"Propane Panel PM","pm_date":"2026-08-01"},{"id":168,"area":"PANEL \u00b7 TALC Unit","panel":"Old RO Panel","pm_date":"2027-02-01"},{"id":169,"area":"PANEL \u00b7 TALC Unit","panel":"PH-1 Common ETP","pm_date":"2026-08-01"},{"id":170,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-2","pm_date":"2027-02-01"},{"id":171,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-3","pm_date":"2027-02-01"},{"id":172,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-4","pm_date":"2027-01-01"},{"id":173,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-5","pm_date":"2027-02-01"},{"id":174,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-6","pm_date":"2027-01-01"},{"id":175,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-7","pm_date":"2026-11-01"},{"id":176,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-8","pm_date":"2026-11-01"},{"id":177,"area":"PANEL \u00b7 TALC Unit","panel":"Canteen SDB","pm_date":"2026-08-01"},{"id":178,"area":"PANEL \u00b7 TALC Unit","panel":"MLTP DGLS PANEL","pm_date":"2026-10-01"},{"id":179,"area":"PANEL \u00b7 TALC Unit","panel":"Borewell Harvesting Pond","pm_date":"2026-11-01"},{"id":180,"area":"PANEL \u00b7 TALC Unit","panel":"Borewell Canteen","pm_date":"2026-11-01"},{"id":181,"area":"PANEL \u00b7 TALC Unit","panel":"Borewell ETP","pm_date":"2026-11-01"},{"id":182,"area":"PANEL \u00b7 TALC Unit","panel":"DG NO 01 NIS PANEL","pm_date":"2026-08-01"},{"id":183,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 02 NIS PANEL","pm_date":"2026-08-01"},{"id":184,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 03 NIS PANEL","pm_date":"2026-08-01"},{"id":185,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 04 NIS PANEL","pm_date":"2026-08-01"},{"id":186,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 05 NIS PANEL","pm_date":"2026-08-01"},{"id":187,"area":"PANEL \u00b7 TALC Unit","panel":"DGNO 06 NIS PANEL","pm_date":"2026-08-01"},{"id":188,"area":"PANEL \u00b7 TALC Unit","panel":"SFB RAW POWER PANEL -1","pm_date":"2027-01-01"},{"id":189,"area":"PANEL \u00b7 TALC Unit","panel":"SFB RAW POWER PANEL -2","pm_date":"2027-01-01"},{"id":190,"area":"PANEL \u00b7 TALC Unit","panel":"SFB UPS POWER PANEL","pm_date":"2027-01-01"},{"id":191,"area":"PANEL \u00b7 TALC Unit","panel":"SFB MCC-1","pm_date":"2027-01-01"},{"id":192,"area":"PANEL \u00b7 TALC Unit","panel":"SFB MCC-2","pm_date":"2026-08-01"},{"id":193,"area":"PANEL \u00b7 TALC Unit","panel":"SFB MCC-3","pm_date":"2026-08-01"},{"id":194,"area":"PANEL \u00b7 TALC Unit","panel":"SFB BAG FILTER PANEL","pm_date":"2026-08-01"},{"id":195,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-14","pm_date":"2026-08-01"},{"id":196,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-25","pm_date":"2026-08-01"},{"id":197,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-4","pm_date":"2027-01-01"},{"id":198,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-3","pm_date":"2027-01-01"},{"id":199,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-13","pm_date":"2027-01-01"},{"id":200,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-26","pm_date":"2027-01-01"},{"id":201,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-9","pm_date":"2026-08-01"},{"id":202,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-9B","pm_date":"2026-08-01"},{"id":203,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-2","pm_date":"2026-08-01"},{"id":204,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-15","pm_date":"2027-01-01"},{"id":205,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-20","pm_date":"2027-01-01"},{"id":206,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-19","pm_date":"2026-08-01"},{"id":207,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-18","pm_date":"2026-08-01"},{"id":208,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-17","pm_date":"2027-01-01"},{"id":209,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-16","pm_date":"2026-08-01"},{"id":210,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-9A","pm_date":"2027-01-01"},{"id":211,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-15","pm_date":"2027-01-01"},{"id":212,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-9C","pm_date":"2026-10-01"},{"id":213,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-11","pm_date":"2026-08-01"},{"id":214,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-14B","pm_date":"2026-10-01"},{"id":215,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-24","pm_date":"2026-08-01"},{"id":216,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-10","pm_date":"2026-10-01"},{"id":217,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-8","pm_date":"2027-01-01"},{"id":218,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-9","pm_date":"2026-10-01"},{"id":219,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-11","pm_date":"2026-08-01"},{"id":220,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-3","pm_date":"2026-10-01"},{"id":221,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-12","pm_date":"2026-08-01"},{"id":222,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-22","pm_date":"2026-10-01"},{"id":223,"area":"PANEL \u00b7 TALC Unit","panel":"CMD","pm_date":"2026-08-01"},{"id":224,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-5","pm_date":"2027-01-01"},{"id":225,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-2","pm_date":"2027-01-01"},{"id":226,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-3","pm_date":"2027-01-01"},{"id":227,"area":"PANEL \u00b7 TALC Unit","panel":"MVP-1","pm_date":"2027-01-01"},{"id":228,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-2","pm_date":"2027-01-01"},{"id":229,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-5C","pm_date":"2027-03-01"},{"id":231,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-4","pm_date":"2026-08-01"},{"id":232,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-5","pm_date":"2026-08-01"},{"id":233,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-5B","pm_date":"2026-08-01"},{"id":234,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-10","pm_date":"2026-08-01"},{"id":235,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-12","pm_date":"2026-08-01"},{"id":236,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-7","pm_date":"2026-10-01"},{"id":237,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-8","pm_date":"2026-08-01"},{"id":238,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-7","pm_date":"2026-08-01"},{"id":239,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-6","pm_date":"2026-08-01"},{"id":240,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-11","pm_date":"2026-08-01"},{"id":241,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-6","pm_date":"2026-10-01"},{"id":242,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-7(AHU)","pm_date":"2027-03-01"},{"id":243,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-6","pm_date":"2027-03-01"},{"id":244,"area":"PANEL \u00b7 TALC Unit","panel":"MPP2B","pm_date":"2027-01-01"},{"id":245,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-1A","pm_date":"2026-08-01"},{"id":246,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-1B","pm_date":"2026-08-01"},{"id":247,"area":"PANEL \u00b7 TALC Unit","panel":"MPP-1C","pm_date":"2026-08-01"},{"id":248,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-1","pm_date":"2026-10-01"},{"id":249,"area":"PANEL \u00b7 TALC Unit","panel":"SMSB-3","pm_date":"2026-10-01"},{"id":250,"area":"PANEL \u00b7 TALC Unit","panel":"ACCP-1","pm_date":"2026-09-01"},{"id":251,"area":"PANEL \u00b7 TALC Unit","panel":"ACCP-2","pm_date":"2026-09-01"},{"id":252,"area":"PANEL \u00b7 TALC Unit","panel":"ACCP-3","pm_date":"2026-09-01"},{"id":253,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-1","pm_date":"2026-08-01"},{"id":254,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-2","pm_date":"2026-08-01"},{"id":255,"area":"PANEL \u00b7 TALC Unit","panel":"Fire Pump Panel","pm_date":"2026-08-01"},{"id":256,"area":"PANEL \u00b7 TALC Unit","panel":"STP-1","pm_date":"2026-12-01"},{"id":257,"area":"PANEL \u00b7 TALC Unit","panel":"STP-2","pm_date":"2026-12-01"},{"id":258,"area":"PANEL \u00b7 TALC Unit","panel":"HT panel,MRSS","pm_date":"2026-08-01"},{"id":259,"area":"PANEL \u00b7 TALC Unit","panel":"HT Panel near EB Room","pm_date":"2026-08-01"},{"id":260,"area":"PANEL \u00b7 TALC Unit","panel":"6.6 KV PANEL","pm_date":"2026-08-01"},{"id":261,"area":"PANEL \u00b7 TALC Unit","panel":"PCC 1","pm_date":"2027-01-01"},{"id":262,"area":"PANEL \u00b7 TALC Unit","panel":"PCC 2","pm_date":"2027-01-01"},{"id":263,"area":"PANEL \u00b7 TALC Unit","panel":"MLDB","pm_date":"2026-08-01"},{"id":264,"area":"PANEL \u00b7 TALC Unit","panel":"RTCC","pm_date":"2027-01-01"},{"id":265,"area":"PANEL \u00b7 TALC Unit","panel":"DG AUXLARY PANEL","pm_date":"2026-08-01"},{"id":266,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-1","pm_date":"2026-11-01"},{"id":267,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-2","pm_date":"2026-11-01"},{"id":268,"area":"PANEL \u00b7 TALC Unit","panel":"APFC-3","pm_date":"2026-11-01"},{"id":269,"area":"PANEL \u00b7 TALC Unit","panel":"4 mva Traffo-1 NGR","pm_date":"2026-08-01"},{"id":270,"area":"PANEL \u00b7 TALC Unit","panel":"4 mva Traffo-2 NGR","pm_date":"2026-08-01"},{"id":271,"area":"PANEL \u00b7 TALC Unit","panel":"DG NGR","pm_date":"2026-08-01"},{"id":272,"area":"PANEL \u00b7 TALC Unit","panel":"DG NIS-1","pm_date":"2026-08-01"},{"id":273,"area":"PANEL \u00b7 TALC Unit","panel":"DG NIS-2","pm_date":"2026-08-01"},{"id":274,"area":"PANEL \u00b7 TALC Unit","panel":"DG NIS-3","pm_date":"2026-08-01"},{"id":275,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 4 mva  #1","pm_date":"2026-06-01"},{"id":276,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 4 mva  #2","pm_date":"2026-06-01"},{"id":277,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 2 mva  # 1","pm_date":"2026-06-01"},{"id":278,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 2 mva # 2","pm_date":"2026-06-01"},{"id":279,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 2 mva # 3","pm_date":"2026-06-01"},{"id":280,"area":"PANEL \u00b7 TALC Unit","panel":"Premonsoon TestTransformers 2 mva # 4","pm_date":"2026-06-01"},{"id":281,"area":"PANEL \u00b7 TALC Unit","panel":"Phase 2 feeder piller main gate","pm_date":"2026-09-01"},{"id":282,"area":"PANEL \u00b7 TALC Unit","panel":"Phase 2 feeder piller between b1,b2 building","pm_date":"2026-09-01"},{"id":283,"area":"PANEL \u00b7 TALC Unit","panel":"Phase 2 feeder piller near stp","pm_date":"2026-09-01"},{"id":284,"area":"PANEL \u00b7 TALC Unit","panel":"Phase-2 ETP","pm_date":"2027-01-01"}];
-
-function defaultChecklistFields(){
+function defaultPanelChecklist(){
   return [
     {id:'pi_value', label:'PI Value', type:'number', step:'0.01', required:true},
     {id:'ir_value', label:'IR Value', type:'number', step:'0.1', unit:'MΩ', required:true},
-    {id:'busbar_torque', label:'Busbar Torque Check', type:'select', options:['Pass','Fail'], required:true},
+    {id:'busbar_torque', label:'Busbar Torque', type:'select', options:['Pass','Fail'], required:true},
     {id:'cable_term', label:'Cable Termination', type:'select', options:['Good','Loose','Damaged'], required:true},
-    {id:'thermal_scan', label:'Thermal Scan (Hot Spots)', type:'select', options:['None','Minor','Major'], required:true},
-    {id:'breaker_op', label:'Breaker Operation', type:'select', options:['OK','Issue Found'], required:true},
-    {id:'meter_check', label:'Meter Calibration Check', type:'select', options:['OK','Out of Range'], required:false},
+    {id:'thermal_scan', label:'Thermal Scan', type:'select', options:['None','Minor','Major'], required:true},
+    {id:'breaker_op', label:'Breaker Operation', type:'select', options:['OK','Issue'], required:true},
+    {id:'meter_check', label:'Meter Calibration', type:'select', options:['OK','Out of Range'], required:false},
     {id:'cleaning', label:'Panel Cleaning', type:'select', options:['Done','Pending'], required:true},
     {id:'observation', label:'Observation / Remarks', type:'text', required:false},
   ];
 }
 
-// ─── Utility functions ───
 function isoDate(d){ const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; }
-function dateFmt(d){ const z=n=>String(n).padStart(2,'0'); return `${z(d.getDate())}-${z(d.getMonth()+1)}-${d.getFullYear()}`; }
+function dateFmt(d){ if(!d) return '—'; const z=n=>String(n).padStart(2,'0'); return `${z(d.getDate())}·${z(d.getMonth()+1)}·${d.getFullYear()}`; }
+function dayName(d){ return ['SUN','MON','TUE','WED','THU','FRI','SAT'][d.getDay()]; }
 function isoToDate(s){ return new Date(s+'T00:00:00'); }
 function isAdmin(){ return window.__pmRole === 'admin'; }
+
 function requireOps(name){
-  if(!window.__pmCurrentUser && window.__pmFirebaseReady){
-    toast('Sign-in required','You must be signed in to '+name,'warn');
-    return false;
-  }
+  if(!window.__pmCurrentUser && window.__pmFirebaseReady){ toast('Sign-in required', name, 'warn'); return false; }
   return true;
 }
-function toast(title,msg,type){
-  const t = document.createElement('div');
-  t.className = 'toast' + (type?' '+type:'');
-  t.innerHTML = `<div style="font-weight:600">${title}</div>${msg?'<div style="font-size:11px;color:var(--text-dim);margin-top:3px">'+msg+'</div>':''}`;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 3500);
+function requireAdmin(name){
+  if(!isAdmin()){ toast('Admin only', `"${name}" needs admin rights`, 'warn'); return false; }
+  return true;
 }
+function toast(t, m, type){
+  const wrap = document.getElementById('toast-wrap');
+  const e = document.createElement('div');
+  e.className = 'toast' + (type ? ' '+type : '');
+  e.innerHTML = `<div class="ts-title">${t}</div>${m?'<div class="ts-msg">'+m+'</div>':''}`;
+  wrap.appendChild(e);
+  setTimeout(()=>{ e.style.opacity='0'; e.style.transform='translateX(20px)'; e.style.transition='all 0.2s'; setTimeout(()=>e.remove(),200); }, 3200);
+}
+function unitShort(area){ return (area||'').replace('PANEL · ',''); }
 
 function getPanelStatus(p){
   const exec = STATE.panelExecutions[p.id];
@@ -244,8 +590,12 @@ function getPanelStatus(p){
   if(diff <= 14) return 'UPCOMING';
   return 'SCHEDULED';
 }
+function computeMTTR(){
+  const t = Object.values(STATE.panelExecutions).filter(e=>e && e.mttrMin).map(e=>e.mttrMin);
+  return t.length ? Math.round(t.reduce((a,b)=>a+b,0)/t.length) : 0;
+}
 
-// ─── Firebase load/save ─────────────────────────────────────────────────────
+// ─── Firebase ──────────
 async function loadFromFirebase(){
   if(!window.__pmFirebase) return;
   const fb = window.__pmFirebase;
@@ -253,337 +603,730 @@ async function loadFromFirebase(){
     const ref = fb.doc(fb.db, 'shared_state', 'main');
     const snap = await fb.getDoc(ref);
     if(snap.exists()){
-      const data = snap.data();
-      STATE.panels = data.panels || DEFAULT_PANELS.slice();
-      STATE.panelExecutions = data.panelExecutions || {};
-      STATE.panelConfirmations = data.panelConfirmations || {};
-      STATE.areaOwners = data.areaOwners || [];
-      STATE.checklistFields = data.checklistFields || defaultChecklistFields();
-      STATE.reschedules = data.reschedules || [];
+      const d = snap.data();
+      STATE.panels = d.panels && d.panels.length ? d.panels : DEFAULT_PANELS.slice();
+      STATE.panelExecutions = d.panelExecutions || {};
+      STATE.panelChecklistFields = d.panelChecklistFields || defaultPanelChecklist();
+      STATE.panelOwners = d.panelOwners || [];
+      STATE.reschedules = (d.reschedules || []).filter(r => r.type === 'panel');
+      const existing = new Set(STATE.panels.map(p=>p.id));
+      let added = 0;
+      for(const dp of DEFAULT_PANELS){
+        if(!existing.has(dp.id)){ STATE.panels.push(dp); added++; }
+      }
+      if(added > 0){ await saveToFirebase(); }
     } else {
       STATE.panels = DEFAULT_PANELS.slice();
-      STATE.checklistFields = defaultChecklistFields();
+      STATE.panelChecklistFields = defaultPanelChecklist();
       await saveToFirebase();
     }
-    // Real-time updates
     fb.onSnapshot(ref, (snap2)=>{
       if(!snap2.exists()) return;
-      const data = snap2.data();
-      STATE.panels = data.panels || STATE.panels;
-      STATE.panelExecutions = data.panelExecutions || {};
-      STATE.panelConfirmations = data.panelConfirmations || {};
-      STATE.areaOwners = data.areaOwners || [];
-      STATE.checklistFields = data.checklistFields || STATE.checklistFields;
+      const d = snap2.data();
+      STATE.panels = d.panels || STATE.panels;
+      STATE.panelExecutions = d.panelExecutions || {};
+      STATE.panelChecklistFields = d.panelChecklistFields || STATE.panelChecklistFields;
+      STATE.panelOwners = d.panelOwners || [];
       renderAll();
     });
-    document.body.className = (window.__pmRole==='admin') ? 'role-admin' : 'role-user';
-    document.getElementById('user-email').textContent = window.__pmCurrentUser ? window.__pmCurrentUser.email : '';
-    const roleEl = document.getElementById('user-role');
-    roleEl.textContent = window.__pmRole.toUpperCase();
-    roleEl.className = 'user-role ' + window.__pmRole;
+    document.body.className = isAdmin() ? 'role-admin' : 'role-user';
+    document.getElementById('u-email').textContent = window.__pmCurrentUser ? window.__pmCurrentUser.email : '';
+    const rb = document.getElementById('u-role');
+    rb.textContent = window.__pmRole.toUpperCase();
+    rb.className = 'role-tag ' + window.__pmRole;
     renderAll();
   } catch(e){
     console.error('Firebase load failed', e);
-    toast('Sync error', 'Could not load from Firebase. Working in local mode.', 'warn');
     STATE.panels = DEFAULT_PANELS.slice();
-    STATE.checklistFields = defaultChecklistFields();
+    STATE.panelChecklistFields = defaultPanelChecklist();
     renderAll();
   }
 }
-
 async function saveToFirebase(){
   if(!window.__pmFirebase || !window.__pmCurrentUser) return;
   const fb = window.__pmFirebase;
   try{
     const ref = fb.doc(fb.db, 'shared_state', 'main');
-    // Merge: only write panel-specific fields so we don't overwrite motor state
-    const existing = await fb.getDoc(ref);
-    const base = existing.exists() ? existing.data() : {};
+    const snap = await fb.getDoc(ref);
+    const base = snap.exists() ? snap.data() : {};
     base.panels = STATE.panels;
     base.panelExecutions = STATE.panelExecutions;
-    base.panelConfirmations = STATE.panelConfirmations;
-    base.reschedules = STATE.reschedules;
+    base.panelChecklistFields = STATE.panelChecklistFields;
+    base.panelOwners = STATE.panelOwners;
+    const motorRes = (base.reschedules || []).filter(r => r.type !== 'panel');
+    base.reschedules = motorRes.concat(STATE.reschedules);
     await fb.setDoc(ref, base);
-  } catch(e){
-    console.error('Firebase save failed', e);
-    toast('Save error','Changes not synced','error');
-  }
+  } catch(e){ console.error('save failed', e); toast('Save error','Not synced','error'); }
 }
 
-// ─── Render ────────────────────────────────────────────────────────────────
-function renderStats(){
+// ─── Nav ───────────────
+document.querySelectorAll('.nav-item').forEach(n=>{
+  n.addEventListener('click', ()=>{
+    if(n.classList.contains('admin-only') && !isAdmin()){ toast('Admin only','','warn'); return; }
+    document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    n.classList.add('active');
+    const el = document.getElementById('page-'+n.dataset.page);
+    if(el) el.classList.add('active');
+    window.scrollTo(0,0);
+    renderAll();
+  });
+});
+
+// ─── Chart defaults ─────
+function chartFont(){ return { color:'#9e9ea4', font:{family:"'IBM Plex Mono', monospace", size:10, weight:'500'}}; }
+function chartGrid(){ return { color:'#26262d', lineWidth:1, drawTicks:false }; }
+function clrChart(id){ if(CHARTS[id]){ CHARTS[id].destroy(); delete CHARTS[id]; } }
+
+const PALETTE = { red:'#ef4444', amber:'#f59e0b', blue:'#60a5fa', muted:'#5d5d65', green:'#22c55e', accent:'#fb923c', violet:'#a78bfa' };
+
+// ─── Overview ──────────
+function renderOverview(){
   const total = STATE.panels.length;
-  const done = STATE.panels.filter(p=>STATE.panelExecutions[p.id] && STATE.panelExecutions[p.id].actualDate).length;
+  const done = STATE.panels.filter(p=>STATE.panelExecutions[p.id]).length;
   const overdue = STATE.panels.filter(p=>getPanelStatus(p)==='OVERDUE').length;
-  const thisMonth = TODAY.getMonth(), thisYear = TODAY.getFullYear();
-  const due = STATE.panels.filter(p=>{
-    if(STATE.panelExecutions[p.id]) return false;
-    const d = isoToDate(p.pm_date);
-    return d.getMonth()===thisMonth && d.getFullYear()===thisYear;
-  }).length;
+  const tm = TODAY.getMonth(), ty = TODAY.getFullYear();
+  const due = STATE.panels.filter(p=>{ if(STATE.panelExecutions[p.id]) return false; const d=isoToDate(p.pm_date); return d.getMonth()===tm && d.getFullYear()===ty; }).length;
   const compl = total > 0 ? Math.min(100, Math.round((done/total)*100)) : 0;
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-done').textContent = done;
-  document.getElementById('stat-due').textContent = due;
-  document.getElementById('stat-overdue').textContent = overdue;
-  document.getElementById('stat-compl').textContent = compl + '%';
+  const units = [...new Set(STATE.panels.map(p=>p.area))].length;
+
+  document.getElementById('k-total').textContent = total.toLocaleString();
+  document.getElementById('k-units').textContent = units;
+  document.getElementById('k-done').textContent = done.toLocaleString();
+  document.getElementById('k-done-pct').textContent = total ? Math.round((done/total)*100) + '%' : '0%';
+  document.getElementById('k-due').textContent = due.toLocaleString();
+  document.getElementById('k-over').textContent = overdue.toLocaleString();
+  document.getElementById('k-comp').firstChild.textContent = compl;
+  document.getElementById('tb-count').textContent = total;
+  document.getElementById('tb-date').textContent = dateFmt(TODAY);
+
+  // Sidebar nav numbers
+  document.getElementById('n-overview').textContent = total;
+  document.getElementById('n-master').textContent = total;
+  document.getElementById('n-comp').textContent = compl + '%';
+  document.getElementById('n-daily').textContent = due + overdue;
+  document.getElementById('n-exec').textContent = Object.keys(STATE.panelExecutions).length;
+
+  // Status doughnut
+  clrChart('status');
+  const buckets = {OVERDUE:0,DUE:0,UPCOMING:0,SCHEDULED:0,DONE:0};
+  STATE.panels.forEach(p=>buckets[getPanelStatus(p)]++);
+  document.getElementById('m-status').textContent = total + ' total';
+  const elStatus = document.getElementById('ch-status');
+  if(elStatus) CHARTS.status = new Chart(elStatus, {
+    type:'doughnut',
+    data:{
+      labels:['Overdue','Due','Upcoming','Scheduled','Done'],
+      datasets:[{ data:Object.values(buckets), backgroundColor:[PALETTE.red, PALETTE.amber, PALETTE.blue, PALETTE.muted, PALETTE.green], borderColor:'#111114', borderWidth:2, hoverOffset:4 }]
+    },
+    options:{
+      cutout:'68%',
+      plugins:{ legend:{ position:'right', labels:{...chartFont(), boxWidth:8, boxHeight:8, padding:10, font:{family:"'IBM Plex Mono', monospace", size:10}}}},
+      responsive:true, maintainAspectRatio:false
+    }
+  });
+
+  // Top units bar
+  clrChart('unit');
+  const byUnit = {};
+  STATE.panels.forEach(p=>byUnit[p.area] = (byUnit[p.area]||0)+1);
+  const sorted = Object.entries(byUnit).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const elUnit = document.getElementById('ch-unit');
+  if(elUnit) CHARTS.unit = new Chart(elUnit, {
+    type:'bar',
+    data:{ labels:sorted.map(s=>unitShort(s[0])), datasets:[{ data:sorted.map(s=>s[1]), backgroundColor:PALETTE.accent, borderRadius:0, barThickness:14 }] },
+    options:{
+      indexAxis:'y',
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#18181d', borderColor:'#34343d', borderWidth:1, titleFont:{family:"'IBM Plex Mono', monospace", size:10}, bodyFont:{family:"'IBM Plex Mono', monospace", size:11}}},
+      scales:{ x:{ grid:chartGrid(), border:{display:false}, ticks:chartFont() }, y:{ grid:{display:false}, border:{display:false}, ticks:chartFont() }},
+      responsive:true, maintainAspectRatio:false
+    }
+  });
+
+  // Monthly workload
+  clrChart('month');
+  const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  const monthCounts = new Array(12).fill(0);
+  STATE.panels.forEach(p=>{
+    const d = isoToDate(p.pm_date);
+    const idx = (d.getFullYear()-2026)*12 + d.getMonth() - 3;
+    if(idx>=0 && idx<12) monthCounts[idx]++;
+  });
+  const elMonth = document.getElementById('ch-month');
+  if(elMonth) CHARTS.month = new Chart(elMonth, {
+    type:'bar',
+    data:{ labels:months, datasets:[{ label:'Planned', data:monthCounts, backgroundColor:PALETTE.blue, borderRadius:0, barThickness:'flex', maxBarThickness:18 }] },
+    options:{
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#18181d', borderColor:'#34343d', borderWidth:1 }},
+      scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:chartFont() }, y:{ grid:chartGrid(), border:{display:false}, ticks:chartFont() }},
+      responsive:true, maintainAspectRatio:false
+    }
+  });
+
+  // Cumulative trend
+  clrChart('trend');
+  const cumPlan = []; const cumDone = []; let sp=0, sd=0;
+  for(let i=0;i<12;i++){
+    sp += monthCounts[i];
+    const dc = Object.values(STATE.panelExecutions).filter(e=>{ if(!e || !e.actualDate) return false; const d=isoToDate(e.actualDate); const idx=(d.getFullYear()-2026)*12 + d.getMonth() - 3; return idx===i; }).length;
+    sd += dc;
+    cumPlan.push(sp); cumDone.push(sd);
+  }
+  const elTrend = document.getElementById('ch-trend');
+  if(elTrend) CHARTS.trend = new Chart(elTrend, {
+    type:'line',
+    data:{ labels:months, datasets:[
+      { label:'Planned', data:cumPlan, borderColor:PALETTE.blue, backgroundColor:'rgba(96,165,250,0.08)', tension:0.25, fill:true, borderWidth:2, pointRadius:3, pointBackgroundColor:PALETTE.blue, pointBorderColor:'#111114', pointBorderWidth:1.5 },
+      { label:'Done', data:cumDone, borderColor:PALETTE.green, backgroundColor:'rgba(34,197,94,0.10)', tension:0.25, fill:true, borderWidth:2, pointRadius:3, pointBackgroundColor:PALETTE.green, pointBorderColor:'#111114', pointBorderWidth:1.5 }
+    ]},
+    options:{
+      plugins:{ legend:{ labels:{...chartFont(), boxWidth:10, boxHeight:8, padding:14}}, tooltip:{ backgroundColor:'#18181d', borderColor:'#34343d', borderWidth:1, mode:'index', intersect:false }},
+      interaction:{ mode:'index', intersect:false },
+      scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:chartFont() }, y:{ grid:chartGrid(), border:{display:false}, ticks:chartFont() }},
+      responsive:true, maintainAspectRatio:false
+    }
+  });
+
+  // MTTR
+  clrChart('mttr');
+  const mttrByUnit = {};
+  Object.entries(STATE.panelExecutions).forEach(([pid,e])=>{
+    const p = STATE.panels.find(x=>x.id===parseInt(pid));
+    if(!p || !e.mttrMin) return;
+    if(!mttrByUnit[p.area]) mttrByUnit[p.area]=[];
+    mttrByUnit[p.area].push(e.mttrMin);
+  });
+  const md = Object.entries(mttrByUnit).map(([u,vals])=>[unitShort(u), Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)]);
+  const elM = document.getElementById('ch-mttr');
+  if(elM) CHARTS.mttr = new Chart(elM, {
+    type:'bar',
+    data:{ labels: md.length ? md.map(d=>d[0]) : ['No data yet'], datasets:[{ label:'Avg MTTR (min)', data: md.length ? md.map(d=>d[1]) : [0], backgroundColor:PALETTE.amber, borderRadius:0, barThickness:'flex', maxBarThickness:18 }] },
+    options:{
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#18181d', borderColor:'#34343d', borderWidth:1 }},
+      scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:chartFont() }, y:{ grid:chartGrid(), border:{display:false}, ticks:chartFont() }},
+      responsive:true, maintainAspectRatio:false
+    }
+  });
 }
 
-function renderFilters(){
-  // Units
-  const unitSel = document.getElementById('filter-unit');
-  const currentUnit = unitSel.value;
+// ─── Daily ────────────
+function renderDaily(){
+  const win = parseInt(document.getElementById('d-window').value) || 30;
+  const stf = document.getElementById('d-status').value;
+  const unf = document.getElementById('d-unit').value;
+  const uSel = document.getElementById('d-unit');
+  const cur = uSel.value;
   const units = [...new Set(STATE.panels.map(p=>p.area))].sort();
-  unitSel.innerHTML = '<option value="">All Units</option>' + units.map(u=>`<option value="${u}">${u.replace('PANEL · ','')}</option>`).join('');
-  unitSel.value = currentUnit;
-  // Months
-  const monthSel = document.getElementById('filter-month');
-  const currentMonth = monthSel.value;
-  const months = [...new Set(STATE.panels.map(p=>p.pm_date.substring(0,7)))].sort();
-  const fmtMonth = (m)=>{
-    const [y,mn] = m.split('-');
-    const d = new Date(parseInt(y), parseInt(mn)-1, 1);
-    return d.toLocaleString('en-US',{month:'short'})+'-'+y;
-  };
-  monthSel.innerHTML = '<option value="">All Months</option>' + months.map(m=>`<option value="${m}">${fmtMonth(m)}</option>`).join('');
-  monthSel.value = currentMonth;
-}
+  uSel.innerHTML = '<option value="">All units</option>' + units.map(u=>`<option value="${u}">${unitShort(u)}</option>`).join('');
+  uSel.value = cur;
 
-function renderList(){
-  const unit = document.getElementById('filter-unit').value;
-  const status = document.getElementById('filter-status').value;
-  const month = document.getElementById('filter-month').value;
-  let rows = STATE.panels.slice();
-  if(unit) rows = rows.filter(p=>p.area===unit);
-  if(month) rows = rows.filter(p=>p.pm_date.startsWith(month));
-  if(status) rows = rows.filter(p=>getPanelStatus(p).toLowerCase()===status);
-  // Sort by date
+  const end = new Date(TODAY); end.setDate(end.getDate()+win);
+  let rows = STATE.panels.filter(p=>isoToDate(p.pm_date) <= end);
+  if(unf) rows = rows.filter(p=>p.area===unf);
+  if(stf) rows = rows.filter(p=>getPanelStatus(p).toLowerCase()===stf);
   rows.sort((a,b)=>a.pm_date.localeCompare(b.pm_date));
-  document.getElementById('list-count').textContent = rows.length + ' panel' + (rows.length===1?'':'s');
-  const container = document.getElementById('panel-rows');
-  if(rows.length===0){ container.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-muted)">No panels match the current filters.</div>'; return; }
-  container.innerHTML = rows.map(p=>{
+  document.getElementById('d-count').textContent = rows.length + ' panel' + (rows.length===1?'':'s');
+  const list = document.getElementById('d-list');
+  if(!rows.length){
+    list.innerHTML = '<div class="empty"><div class="empty-icon">∅</div><div class="empty-text">No panels in window</div></div>';
+    return;
+  }
+  list.innerHTML = rows.map(p=>{
     const st = getPanelStatus(p);
-    const cls = st==='OVERDUE'?'overdue':st==='DUE'?'due':st==='UPCOMING'?'upcoming':st==='DONE'?'done':'scheduled';
+    const cls = st.toLowerCase();
     const exec = STATE.panelExecutions[p.id];
     const isDone = exec && exec.actualDate;
-    return `<div class="panel-item ${cls}">
-      <div class="panel-date" onclick="openShiftPanelDate(${p.id})" title="Click to shift planned date">${dateFmt(isoToDate(p.pm_date))}</div>
-      <div><div class="panel-area">${p.area}</div><div class="panel-name">${p.panel}</div></div>
-      <div style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:11px">Yearly · 1/yr</div>
-      <div><span style="display:inline-block;padding:3px 7px;background:rgba(167,139,250,0.16);color:var(--accent-5);border-radius:3px;font-size:9px;font-weight:700">Y</span></div>
-      <div><span class="status-pill status-${st.toLowerCase()}">${st}</span>${isDone?`<div style="font-size:9px;color:var(--text-muted);margin-top:3px">${dateFmt(isoToDate(exec.actualDate))}</div>`:''}</div>
-      ${isDone ? `<button class="mark-btn undo" onclick="markPanelUndo(${p.id})">Undo</button>` : `<button class="mark-btn" onclick="markPanelDone(${p.id})">Mark Done</button>`}
+    const d = isoToDate(p.pm_date);
+    return `<div class="daily-row ${cls}">
+      <div class="dr-date" onclick="openShiftDate(${p.id})" title="Click to shift">${dateFmt(d)}<span class="day">${dayName(d)}</span></div>
+      <div><div class="dr-name">${p.panel}</div><div class="dr-unit">${unitShort(p.area)}</div></div>
+      <div class="dr-freq">YEARLY</div>
+      <div><span class="pill ${cls}">${st}</span>${isDone?`<div class="mono" style="font-size:10px;color:var(--text-3);margin-top:3px">${dateFmt(isoToDate(exec.actualDate))}</div>`:''}</div>
+      <div>${isDone ? `<button class="btn ghost sm" onclick="markUndo(${p.id})">↶ Undo</button>` : `<button class="btn sm" onclick="markDone(${p.id})">✓ Mark Done</button>`}</div>
     </div>`;
   }).join('');
 }
+['d-window','d-status','d-unit'].forEach(id=>{ const e=document.getElementById(id); if(e) e.addEventListener('change', renderDaily); });
 
-function renderAll(){ renderStats(); renderFilters(); renderList(); }
+// ─── Schedule matrix ────
+function renderSchedule(){
+  const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  const units = [...new Set(STATE.panels.map(p=>p.area))].sort();
+  const matrix = {};
+  units.forEach(u=>{ matrix[u] = new Array(12).fill(0); });
+  STATE.panels.forEach(p=>{
+    const d = isoToDate(p.pm_date);
+    const idx = (d.getFullYear()-2026)*12 + d.getMonth() - 3;
+    if(idx>=0 && idx<12 && matrix[p.area]) matrix[p.area][idx]++;
+  });
+  const colTotals = new Array(12).fill(0);
+  units.forEach(u=>{ matrix[u].forEach((v,i)=>colTotals[i]+=v); });
+  const grandTotal = colTotals.reduce((a,b)=>a+b,0);
+  let h = '<thead><tr><th>Unit</th>' + months.map(m=>`<th class="num">${m}</th>`).join('') + '<th class="num">Total</th></tr></thead><tbody>';
+  units.forEach(u=>{
+    const total = matrix[u].reduce((a,b)=>a+b,0);
+    h += `<tr><td class="unit-name">${unitShort(u)}</td>` +
+         matrix[u].map(v=>`<td class="num" style="color:${v?'var(--text)':'var(--text-3)'}">${v||'·'}</td>`).join('') +
+         `<td class="num" style="font-weight:600;color:var(--accent)">${total}</td></tr>`;
+  });
+  h += `<tr style="background:var(--bg-2)"><td class="unit-name" style="color:var(--text-2)">Σ TOTAL</td>` +
+       colTotals.map(v=>`<td class="num" style="font-weight:600">${v}</td>`).join('') +
+       `<td class="num" style="font-weight:700;color:var(--accent)">${grandTotal}</td></tr>`;
+  h += '</tbody>';
+  document.getElementById('sch-table').innerHTML = h;
+  document.getElementById('sch-meta').innerHTML = `${units.length} units · <b>${grandTotal}</b> panels`;
+}
 
-['filter-unit','filter-status','filter-month'].forEach(id=>{
-  document.getElementById(id).addEventListener('change', renderList);
-});
+// ─── Compliance ─────────
+function renderCompliance(){
+  const total = STATE.panels.length;
+  const done = Object.keys(STATE.panelExecutions).length;
+  const overall = total > 0 ? Math.min(100, Math.round((done/total)*100)) : 0;
+  document.getElementById('c-overall').firstChild.textContent = overall;
 
-// ─── Modal: Mark Done with checklist + GPS ───
-let _gpsCapture = null;
-function openModal(content){
-  const host = document.getElementById('modal-host');
-  const bd = document.getElementById('modal-backdrop');
-  host.innerHTML = content;
-  host.classList.add('show'); bd.classList.add('show');
+  const unitStats = {};
+  STATE.panels.forEach(p=>{
+    if(!unitStats[p.area]) unitStats[p.area] = {planned:0, done:0};
+    unitStats[p.area].planned++;
+    if(STATE.panelExecutions[p.id]) unitStats[p.area].done++;
+  });
+  const units = Object.entries(unitStats).map(([u,s])=>{
+    const pct = s.planned ? Math.round((s.done/s.planned)*100) : 0;
+    return {unit:u, planned:s.planned, done:s.done, pct};
+  }).sort((a,b)=>b.pct-a.pct);
+
+  if(units.length){
+    document.getElementById('c-best').textContent = unitShort(units[0].unit);
+    document.getElementById('c-best-pct').textContent = units[0].pct + '% compliance';
+    document.getElementById('c-worst').textContent = unitShort(units[units.length-1].unit);
+    document.getElementById('c-worst-pct').textContent = units[units.length-1].pct + '% compliance';
+  } else {
+    document.getElementById('c-best').textContent = '—';
+    document.getElementById('c-worst').textContent = '—';
+  }
+  const mttr = computeMTTR();
+  document.getElementById('c-mttr').firstChild.textContent = mttr || '—';
+
+  // Unit compliance bar
+  clrChart('cunit');
+  const elcu = document.getElementById('ch-comp-unit');
+  if(elcu && units.length) CHARTS.cunit = new Chart(elcu, {
+    type:'bar',
+    data:{
+      labels:units.map(u=>unitShort(u.unit)),
+      datasets:[{ label:'Compliance %', data:units.map(u=>u.pct), backgroundColor:units.map(u=>u.pct>=90?PALETTE.green:u.pct>=70?PALETTE.amber:PALETTE.red), borderRadius:0, barThickness:14 }]
+    },
+    options:{
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#18181d', borderColor:'#34343d', borderWidth:1 }},
+      scales:{ x:{ max:100, grid:chartGrid(), border:{display:false}, ticks:{...chartFont(), callback:v=>v+'%'} }, y:{ grid:{display:false}, border:{display:false}, ticks:chartFont() }},
+      indexAxis:'y', responsive:true, maintainAspectRatio:false
+    }
+  });
+
+  // Monthly plan vs done
+  clrChart('cmon');
+  const monthsLbl = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  const planArr = new Array(12).fill(0);
+  const doneArr = new Array(12).fill(0);
+  STATE.panels.forEach(p=>{ const d=isoToDate(p.pm_date); const i=(d.getFullYear()-2026)*12+d.getMonth()-3; if(i>=0&&i<12) planArr[i]++; });
+  Object.values(STATE.panelExecutions).forEach(e=>{ if(!e.actualDate) return; const d=isoToDate(e.actualDate); const i=(d.getFullYear()-2026)*12+d.getMonth()-3; if(i>=0&&i<12) doneArr[i]++; });
+  const elcm = document.getElementById('ch-comp-month');
+  if(elcm) CHARTS.cmon = new Chart(elcm, {
+    type:'bar',
+    data:{ labels:monthsLbl, datasets:[
+      { label:'Planned', data:planArr, backgroundColor:PALETTE.muted, borderRadius:0, barThickness:'flex', maxBarThickness:14 },
+      { label:'Done', data:doneArr, backgroundColor:PALETTE.green, borderRadius:0, barThickness:'flex', maxBarThickness:14 }
+    ]},
+    options:{
+      plugins:{ legend:{ labels:{...chartFont(), boxWidth:10, boxHeight:8, padding:14}}, tooltip:{ backgroundColor:'#18181d', borderColor:'#34343d', borderWidth:1 }},
+      scales:{ x:{ grid:{display:false}, border:{display:false}, ticks:chartFont() }, y:{ grid:chartGrid(), border:{display:false}, ticks:chartFont() }},
+      responsive:true, maintainAspectRatio:false
+    }
+  });
+
+  // Unit detail table with progress bars
+  let h = '<thead><tr><th>Unit</th><th class="num">Planned</th><th class="num">Done</th><th class="num">Pending</th><th>Progress</th></tr></thead><tbody>';
+  units.forEach(u=>{
+    const cls = u.pct>=90?'good':u.pct>=70?'warn':'bad';
+    h += `<tr>
+      <td class="unit-name">${unitShort(u.unit)}</td>
+      <td class="num">${u.planned}</td>
+      <td class="num" style="color:var(--green)">${u.done}</td>
+      <td class="num" style="color:${u.planned-u.done?'var(--amber)':'var(--text-3)'}">${u.planned-u.done}</td>
+      <td><div class="bar-cell"><div class="bar-track"><div class="bar-fill ${cls}" style="width:${u.pct}%"></div></div><div class="bar-pct">${u.pct}%</div></div></td>
+    </tr>`;
+  });
+  h += '</tbody>';
+  document.getElementById('t-unit-comp').innerHTML = h;
+}
+
+// ─── Master ────────────
+function renderMaster(){
+  const q = (document.getElementById('m-search').value||'').toLowerCase();
+  const uf = document.getElementById('m-unit').value;
+  const uSel = document.getElementById('m-unit');
+  if(uSel.options.length <= 1){
+    const units = [...new Set(STATE.panels.map(p=>p.area))].sort();
+    uSel.innerHTML = '<option value="">All units</option>' + units.map(u=>`<option value="${u}">${unitShort(u)}</option>`).join('');
+  }
+  let rows = STATE.panels.slice();
+  if(q) rows = rows.filter(p=>p.panel.toLowerCase().includes(q) || p.area.toLowerCase().includes(q));
+  if(uf) rows = rows.filter(p=>p.area===uf);
+  document.getElementById('m-count').textContent = rows.length + ' panels';
+  let h = '<thead><tr><th class="num">ID</th><th>Unit</th><th>Panel</th><th class="num">PM Date</th><th>Status</th>' + (isAdmin()?'<th>Action</th>':'') + '</tr></thead><tbody>';
+  if(!rows.length){
+    h += `<tr><td colspan="${isAdmin()?6:5}" style="text-align:center;padding:40px;color:var(--text-3)">No panels match filter</td></tr>`;
+  } else {
+    rows.forEach(p=>{
+      const st = getPanelStatus(p);
+      h += `<tr>
+        <td class="num" style="color:var(--text-3)">${String(p.id).padStart(3,'0')}</td>
+        <td class="unit-name">${unitShort(p.area)}</td>
+        <td>${p.panel}</td>
+        <td class="num">${dateFmt(isoToDate(p.pm_date))}</td>
+        <td><span class="pill ${st.toLowerCase()}">${st}</span></td>` +
+        (isAdmin()?`<td><button class="btn ghost sm" onclick="deletePanel(${p.id})" style="color:var(--red)">× Delete</button></td>`:'') +
+        '</tr>';
+    });
+  }
+  h += '</tbody>';
+  document.getElementById('t-master').innerHTML = h;
+}
+document.getElementById('m-search').addEventListener('input', renderMaster);
+document.getElementById('m-unit').addEventListener('change', renderMaster);
+
+// ─── Executions ────────
+function renderExecutions(){
+  const execs = Object.entries(STATE.panelExecutions).map(([pid,e])=>{
+    const p = STATE.panels.find(x=>x.id===parseInt(pid));
+    return p ? {p, e} : null;
+  }).filter(Boolean).sort((a,b)=>(b.e.submittedAt||'').localeCompare(a.e.submittedAt||''));
+  document.getElementById('e-count').textContent = execs.length + ' executions';
+  let h = '<thead><tr><th>Unit</th><th>Panel</th><th class="num">Planned</th><th class="num">Actual</th><th class="num">MTTR</th><th>By</th><th>GPS</th>' + (isAdmin()?'<th>Action</th>':'') + '</tr></thead><tbody>';
+  if(!execs.length){
+    h += `<tr><td colspan="${isAdmin()?8:7}" style="text-align:center;padding:40px;color:var(--text-3)">No executions yet</td></tr>`;
+  } else {
+    execs.forEach(({p,e})=>{
+      const gps = e.gps && e.gps.captured ? '<span style="color:var(--green)">●</span> captured' : '<span style="color:var(--text-3)">—</span>';
+      h += `<tr>
+        <td class="unit-name">${unitShort(p.area)}</td>
+        <td>${p.panel}</td>
+        <td class="num">${dateFmt(isoToDate(p.pm_date))}</td>
+        <td class="num">${dateFmt(isoToDate(e.actualDate))}</td>
+        <td class="num">${e.mttrMin||'—'}<span style="color:var(--text-3);font-size:10px"> m</span></td>
+        <td class="mono" style="font-size:11px">${(e.submittedBy||'').split('@')[0]}</td>
+        <td class="mono" style="font-size:10.5px">${gps}</td>` +
+        (isAdmin()?`<td><button class="btn ghost sm" onclick="markUndo(${p.id})">↶ Undo</button></td>`:'') +
+        '</tr>';
+    });
+  }
+  h += '</tbody>';
+  document.getElementById('t-exec').innerHTML = h;
+}
+
+// ─── Checklist Config ─
+function renderChecklist(){
+  let h = '<thead><tr><th>Label</th><th>Type</th><th>Unit</th><th>Required</th><th>Options</th><th></th></tr></thead><tbody>';
+  STATE.panelChecklistFields.forEach((f,i)=>{
+    h += `<tr>
+      <td style="font-weight:500">${f.label}</td>
+      <td><span class="mono" style="font-size:11px;color:var(--blue)">${f.type}</span></td>
+      <td class="mono" style="font-size:11px;color:var(--text-2)">${f.unit||'—'}</td>
+      <td>${f.required?'<span style="color:var(--red);font-weight:600">YES</span>':'<span style="color:var(--text-3)">no</span>'}</td>
+      <td class="mono" style="font-size:11px;color:var(--text-2)">${(f.options||[]).join(', ')||'—'}</td>
+      <td><button class="btn ghost sm" onclick="deleteChecklistField(${i})" style="color:var(--red)">× Remove</button></td>
+    </tr>`;
+  });
+  h += '</tbody>';
+  document.getElementById('t-checklist').innerHTML = h;
+  document.getElementById('ck-count').textContent = STATE.panelChecklistFields.length + ' fields';
+}
+function addChecklistField(){
+  if(!requireAdmin('Add field')) return;
+  const label = document.getElementById('ck-label').value.trim();
+  const type = document.getElementById('ck-type').value;
+  const unit = document.getElementById('ck-unit').value.trim();
+  const req = document.getElementById('ck-req').value === 'true';
+  const opts = document.getElementById('ck-opts').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!label){ toast('Missing','Label is required','warn'); return; }
+  const id = label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  STATE.panelChecklistFields.push({id, label, type, unit:unit||undefined, required:req, options:opts.length?opts:undefined});
+  saveToFirebase();
+  renderChecklist();
+  document.getElementById('ck-label').value='';
+  document.getElementById('ck-unit').value='';
+  document.getElementById('ck-opts').value='';
+  toast('Field added', label, 'good');
+}
+function deleteChecklistField(idx){
+  if(!requireAdmin('Delete field')) return;
+  if(!confirm('Remove this field?')) return;
+  STATE.panelChecklistFields.splice(idx,1);
+  saveToFirebase();
+  renderChecklist();
+}
+
+// ─── Modals ────────────
+let _gps = null;
+function openModal(html){
+  document.getElementById('m-host').innerHTML = html;
+  document.getElementById('m-host').classList.add('show');
+  document.getElementById('m-bd').classList.add('show');
 }
 function closeModal(){
-  document.getElementById('modal-host').classList.remove('show');
-  document.getElementById('modal-backdrop').classList.remove('show');
-  _gpsCapture = null;
+  document.getElementById('m-host').classList.remove('show');
+  document.getElementById('m-bd').classList.remove('show');
+  _gps = null;
 }
 function captureGPS(){
-  const status = document.getElementById('gps-status');
-  const text = document.getElementById('gps-text');
-  if(!navigator.geolocation){ if(status){status.className='gps-indicator fail';text.textContent='GPS not supported';} return; }
+  const ind = document.getElementById('gps-ind');
+  const txt = document.getElementById('gps-txt');
+  if(!navigator.geolocation){ if(ind){ind.className='gps-strip fail';txt.textContent='GPS unavailable';} return; }
   navigator.geolocation.getCurrentPosition(
-    p=>{
-      _gpsCapture = {captured:true, lat:p.coords.latitude, lng:p.coords.longitude, accuracy:p.coords.accuracy};
-      if(status){status.className='gps-indicator ok';text.innerHTML=`${p.coords.latitude.toFixed(4)}°, ${p.coords.longitude.toFixed(4)}° · ±${Math.round(p.coords.accuracy)}m`;}
-    },
-    e=>{ _gpsCapture = {captured:false, reason:e.message}; if(status){status.className='gps-indicator fail';text.textContent='Location: '+e.message;} },
+    p=>{ _gps={captured:true,lat:p.coords.latitude,lng:p.coords.longitude,accuracy:p.coords.accuracy}; if(ind){ind.className='gps-strip ok';txt.innerHTML=`${p.coords.latitude.toFixed(4)}° · ${p.coords.longitude.toFixed(4)}° · ±${Math.round(p.coords.accuracy)}m`;} },
+    e=>{ _gps={captured:false,reason:e.message}; if(ind){ind.className='gps-strip fail';txt.textContent='Location · '+e.message;} },
     {enableHighAccuracy:true,timeout:10000}
   );
 }
-function nowForInput(){ const d=new Date(); const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; }
+function nowDT(){ const d=new Date(); const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; }
 
-function markPanelDone(pid){
-  if(!requireOps('mark panel done')) return;
-  const p = STATE.panels.find(x=>x.id===pid);
-  if(!p){ toast('Not found','','error'); return; }
-  const isToday = isoDate(TODAY);
-  const fields = STATE.checklistFields || defaultChecklistFields();
-  const fieldsHtml = fields.map(f=>{
-    const req = f.required ? 'required' : '';
-    const star = f.required ? 'required' : '';
-    if(f.type === 'select'){
+function markDone(pid){
+  if(!requireOps('mark done')) return;
+  const p = STATE.panels.find(x=>x.id===pid); if(!p) return;
+  const today = isoDate(TODAY);
+  const fields = STATE.panelChecklistFields || defaultPanelChecklist();
+  const fh = fields.map(f=>{
+    const req = f.required?'required':'';
+    const star = f.required?'req':'';
+    if(f.type==='select'){
       const opts = (f.options||[]).map(o=>`<option value="${o}">${o}</option>`).join('');
-      return `<div class="field-group"><label class="${star}">${f.label}${f.unit?' ('+f.unit+')':''}</label><select id="cl-${f.id}" ${req}><option value="">— select —</option>${opts}</select></div>`;
+      return `<div class="field"><label class="${star}">${f.label}${f.unit?' · '+f.unit:''}</label><select id="cl-${f.id}" ${req}><option value="">—</option>${opts}</select></div>`;
     }
-    if(f.type === 'text'){
-      return `<div class="field-group"><label class="${star}">${f.label}</label><textarea id="cl-${f.id}" rows="2" ${req}></textarea></div>`;
-    }
-    return `<div class="field-group"><label class="${star}">${f.label}${f.unit?' ('+f.unit+')':''}</label><input type="number" id="cl-${f.id}" step="${f.step||'any'}" ${req}/></div>`;
+    if(f.type==='text') return `<div class="field"><label class="${star}">${f.label}</label><textarea id="cl-${f.id}" rows="2" ${req}></textarea></div>`;
+    return `<div class="field"><label class="${star}">${f.label}${f.unit?' · '+f.unit:''}</label><input type="number" id="cl-${f.id}" step="${f.step||'any'}" ${req}/></div>`;
   }).join('');
-  const dateMin = isAdmin() ? '' : `min="${isToday}"`;
-  const dateMax = isAdmin() ? '' : `max="${isToday}"`;
-  const content = `
+  const dMin = isAdmin()?'':`min="${today}"`;
+  const dMax = isAdmin()?'':`max="${today}"`;
+  openModal(`
     <div class="modal-head">
-      <div><div class="modal-title">✓ Mark Panel PM Done</div><div class="modal-subtitle">Fill checklist to log this PM</div></div>
-      <button class="modal-close" onclick="closeModal()">×</button>
+      <div>
+        <div class="modal-eyebrow">▍ Execute · Panel PM</div>
+        <div class="modal-title">Mark PM Done</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="panel-info-card">
-        <div class="name">${p.panel}</div>
-        <div class="meta">${p.area} · Yearly · Planned: ${dateFmt(isoToDate(p.pm_date))}</div>
+      <div class="info-strip"><div class="ttl">${p.panel}</div><div class="meta">${p.area} · Yearly · Planned ${dateFmt(isoToDate(p.pm_date))}</div></div>
+      <div class="gps-strip pending" id="gps-ind"><span>📍 GPS</span><span id="gps-txt">Capturing…</span></div>
+      <div class="f-row">
+        <div class="field"><label class="req">Actual Date</label><input type="date" id="md-ad" value="${today}" ${dMin} ${dMax} required/></div>
+        <div class="field"><label class="req">Start</label><input type="datetime-local" id="md-ps" value="${nowDT()}" required/></div>
       </div>
-      <div class="gps-indicator pending" id="gps-status"><span>📍 GPS:</span><span id="gps-text">Capturing location…</span></div>
-      <div class="field-row">
-        <div class="field-group"><label class="required">Actual Date</label><input type="date" id="md-actual-date" value="${isToday}" ${dateMin} ${dateMax} required/></div>
-        <div class="field-group"><label class="required">PM Start</label><input type="datetime-local" id="md-pm-start" value="${nowForInput()}" required/></div>
+      <div class="f-row">
+        <div class="field"><label class="req">Stop</label><input type="datetime-local" id="md-pp" value="${nowDT()}" required/></div>
+        <div class="field"><label>Done by</label><input type="text" id="md-by" value="${window.__pmCurrentUser?window.__pmCurrentUser.email.split('@')[0]:''}"/></div>
       </div>
-      <div class="field-row">
-        <div class="field-group"><label class="required">PM Stop</label><input type="datetime-local" id="md-pm-stop" value="${nowForInput()}" required/></div>
-        <div class="field-group"><label>Done by</label><input type="text" id="md-by" value="${window.__pmCurrentUser ? window.__pmCurrentUser.email.split('@')[0]:''}"/></div>
-      </div>
-      <div style="font-size:12px;color:var(--text);font-weight:600;margin:14px 0 10px;letter-spacing:0.5px">Panel PM Checklist</div>
-      ${fieldsHtml}
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line)">▍ Checklist</div>
+      ${fh}
     </div>
-    <div class="modal-footer">
-      <button class="btn secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn" onclick="submitPanelDone(${pid})">Save & Mark Done</button>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn success" onclick="submitDone(${pid})">✓ Save & Submit</button>
     </div>
-  `;
-  openModal(content);
+  `);
   captureGPS();
 }
-
-function submitPanelDone(pid){
-  if(!requireOps('submit')) return;
-  const fields = STATE.checklistFields || defaultChecklistFields();
+function submitDone(pid){
+  const fields = STATE.panelChecklistFields || defaultPanelChecklist();
   const cl = {};
   for(const f of fields){
-    const el = document.getElementById('cl-'+f.id);
-    if(!el) continue;
+    const el = document.getElementById('cl-'+f.id); if(!el) continue;
     const v = el.value.trim();
     if(f.required && !v){ toast('Missing','Please fill: '+f.label,'warn'); el.focus(); return; }
     cl[f.id] = v;
   }
-  const ad = document.getElementById('md-actual-date').value;
-  if(!ad){ toast('Missing date','','warn'); return; }
-  if(!isAdmin() && ad !== isoDate(TODAY)){ toast('Date restricted','Only today allowed for non-admin','warn'); return; }
-  const ps = document.getElementById('md-pm-start').value;
-  const pp = document.getElementById('md-pm-stop').value;
-  if(!ps || !pp){ toast('Missing time','PM start/stop required','warn'); return; }
-  const startD = new Date(ps), stopD = new Date(pp);
-  if(stopD <= startD){ toast('Invalid time','Stop must be after Start','warn'); return; }
+  const ad = document.getElementById('md-ad').value;
+  if(!ad){ toast('Missing','Date is required','warn'); return; }
+  if(!isAdmin() && ad !== isoDate(TODAY)){ toast('Restricted','User can only set today','warn'); return; }
+  const ps = document.getElementById('md-ps').value;
+  const pp = document.getElementById('md-pp').value;
+  if(!ps || !pp){ toast('Missing','Times required','warn'); return; }
+  const ss = new Date(ps), sp = new Date(pp);
+  if(sp<=ss){ toast('Invalid','Stop must be after start','warn'); return; }
   const by = document.getElementById('md-by').value.trim() || (window.__pmCurrentUser?window.__pmCurrentUser.email:'unknown');
-  STATE.panelExecutions[pid] = {
-    actualDate: ad, pmStart: new Date(ps).toISOString(), pmStop: new Date(pp).toISOString(),
-    mttrMin: Math.round((stopD-startD)/60000),
-    checklist: cl, gps: _gpsCapture, submittedBy: by, submittedAt: new Date().toISOString()
-  };
+  STATE.panelExecutions[pid] = { actualDate:ad, pmStart:ss.toISOString(), pmStop:sp.toISOString(), mttrMin:Math.round((sp-ss)/60000), checklist:cl, gps:_gps, submittedBy:by, submittedAt:new Date().toISOString() };
   saveToFirebase();
-  renderAll();
   closeModal();
-  toast('Panel PM logged', STATE.panels.find(p=>p.id===pid).panel);
+  renderAll();
+  toast('Recorded', STATE.panels.find(p=>p.id===pid).panel, 'good');
 }
-
-function markPanelUndo(pid){
+function markUndo(pid){
   if(!isAdmin()){ toast('Admin only','Only admin can undo','warn'); return; }
-  if(!confirm('Undo this panel PM execution?')) return;
+  if(!confirm('Undo this Panel PM?')) return;
   delete STATE.panelExecutions[pid];
   saveToFirebase();
   renderAll();
-  toast('Undone','Panel PM unmarked');
 }
 
-// ─── Shift planned date ─────
-function openShiftPanelDate(pid){
+function openShiftDate(pid){
   if(!requireOps('shift date')) return;
-  const p = STATE.panels.find(x=>x.id===pid);
-  if(!p) return;
-  const content = `
+  const p = STATE.panels.find(x=>x.id===pid); if(!p) return;
+  openModal(`
     <div class="modal-head">
-      <div><div class="modal-title">📅 Shift Planned Date</div><div class="modal-subtitle">${p.panel}</div></div>
-      <button class="modal-close" onclick="closeModal()">×</button>
+      <div>
+        <div class="modal-eyebrow">▍ Reschedule</div>
+        <div class="modal-title">Shift Planned Date</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="panel-info-card">
-        <div class="name">${p.panel}</div>
-        <div class="meta">${p.area} · Currently: ${dateFmt(isoToDate(p.pm_date))}</div>
-      </div>
-      <div class="field-group">
-        <label class="required">New Planned Date</label>
-        <input type="date" id="sd-date" value="${p.pm_date}" required/>
-      </div>
-      <div class="field-group">
-        <label>Reason</label>
-        <input type="text" id="sd-reason" placeholder="e.g. Production schedule conflict"/>
-      </div>
+      <div class="info-strip"><div class="ttl">${p.panel}</div><div class="meta">${p.area} · Current ${dateFmt(isoToDate(p.pm_date))}</div></div>
+      <div class="field"><label class="req">New Planned Date</label><input type="date" id="sd-date" value="${p.pm_date}" required/></div>
+      <div class="field"><label>Reason</label><input type="text" id="sd-reason" placeholder="e.g. Production constraint"/></div>
     </div>
-    <div class="modal-footer">
-      <button class="btn secondary" onclick="closeModal()">Cancel</button>
-      <button class="btn" onclick="submitShiftPanel(${pid})">Save</button>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="submitShift(${pid})">→ Apply</button>
     </div>
-  `;
-  openModal(content);
+  `);
 }
-function submitShiftPanel(pid){
-  const newDate = document.getElementById('sd-date').value;
-  const reason = document.getElementById('sd-reason').value.trim();
-  if(!newDate){ toast('Missing','New date required','warn'); return; }
-  const p = STATE.panels.find(x=>x.id===pid);
-  if(!p) return;
+function submitShift(pid){
+  const nd = document.getElementById('sd-date').value;
+  const r = document.getElementById('sd-reason').value.trim();
+  if(!nd){ toast('Missing','date','warn'); return; }
+  const p = STATE.panels.find(x=>x.id===pid); if(!p) return;
   const oldDate = p.pm_date;
-  p.pm_date = newDate;
-  if(!STATE.reschedules) STATE.reschedules = [];
-  STATE.reschedules.push({
-    type:'panel', pid, when:new Date().toISOString(),
-    by: window.__pmCurrentUser?window.__pmCurrentUser.email:'unknown',
-    fromDate:oldDate, toDate:newDate, reason: reason||'Quick shift'
-  });
+  p.pm_date = nd;
+  STATE.reschedules.push({type:'panel', pid, when:new Date().toISOString(), by:window.__pmCurrentUser?window.__pmCurrentUser.email:'unknown', fromDate:oldDate, toDate:nd, reason:r||'Quick shift'});
+  saveToFirebase();
+  closeModal();
+  renderAll();
+  toast('Rescheduled', p.panel + ' → ' + dateFmt(isoToDate(nd)),'good');
+}
+
+function deletePanel(pid){
+  if(!requireAdmin('Delete')) return;
+  if(!confirm('Delete this panel? Cannot be undone.')) return;
+  STATE.panels = STATE.panels.filter(p=>p.id!==pid);
+  delete STATE.panelExecutions[pid];
   saveToFirebase();
   renderAll();
-  closeModal();
-  toast('Date shifted', p.panel + ' → ' + dateFmt(isoToDate(newDate)));
+  toast('Deleted','Panel removed','warn');
 }
 
-// ─── Export ──
-function exportPanelCSV(){
-  const headers = ['Unit','Panel','PM Frequency','Planned Date','Status','Actual Date','MTTR (min)','Done By'];
-  const rows = STATE.panels.map(p=>{
-    const exec = STATE.panelExecutions[p.id];
-    return [
-      p.area, p.panel, 'Yearly',
-      dateFmt(isoToDate(p.pm_date)),
-      getPanelStatus(p),
-      exec?dateFmt(isoToDate(exec.actualDate)):'',
-      exec?exec.mttrMin:'',
-      exec?exec.submittedBy:''
-    ].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',');
-  });
-  const csv = headers.join(',') + '\n' + rows.join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
+// ─── Import / Export ─
+function downloadPanelTemplate(){
+  const csv = 'Unit,Panel Name,PM Date\nBiscuit Unit,PCC-1,2026-04-01\nSnacks Unit,MCC-2,2026-05-01';
   const a = document.createElement('a');
-  a.href = url; a.download = `Panel_PM_${isoDate(TODAY)}.csv`;
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download = 'panel_master_template.csv';
   a.click();
-  URL.revokeObjectURL(url);
+}
+function processUpload(){
+  if(!requireAdmin('Upload')) return;
+  const file = document.getElementById('upload-file').files[0];
+  if(!file){ toast('No file','Choose a file first','warn'); return; }
+  const status = document.getElementById('up-status');
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    let rows = [];
+    try{
+      if(file.name.toLowerCase().endsWith('.csv')){
+        const lines = ev.target.result.split(/\r?\n/).filter(Boolean);
+        const headers = lines[0].split(',').map(s=>s.trim().toLowerCase());
+        const uI = headers.findIndex(h=>h.includes('unit'));
+        const nI = headers.findIndex(h=>h.includes('panel'));
+        const dI = headers.findIndex(h=>h.includes('date'));
+        if(uI<0||nI<0||dI<0){ status.textContent = '✗ Missing columns: need Unit, Panel Name, PM Date'; return; }
+        for(let i=1;i<lines.length;i++){ const c=lines[i].split(','); rows.push({unit:c[uI], panel:c[nI], date:c[dI]}); }
+      } else {
+        const wb = XLSX.read(ev.target.result, {type:'array'});
+        const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
+        const headers = json[0].map(s=>String(s||'').trim().toLowerCase());
+        const uI = headers.findIndex(h=>h.includes('unit'));
+        const nI = headers.findIndex(h=>h.includes('panel'));
+        const dI = headers.findIndex(h=>h.includes('date'));
+        if(uI<0||nI<0||dI<0){ status.textContent = '✗ Missing columns'; return; }
+        for(let i=1;i<json.length;i++){
+          if(!json[i] || !json[i][nI]) continue;
+          let dt = json[i][dI];
+          if(typeof dt === 'number') dt = isoDate(new Date((dt - 25569) * 86400 * 1000));
+          rows.push({unit:String(json[i][uI]||''), panel:String(json[i][nI]||''), date:String(dt||'')});
+        }
+      }
+      let added=0, updated=0;
+      const maxId = STATE.panels.length ? Math.max(...STATE.panels.map(p=>p.id)) : 0;
+      let nextId = maxId + 1;
+      rows.forEach(r=>{
+        const area = r.unit.startsWith('PANEL · ') ? r.unit : 'PANEL · ' + r.unit.trim();
+        const existing = STATE.panels.find(p=>p.area===area && p.panel===r.panel.trim());
+        if(existing){ existing.pm_date = r.date.trim(); updated++; }
+        else { STATE.panels.push({id:nextId++, area, panel:r.panel.trim(), pm_date:r.date.trim()}); added++; }
+      });
+      saveToFirebase();
+      renderAll();
+      status.innerHTML = `✓ <span style="color:var(--green)">Added ${added} · Updated ${updated}</span>`;
+      toast('Uploaded', `+${added} new · ${updated} updated`,'good');
+    } catch(e){ status.textContent = '✗ Error: ' + e.message; }
+  };
+  if(file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+function exportPanelCSV(){
+  const h = ['ID','Unit','Panel','PM Date','Status','Actual Date','MTTR (min)','Done By'];
+  const rows = STATE.panels.map(p=>{
+    const e = STATE.panelExecutions[p.id];
+    return [p.id, p.area, p.panel, dateFmt(isoToDate(p.pm_date)), getPanelStatus(p), e?dateFmt(isoToDate(e.actualDate)):'', e?e.mttrMin:'', e?e.submittedBy:''].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',');
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([h.join(',')+'\n'+rows.join('\n')],{type:'text/csv'}));
+  a.download = `Panel_PM_${isoDate(TODAY)}.csv`;
+  a.click();
+}
+function exportExecCSV(){
+  const h = ['Unit','Panel','Planned','Actual','MTTR','PM Start','PM Stop','Done By','GPS Lat','GPS Lng','Submitted At'];
+  const rows = Object.entries(STATE.panelExecutions).map(([pid,e])=>{
+    const p = STATE.panels.find(x=>x.id===parseInt(pid));
+    if(!p) return null;
+    const gps = e.gps && e.gps.captured ? [e.gps.lat, e.gps.lng] : ['',''];
+    return [p.area, p.panel, dateFmt(isoToDate(p.pm_date)), dateFmt(isoToDate(e.actualDate)), e.mttrMin||'', e.pmStart||'', e.pmStop||'', e.submittedBy||'', gps[0], gps[1], e.submittedAt||''].map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',');
+  }).filter(Boolean);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([h.join(',')+'\n'+rows.join('\n')],{type:'text/csv'}));
+  a.download = `Panel_Executions_${isoDate(TODAY)}.csv`;
+  a.click();
+}
+function exportJSON(){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(STATE,null,2)],{type:'application/json'}));
+  a.download = `Panel_PM_Backup_${isoDate(TODAY)}.json`;
+  a.click();
+}
+function resetExecutions(){
+  if(!requireAdmin('Clear log')) return;
+  if(!confirm('Clear ALL Panel PM executions?')) return;
+  STATE.panelExecutions = {};
+  saveToFirebase();
+  renderAll();
+  toast('Cleared','Execution log emptied','warn');
 }
 
-// ─── Init ──
-document.addEventListener('panel-firebase-ready', loadFromFirebase);
-// Fallback in case event fires before listener
+function renderAll(){
+  try{
+    renderOverview();
+    renderDaily();
+    renderSchedule();
+    renderCompliance();
+    renderMaster();
+    renderExecutions();
+    renderChecklist();
+  }catch(e){ console.error('render error',e); }
+}
+
+document.addEventListener('pm-firebase-ready', loadFromFirebase);
 if(window.__pmFirebaseReady) loadFromFirebase();
-// Show seed data immediately for snappy load
 STATE.panels = DEFAULT_PANELS.slice();
-STATE.checklistFields = defaultChecklistFields();
+STATE.panelChecklistFields = defaultPanelChecklist();
 renderAll();
 </script>
 </body>
