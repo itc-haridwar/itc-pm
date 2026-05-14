@@ -6,7 +6,7 @@
 <title>Panel PM · ITC Haridwar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -70,11 +70,14 @@ onAuthStateChanged(auth, async (user)=>{
   --violet:#a78bfa;
   --violet-soft:rgba(167,139,250,0.12);
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
-html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-apple-system,sans-serif;font-size:13px;line-height:1.5;font-weight:400}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+html,body{background:var(--bg-0);color:var(--text);
+  font-family:'Segoe UI Variable Display','Segoe UI Variable','Segoe UI','Inter','IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:13px;line-height:1.5;font-weight:400;
+  font-feature-settings:'cv11','ss01','ss03';letter-spacing:-0.005em}
 
-/* numeric tabular alignment */
-.mono,.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em}
+/* numeric tabular alignment — match Power BI's clean number look */
+.mono,.num{font-family:'JetBrains Mono','IBM Plex Mono','Cascadia Code',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;font-feature-settings:'tnum','zero'}
 
 ::selection{background:var(--accent);color:#000}
 
@@ -85,58 +88,81 @@ html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-
 .brand{padding:22px 22px 18px;border-bottom:1px solid var(--line)}
 .brand-mark{display:flex;align-items:center;gap:9px;margin-bottom:3px}
 .brand-dot{width:8px;height:8px;background:var(--accent);border-radius:1px}
-.brand-text{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:0.18em;text-transform:uppercase;color:var(--text)}
-.brand-sub{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;padding-left:17px}
+.brand-text{font-family:'Segoe UI Variable Display','Segoe UI','Inter','IBM Plex Sans Condensed',sans-serif;font-weight:700;font-size:15.5px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text)}
+.brand-sub{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;padding-left:17px}
 
 .nav{padding:12px 0;display:flex;flex-direction:column;gap:1px;flex:1}
-.nav-section{padding:14px 22px 6px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500}
-.nav-item{padding:8px 22px;cursor:pointer;display:flex;align-items:center;gap:12px;color:var(--text-2);font-size:12.5px;font-weight:400;border-left:2px solid transparent;transition:all 0.12s;position:relative}
+.nav-section{padding:14px 22px 6px;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500}
+.nav-item{padding:8px 22px;cursor:pointer;display:flex;align-items:center;gap:12px;color:var(--text-2);font-size:13px;font-weight:400;border-left:2px solid transparent;transition:all 0.12s;position:relative}
 .nav-item:hover{color:var(--text);background:var(--bg-2)}
-.nav-item.active{color:var(--text);border-left-color:var(--accent);background:linear-gradient(to right, var(--accent-soft), transparent 70%)}
+.nav-item.active{color:var(--text);border-left-color:var(--accent);background:linear-gradient(to right, var(--accent-soft), transparent 70%);font-weight:500}
 .nav-item.active::before{content:'';position:absolute;left:14px;width:3px;height:3px;background:var(--accent);border-radius:50%;top:50%;transform:translateY(-50%);display:none}
-.nav-num{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);margin-left:auto;font-weight:500}
+.nav-num{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-3);margin-left:auto;font-weight:500;font-feature-settings:'tnum'}
 .nav-item.active .nav-num{color:var(--accent)}
 
 .signed-tile{margin:12px 14px 16px;padding:11px 12px;background:var(--bg-2);border:1px solid var(--line);border-radius:3px}
-.signed-tile .lbl{font-family:'IBM Plex Mono',monospace;font-size:8.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:4px;font-weight:500}
-.signed-tile .who{font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.role-tag{display:inline-block;margin-top:5px;padding:2px 6px;border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;border:1px solid var(--accent);color:var(--accent);background:var(--accent-soft)}
+.signed-tile .lbl{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:4px;font-weight:500}
+.signed-tile .who{font-size:11.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.role-tag{display:inline-block;margin-top:5px;padding:2px 6px;border-radius:2px;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;border:1px solid var(--accent);color:var(--accent);background:var(--accent-soft)}
 .role-tag.user{border-color:var(--blue);color:var(--blue);background:var(--blue-soft)}
 
 /* ─── Main ─── */
 .main{overflow-y:auto;background:var(--bg-0)}
 
 /* Header strip with live ticker feel */
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--bg-1)}
-.crumb{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.12em;text-transform:uppercase;font-weight:500}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--bg-1);position:relative}
+.crumb{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-3);letter-spacing:0.12em;text-transform:uppercase;font-weight:500}
 .crumb b{color:var(--text);font-weight:600}
 .crumb::before{content:'';width:4px;height:4px;background:var(--green);border-radius:50%;box-shadow:0 0 0 3px rgba(34,197,94,0.18)}
-.topbar-meta{display:flex;gap:22px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-2);font-weight:500}
+.topbar-meta{display:flex;gap:22px;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:11px;color:var(--text-2);font-weight:500;align-items:center;font-feature-settings:'tnum'}
 .topbar-meta span b{color:var(--text);font-weight:600}
+
+/* ─── Notification bell (parity with motor-pm) ─── */
+.notif-icon{position:relative;cursor:pointer;padding:6px 10px;border-radius:3px;border:1px solid var(--line-2);color:var(--text-2);font-size:14px;line-height:1;transition:all 0.15s;user-select:none}
+.notif-icon:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.notif-badge{position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:9px;min-width:16px;text-align:center;font-family:'JetBrains Mono','IBM Plex Mono',monospace;line-height:1;box-shadow:0 0 0 2px var(--bg-1);font-feature-settings:'tnum'}
+.notif-panel{position:absolute;top:60px;right:28px;background:var(--bg-1);border:1px solid var(--line-2);border-radius:4px;padding:14px;width:380px;max-height:520px;overflow-y:auto;z-index:1500;box-shadow:0 16px 48px rgba(0,0,0,0.7);display:none}
+.notif-panel.show{display:block;animation:slideDown 0.2s ease-out}
+.notif-section-title{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.18em;color:var(--text-3);text-transform:uppercase;font-weight:600;margin-bottom:10px}
+.notif-empty{font-size:12px;color:var(--text-3);padding:10px 0;text-align:center;letter-spacing:0.02em}
+.notif-row{padding:10px;background:var(--bg-2);border:1px solid var(--line);border-radius:3px;margin-bottom:6px;border-left:3px solid var(--blue)}
+.notif-row.urgent{border-left-color:var(--red)}
+.notif-row.warn{border-left-color:var(--amber)}
+.notif-row .nm-panel{font-size:12px;color:var(--text);font-weight:600;line-height:1.2}
+.notif-row .nm-meta{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);margin-top:3px;letter-spacing:0.02em;font-feature-settings:'tnum'}
+.notif-row .nm-actions{display:flex;gap:6px;margin-top:8px}
+.notif-row .nm-btn{padding:5px 11px;font-size:10.5px;font-family:'Segoe UI','Inter','IBM Plex Sans',sans-serif;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#0c0c0e;border-radius:2px;transition:all 0.12s}
+.notif-row .nm-btn:hover{filter:brightness(1.1)}
+.notif-row .nm-btn.ghost{background:transparent;color:var(--text-2);border-color:var(--line-2)}
+.notif-row .nm-btn.ghost:hover{color:var(--text);border-color:var(--text-2)}
+.notif-recent{padding:6px 0;font-size:11px;color:var(--text-3);border-bottom:1px solid var(--line)}
+.notif-recent:last-child{border-bottom:none}
+.notif-recent .tag{font-weight:700;letter-spacing:0.04em}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 
 /* Page surface */
 .page{display:none;padding:24px 28px 60px}
 .page.active{display:block}
 
 .page-head{margin-bottom:22px}
-.page-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--accent);letter-spacing:0.22em;text-transform:uppercase;font-weight:600;margin-bottom:5px}
-.page-title{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:30px;letter-spacing:-0.01em;line-height:1.05;margin-bottom:6px}
-.page-desc{color:var(--text-2);font-size:13px;max-width:640px}
+.page-eyebrow{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10.5px;color:var(--accent);letter-spacing:0.22em;text-transform:uppercase;font-weight:600;margin-bottom:6px}
+.page-title{font-family:'Segoe UI Variable Display','Segoe UI Variable','Segoe UI','Inter','IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:32px;letter-spacing:-0.02em;line-height:1.08;margin-bottom:8px}
+.page-desc{color:var(--text-2);font-size:13.5px;max-width:680px;font-weight:400}
 
-/* KPI strip — Bloomberg-style */
-.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg-1);border:1px solid var(--line);border-radius:3px;margin-bottom:22px;overflow:hidden}
-.kpi{padding:16px 18px;border-right:1px solid var(--line);position:relative;transition:background 0.15s}
+/* KPI strip — Power BI-inspired tile grid */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg-1);border:1px solid var(--line);border-radius:4px;margin-bottom:22px;overflow:hidden}
+.kpi{padding:18px 20px;border-right:1px solid var(--line);position:relative;transition:background 0.15s}
 .kpi:last-child{border-right:none}
 .kpi:hover{background:var(--bg-2)}
-.kpi-label{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.kpi-label{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:6px}
 .kpi-label::before{content:'';width:6px;height:1px;background:var(--text-3)}
-.kpi-value{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:26px;line-height:1;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+.kpi-value{font-family:'Segoe UI Variable Display','Segoe UI Variable','Segoe UI','Inter','IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:30px;line-height:1;letter-spacing:-0.025em;font-variant-numeric:tabular-nums;font-feature-settings:'tnum','lnum'}
 .kpi-value.up{color:var(--green)}
 .kpi-value.down{color:var(--red)}
 .kpi-value.warn{color:var(--amber)}
 .kpi-value.accent{color:var(--accent)}
-.kpi-suffix{font-size:13px;color:var(--text-3);font-weight:400;margin-left:3px}
-.kpi-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);margin-top:6px;letter-spacing:0.04em}
+.kpi-suffix{font-size:14px;color:var(--text-3);font-weight:400;margin-left:3px}
+.kpi-meta{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-3);margin-top:8px;letter-spacing:0.04em;font-feature-settings:'tnum'}
 .kpi-meta b{color:var(--text-2);font-weight:500}
 .kpi-trend{position:absolute;top:14px;right:18px;width:60px;height:18px;opacity:0.65}
 
@@ -146,11 +172,12 @@ html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-
 .row.cols-2{grid-template-columns:1fr 1fr}
 .row.cols-2-asym{grid-template-columns:1.6fr 1fr}
 
-.card{background:var(--bg-1);border:1px solid var(--line);border-radius:3px;overflow:hidden}
-.card-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
-.card-title{font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;color:var(--text);display:flex;align-items:center;gap:8px}
-.card-title::before{content:'';width:3px;height:11px;background:var(--accent);display:inline-block}
-.card-meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.06em}
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:4px;overflow:hidden;transition:border-color 0.15s}
+.card:hover{border-color:var(--line-2)}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;background:linear-gradient(180deg,var(--bg-1) 0%,var(--bg-1) 100%)}
+.card-title{font-family:'Segoe UI Variable Display','Segoe UI','Inter','IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:13.5px;letter-spacing:0.01em;color:var(--text);display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:13px;background:var(--accent);display:inline-block;border-radius:1px}
+.card-meta{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-3);letter-spacing:0.04em;font-feature-settings:'tnum'}
 .card-meta b{color:var(--text-2);font-weight:500}
 .card-body{padding:16px}
 .card-body.no-pad{padding:0}
@@ -158,18 +185,18 @@ html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-
 .chart-host.tall{height:280px}
 
 /* Tables */
-.tbl{width:100%;border-collapse:collapse;font-size:12px}
-.tbl thead th{background:var(--bg-2);color:var(--text-3);padding:8px 14px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1}
-.tbl thead th.num,.tbl tbody td.num{text-align:right;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl thead th{background:var(--bg-2);color:var(--text-3);padding:9px 14px;text-align:left;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.15em;text-transform:uppercase;font-weight:600;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1}
+.tbl thead th.num,.tbl tbody td.num{text-align:right;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-feature-settings:'tnum'}
 .tbl tbody td{padding:10px 14px;border-bottom:1px solid var(--line);color:var(--text)}
 .tbl tbody tr:hover td{background:var(--bg-2)}
 .tbl tbody tr:last-child td{border-bottom:none}
 .tbl-scroll{max-height:520px;overflow:auto}
 .unit-cell{display:flex;align-items:center;gap:8px}
-.unit-tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:var(--accent);font-weight:600;letter-spacing:0.06em}
+.unit-tag{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;color:var(--accent);font-weight:600;letter-spacing:0.06em}
 
 /* Status pills */
-.pill{display:inline-block;padding:2px 7px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;border-radius:2px;border:1px solid transparent}
+.pill{display:inline-block;padding:3px 8px;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;border-radius:2px;border:1px solid transparent}
 .pill.overdue{color:var(--red);background:var(--red-soft);border-color:rgba(239,68,68,0.3)}
 .pill.due{color:var(--amber);background:var(--amber-soft);border-color:rgba(245,158,11,0.3)}
 .pill.upcoming{color:var(--blue);background:var(--blue-soft);border-color:rgba(96,165,250,0.3)}
@@ -179,20 +206,20 @@ html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-
 /* Compact data bar (sparkbar) inside table cells */
 .bar-cell{display:flex;align-items:center;gap:8px}
 .bar-track{flex:1;height:5px;background:var(--bg-3);border-radius:1px;overflow:hidden;min-width:80px}
-.bar-fill{height:100%;background:var(--accent);border-radius:1px}
+.bar-fill{height:100%;background:var(--accent);border-radius:1px;transition:width 0.4s ease}
 .bar-fill.good{background:var(--green)}
 .bar-fill.warn{background:var(--amber)}
 .bar-fill.bad{background:var(--red)}
-.bar-pct{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;min-width:38px;text-align:right}
+.bar-pct{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;min-width:38px;text-align:right;font-feature-settings:'tnum'}
 
 /* Controls */
 .controls{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-end}
 .ctrl{display:flex;flex-direction:column;gap:4px}
-.ctrl-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-3);letter-spacing:0.15em;text-transform:uppercase;font-weight:500}
-.ctrl select,.ctrl input,input.txt,select.sel{background:var(--bg-1);border:1px solid var(--line);border-radius:2px;padding:7px 10px;color:var(--text);font-size:12px;font-family:'IBM Plex Sans',sans-serif;min-width:150px}
+.ctrl-label{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.15em;text-transform:uppercase;font-weight:500}
+.ctrl select,.ctrl input,input.txt,select.sel{background:var(--bg-1);border:1px solid var(--line);border-radius:2px;padding:8px 11px;color:var(--text);font-size:12.5px;font-family:'Segoe UI','Inter','IBM Plex Sans',sans-serif;font-weight:500;min-width:150px;transition:border-color 0.12s}
 .ctrl select:focus,.ctrl input:focus,input.txt:focus,select.sel:focus{outline:none;border-color:var(--accent)}
 
-.btn{background:var(--accent);color:#0c0c0e;border:none;padding:8px 14px;border-radius:2px;font-weight:600;cursor:pointer;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-family:'IBM Plex Sans',sans-serif;transition:all 0.12s}
+.btn{background:var(--accent);color:#0c0c0e;border:none;padding:8px 14px;border-radius:2px;font-weight:600;cursor:pointer;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;font-family:'Segoe UI','Inter','IBM Plex Sans',sans-serif;transition:all 0.12s}
 .btn:hover{filter:brightness(1.08)}
 .btn.ghost{background:transparent;color:var(--text-2);border:1px solid var(--line)}
 .btn.ghost:hover{color:var(--text);border-color:var(--line-2);background:var(--bg-2)}
@@ -210,7 +237,7 @@ html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-
 .daily-row.upcoming{border-left-color:var(--blue)}
 .daily-row.done{border-left-color:var(--green);opacity:0.7}
 .daily-row.scheduled{border-left-color:var(--line-2)}
-.dr-date{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--text);cursor:pointer}
+.dr-date{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:var(--text);cursor:pointer;font-feature-settings:'tnum'}
 .dr-date:hover{color:var(--accent)}
 .dr-date .day{display:block;font-size:10px;color:var(--text-3);font-weight:400;text-transform:uppercase;letter-spacing:0.08em;margin-top:1px}
 .dr-name{font-size:12.5px;color:var(--text);font-weight:500;line-height:1.3}
@@ -351,6 +378,11 @@ body.role-user .admin-only{display:none !important}
         <span>FY <b>26-27</b></span>
         <span>Today <b id="tb-date">—</b></span>
         <span>Panels <b id="tb-count">283</b></span>
+        <span class="notif-icon" id="notif-bell" onclick="toggleNotifPanel()" title="Panel PMs needing confirmation">
+          🔔
+          <span class="notif-badge" id="notif-count" style="display:none">0</span>
+        </span>
+        <div class="notif-panel" id="notif-panel"></div>
       </div>
     </div>
 
@@ -593,7 +625,7 @@ body.role-user .admin-only{display:none !important}
 <script>
 const DEFAULT_PANELS = [{"id":1,"area":"PANEL \u00b7 Biscuit Unit","panel":"PCC - 1","pm_date":"2026-08-02"},{"id":2,"area":"PANEL \u00b7 Biscuit Unit","panel":"PCC - 2","pm_date":"2026-08-08"},{"id":3,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 1","pm_date":"2026-12-05"},{"id":4,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 2","pm_date":"2026-08-09"},{"id":5,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 3","pm_date":"2026-12-06"},{"id":6,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 4","pm_date":"2026-05-02"},{"id":7,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 4.1","pm_date":"2026-05-03"},{"id":8,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 5","pm_date":"2026-04-04"},{"id":9,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 6","pm_date":"2026-05-09"},{"id":10,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 7","pm_date":"2026-07-04"},{"id":11,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 8","pm_date":"2026-12-12"},{"id":12,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 9","pm_date":"2026-08-15"},{"id":13,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC-10","pm_date":"2026-08-16"},{"id":14,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 11","pm_date":"2026-08-22"},{"id":15,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 12","pm_date":"2026-10-04"},{"id":16,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 13","pm_date":"2026-08-23"},{"id":17,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 15","pm_date":"2026-07-05"},{"id":18,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 16","pm_date":"2026-12-13"},{"id":19,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 17","pm_date":"2026-08-29"},{"id":20,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 18","pm_date":"2026-08-30"},{"id":21,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 19","pm_date":"2026-07-11"},{"id":22,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 20","pm_date":"2026-08-01"},{"id":23,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 21","pm_date":"2026-08-02"},{"id":24,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 23","pm_date":"2026-12-19"},{"id":25,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 24","pm_date":"2026-10-10"},{"id":26,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 25","pm_date":"2026-10-11"},{"id":27,"area":"PANEL \u00b7 Biscuit Unit","panel":"MCC - 26","pm_date":"2026-08-08"},{"id":28,"area":"PANEL \u00b7 Biscuit Unit","panel":"Front side AHU chiller panel","pm_date":"2026-04-05"},{"id":29,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 1","pm_date":"2026-05-10"},{"id":30,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 2","pm_date":"2026-04-11"},{"id":31,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 3","pm_date":"2027-02-06"},{"id":32,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 4","pm_date":"2026-08-09"},{"id":33,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 5","pm_date":"2027-02-07"},{"id":34,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 6","pm_date":"2026-04-12"},{"id":35,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 7","pm_date":"2027-02-13"},{"id":36,"area":"PANEL \u00b7 Biscuit Unit","panel":"Control Panel - 8","pm_date":"2027-02-14"},{"id":37,"area":"PANEL \u00b7 Biscuit Unit","panel":"SDB 1.4","pm_date":"2026-10-17"},{"id":38,"area":"PANEL \u00b7 Biscuit Unit","panel":"APFC Panel-1","pm_date":"2026-10-18"},{"id":39,"area":"PANEL \u00b7 Biscuit Unit","panel":"APFC Panel-2","pm_date":"2026-10-24"},{"id":40,"area":"PANEL \u00b7 Snacks Unit","panel":"PDB U 2.1","pm_date":"2026-05-16"},{"id":41,"area":"PANEL \u00b7 Snacks Unit","panel":"PDB U 2.2","pm_date":"2026-05-17"},{"id":42,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC -U 2","pm_date":"2027-03-06"},{"id":43,"area":"PANEL \u00b7 Snacks Unit","panel":"SPOT COOLING(MCC-7)","pm_date":"2027-01-23"},{"id":44,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC PC-21","pm_date":"2027-01-24"},{"id":45,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel 9000 CFM For Noodles UPS Room & Exhaust Fan Supply","pm_date":"2026-12-06"},{"id":46,"area":"PANEL \u00b7 Snacks Unit","panel":"PCC-1","pm_date":"2027-01-30"},{"id":47,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC 1.1 & 1.2","pm_date":"2027-01-31"},{"id":48,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-1","pm_date":"2027-01-02"},{"id":49,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-2","pm_date":"2026-04-05"},{"id":50,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-3","pm_date":"2027-01-03"},{"id":51,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-4","pm_date":"2027-01-09"},{"id":52,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-5","pm_date":"2027-03-07"},{"id":53,"area":"PANEL \u00b7 Snacks Unit","panel":"SDB 1.2","pm_date":"2026-10-04"},{"id":54,"area":"PANEL \u00b7 Snacks Unit","panel":"MDB U","pm_date":"2026-05-23"},{"id":55,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-3A","pm_date":"2027-01-10"},{"id":56,"area":"PANEL \u00b7 Snacks Unit","panel":"MCC-2A","pm_date":"2027-01-16"},{"id":57,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (Air washer) (SN-FS/01) 30000 CFM For Process -2","pm_date":"2027-03-13"},{"id":58,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (Air washer) (SN-FS/02) 30000 CFM For Process -2","pm_date":"2027-03-14"},{"id":59,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (SN-FS/03) 30000 CFM For Process -1","pm_date":"2027-03-20"},{"id":60,"area":"PANEL \u00b7 Snacks Unit","panel":"Fresh Air Fan (SN-FS/04) 30000 CFM For Process -1","pm_date":"2027-03-21"},{"id":61,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/01)  8000 CFM For Gnd Floor UPS Room","pm_date":"2027-03-27"},{"id":62,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-4","pm_date":"2027-02-06"},{"id":63,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/02) 8000 CFM For Seasoning Ist","pm_date":"2026-12-12"},{"id":64,"area":"PANEL \u00b7 Snacks Unit","panel":"Spot Cooling AHU 14000 CFM Process Hall-1 and Spot Cooling AHU 14000 CFM Process Hall-2","pm_date":"2026-05-24"},{"id":65,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/03) 18000 CFM For Packaging-Ist PC-21","pm_date":"2027-01-17"},{"id":66,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel (SN-AH/04) 18000 CFM For Packaging-Ist Bridge-1 and 31000 CFM For Packaging-Iind Bridge-2&4","pm_date":"2027-02-07"},{"id":67,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-1","pm_date":"2026-07-26"},{"id":68,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-3","pm_date":"2027-02-13"},{"id":69,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks Exhaust Fan Control Panel-2","pm_date":"2027-02-14"},{"id":70,"area":"PANEL \u00b7 Snacks Unit","panel":"AHU Control Panel 8000 CFM For Seasoning Blending","pm_date":"2027-03-28"},{"id":71,"area":"PANEL \u00b7 Snacks Unit","panel":"Snacks ETP Panel","pm_date":"2026-08-30"},{"id":72,"area":"PANEL \u00b7 Snacks Unit","panel":"APFC Panel","pm_date":"2027-02-20"},{"id":73,"area":"PANEL \u00b7 Noodles Unit","panel":"PCC-1","pm_date":"2027-02-21"},{"id":74,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Machine Panel","pm_date":"2026-04-25"},{"id":75,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB Lighting","pm_date":"2026-04-26"},{"id":76,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB Power","pm_date":"2027-03-28"},{"id":77,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- AHU","pm_date":"2027-02-27"},{"id":78,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Panel no.-2 Secondary packing","pm_date":"2026-08-29"},{"id":79,"area":"PANEL \u00b7 Noodles Unit","panel":"MCC- Panel no.-1 Seasoning Machine (Topack)","pm_date":"2026-07-18"},{"id":80,"area":"PANEL \u00b7 Noodles Unit","panel":"VTPN DB-1","pm_date":"2026-07-19"},{"id":81,"area":"PANEL \u00b7 Noodles Unit","panel":"VTPN DB-2","pm_date":"2026-04-04"},{"id":82,"area":"PANEL \u00b7 Noodles Unit","panel":"MDB UPS DB (LIGHTING)","pm_date":"2026-07-25"},{"id":83,"area":"PANEL \u00b7 Noodles Unit","panel":"AHU Control Panel (Noodles PCC room)","pm_date":"2027-02-28"},{"id":84,"area":"PANEL \u00b7 Soap Unit","panel":"PCC-1","pm_date":"2027-02-21"},{"id":85,"area":"PANEL \u00b7 Soap Unit","panel":"PCC-2","pm_date":"2027-02-27"},{"id":86,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-1","pm_date":"2027-03-06"},{"id":87,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-2","pm_date":"2027-03-07"},{"id":88,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-3","pm_date":"2026-10-10"},{"id":89,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-4","pm_date":"2026-06-07"},{"id":90,"area":"PANEL \u00b7 Soap Unit","panel":"MCC-5","pm_date":"2026-06-13"},{"id":91,"area":"PANEL \u00b7 Soap Unit","panel":"SDB 1.3","pm_date":"2026-10-11"},{"id":92,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 3B","pm_date":"2026-06-14"},{"id":93,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 3A","pm_date":"2027-03-13"},{"id":94,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 5A","pm_date":"2027-03-14"},{"id":95,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 5B","pm_date":"2027-02-28"},{"id":96,"area":"PANEL \u00b7 Soap Unit","panel":"Control Panel # 1","pm_date":"2026-06-20"},{"id":97,"area":"PANEL \u00b7 Soap Unit","panel":"MDB-U","pm_date":"2026-10-17"},{"id":98,"area":"PANEL \u00b7 Soap Unit","panel":"MCC 5.2","pm_date":"2027-03-20"},{"id":99,"area":"PANEL \u00b7 Soap Unit","panel":"MCC 5.1","pm_date":"2026-04-11"},{"id":100,"area":"PANEL \u00b7 Soap Unit","panel":"MCC3.2","pm_date":"2027-03-21"},{"id":101,"area":"PANEL \u00b7 Soap Unit","panel":"APFC-1","pm_date":"2026-04-12"},{"id":102,"area":"PANEL \u00b7 Soap Unit","panel":"APFC-2","pm_date":"2026-04-18"},{"id":103,"area":"PANEL \u00b7 Soap Unit","panel":"Electrical Boiler panel","pm_date":"2026-06-21"},{"id":104,"area":"PANEL \u00b7 CLS Unit","panel":"PCC","pm_date":"2026-04-18"},{"id":105,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-1","pm_date":"2027-03-06"},{"id":106,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-2","pm_date":"2027-03-07"},{"id":107,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3","pm_date":"2027-03-13"},{"id":108,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3.1","pm_date":"2027-03-14"},{"id":109,"area":"PANEL \u00b7 CLS Unit","panel":"MCC-3.2","pm_date":"2027-03-20"},{"id":110,"area":"PANEL \u00b7 CLS Unit","panel":"MCC 3.4","pm_date":"2027-03-21"},{"id":111,"area":"PANEL \u00b7 CLS Unit","panel":"SDB 1.6","pm_date":"2026-10-25"},{"id":112,"area":"PANEL \u00b7 CLS Unit","panel":"Control Panels in FG & RM Area","pm_date":"2027-03-27"},{"id":113,"area":"PANEL \u00b7 CLS Unit","panel":"MDB U","pm_date":"2026-10-31"},{"id":114,"area":"PANEL \u00b7 CLS Unit","panel":"APFC","pm_date":"2026-04-19"},{"id":115,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #1 Main Panel","pm_date":"2026-09-05"},{"id":116,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #1 Control Panel","pm_date":"2026-09-06"},{"id":117,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #2 Main Panel","pm_date":"2026-09-12"},{"id":118,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #2 Control Panel","pm_date":"2026-09-13"},{"id":119,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #3 Main Panel (1TPH)","pm_date":"2026-09-19"},{"id":120,"area":"PANEL \u00b7 CLS Unit","panel":"Baby Boiler #3 Control Panel (1TPH)","pm_date":"2026-09-20"},{"id":121,"area":"PANEL \u00b7 TALC Unit","panel":"PCC PANEL","pm_date":"2026-07-04"},{"id":122,"area":"PANEL \u00b7 TALC Unit","panel":"MCC-1 PANEL","pm_date":"2026-04-19"},{"id":123,"area":"PANEL \u00b7 TALC Unit","panel":"CONTROL PANEL-1","pm_date":"2026-07-05"},{"id":124,"area":"PANEL \u00b7 TALC Unit","panel":"CONTROL PANEL-2","pm_date":"2026-07-11"},{"id":125,"area":"PANEL \u00b7 TALC Unit","panel":"SDB 1.5","pm_date":"2026-10-18"},{"id":126,"area":"PANEL \u00b7 TALC Unit","panel":"APFC","pm_date":"2026-05-30"},{"id":127,"area":"PANEL \u00b7 Utility Electricals","panel":"HT panel","pm_date":"2026-08-01"},{"id":128,"area":"PANEL \u00b7 Utility Electricals","panel":"HT Panel Eb Room","pm_date":"2026-08-02"},{"id":129,"area":"PANEL \u00b7 HVAC","panel":"HVAC # 1 Panel","pm_date":"2026-12-20"},{"id":130,"area":"PANEL \u00b7 HVAC","panel":"HVAC # 2 Panel","pm_date":"2026-12-26"},{"id":131,"area":"PANEL \u00b7 DG House","panel":"MCC # 1 (DG Auxillary)","pm_date":"2026-10-03"},{"id":132,"area":"PANEL \u00b7 Utility Electricals","panel":"MLTP Sec # 1","pm_date":"2027-01-23"},{"id":133,"area":"PANEL \u00b7 Utility Electricals","panel":"MLTP Sec # 2","pm_date":"2027-01-24"},{"id":134,"area":"PANEL \u00b7 Utility Electricals","panel":"MLTP Sec # 3","pm_date":"2027-01-30"},{"id":135,"area":"PANEL \u00b7 Fire / Water / ETP","panel":"MCC for Plumbing System","pm_date":"2026-08-01"},{"id":136,"area":"PANEL \u00b7 Fire / Water / ETP","panel":"New RO Panel","pm_date":"2026-09-27"},{"id":137,"area":"PANEL \u00b7 Fire / Water / ETP","panel":"Fire water MCC panel","pm_date":"2026-08-02"},{"id":138,"area":"PANEL \u00b7 Utility Electricals","panel":"MDB # 1","pm_date":"2026-08-08"},{"id":139,"area":"PANEL \u00b7 Utility Electricals","panel":"MDB # 2","pm_date":"2026-10-24"},{"id":140,"area":"PANEL \u00b7 Utility Electricals","panel":"MDB # 3","pm_date":"2027-01-31"},{"id":141,"area":"PANEL \u00b7 Utility Electricals","panel":"FO yard MCC Panel","pm_date":"2026-05-31"},{"id":142,"area":"PANEL \u00b7 Utility Electricals","panel":"Lighting UPS in Utility","pm_date":"2027-01-02"},{"id":143,"area":"PANEL \u00b7 Admin & Canteen","panel":"Lighting UPS in Admin","pm_date":"2027-01-02"},{"id":144,"area":"PANEL \u00b7 Admin & Canteen","panel":"Admin PCC panel (SDB-3.2)","pm_date":"2027-01-03"},{"id":145,"area":"PANEL \u00b7 Admin & Canteen","panel":"Admin Server panel-1","pm_date":"2027-01-09"},{"id":146,"area":"PANEL \u00b7 Admin & Canteen","panel":"Admin HVAC panel","pm_date":"2027-01-10"},{"id":147,"area":"PANEL \u00b7 Admin & Canteen","panel":"Admin SDB Panel (U3)","pm_date":"2027-01-16"},{"id":148,"area":"PANEL \u00b7 Admin & Canteen","panel":"Admin UPS Reduant Panel","pm_date":"2027-01-17"},{"id":149,"area":"PANEL \u00b7 Admin & Canteen","panel":"Admin Server panels-2","pm_date":"2027-01-23"},{"id":150,"area":"PANEL \u00b7 Boiler House","panel":"Boiler Panel (MAIN Panel)","pm_date":"2026-07-12"},{"id":151,"area":"PANEL \u00b7 Utility Electricals","panel":"Common Utility Panel (4.5TPH)","pm_date":"2026-11-14"},{"id":152,"area":"PANEL \u00b7 Utility Electricals","panel":"HSD/FO Transfer Panel","pm_date":"2026-11-15"},{"id":153,"area":"PANEL \u00b7 Boiler House","panel":"Boiler Panel (4.5TPH)","pm_date":"2026-11-08"},{"id":154,"area":"PANEL \u00b7 Utility Electricals","panel":"Common Utility Control Panel (8.0TPH)","pm_date":"2026-11-21"},{"id":155,"area":"PANEL \u00b7 Boiler House","panel":"Boiler-1 Control Panel (8.0TPH)","pm_date":"2026-11-14"},{"id":156,"area":"PANEL \u00b7 Admin & Canteen","panel":"SDB Canteen","pm_date":"2026-10-03"},{"id":157,"area":"PANEL \u00b7 Admin & Canteen","panel":"Admin Lighting Panel","pm_date":"2027-01-24"},{"id":158,"area":"PANEL \u00b7 DG House","panel":"Holiday Incomer Panel","pm_date":"2026-09-26"},{"id":159,"area":"PANEL \u00b7 Outdoor / Yard","panel":"Street light Feeder Piller Utility #1","pm_date":"2026-11-15"},{"id":160,"area":"PANEL \u00b7 Admin & Canteen","panel":"Street light Feeder Piller  Admin #2","pm_date":"2026-11-01"},{"id":161,"area":"PANEL \u00b7 Outdoor / Yard","panel":"Street light Feeder Piller FO yard #3","pm_date":"2026-11-21"},{"id":162,"area":"PANEL \u00b7 Outdoor / Yard","panel":"Street light Feeder Piller Soap side #4","pm_date":"2026-11-22"},{"id":163,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers #1","pm_date":"2026-06-06"},{"id":164,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers #2","pm_date":"2026-06-07"},{"id":165,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers #3","pm_date":"2026-06-13"},{"id":166,"area":"PANEL \u00b7 Utility Electricals","panel":"Change Over Panel","pm_date":"2027-02-06"},{"id":167,"area":"PANEL \u00b7 Utility Electricals","panel":"Propane Panel PM","pm_date":"2026-08-09"},{"id":168,"area":"PANEL \u00b7 Fire / Water / ETP","panel":"Old RO Panel","pm_date":"2027-02-20"},{"id":169,"area":"PANEL \u00b7 Fire / Water / ETP","panel":"PH-1 Common ETP","pm_date":"2026-08-08"},{"id":170,"area":"PANEL \u00b7 Utility Electricals","panel":"APFC-2","pm_date":"2027-02-07"},{"id":171,"area":"PANEL \u00b7 Utility Electricals","panel":"APFC-3","pm_date":"2027-02-13"},{"id":172,"area":"PANEL \u00b7 Utility Electricals","panel":"APFC-4","pm_date":"2027-01-03"},{"id":173,"area":"PANEL \u00b7 Utility Electricals","panel":"APFC-5","pm_date":"2027-02-14"},{"id":174,"area":"PANEL \u00b7 Utility Electricals","panel":"APFC-6","pm_date":"2027-01-09"},{"id":175,"area":"PANEL \u00b7 Utility Electricals","panel":"APFC-7","pm_date":"2026-11-22"},{"id":176,"area":"PANEL \u00b7 Utility Electricals","panel":"APFC-8","pm_date":"2026-11-28"},{"id":177,"area":"PANEL \u00b7 Admin & Canteen","panel":"Canteen SDB","pm_date":"2026-08-01"},{"id":178,"area":"PANEL \u00b7 Utility Electricals","panel":"MLTP DGLS PANEL","pm_date":"2026-10-25"},{"id":179,"area":"PANEL \u00b7 Outdoor / Yard","panel":"Borewell Harvesting Pond","pm_date":"2026-11-28"},{"id":180,"area":"PANEL \u00b7 Admin & Canteen","panel":"Borewell Canteen","pm_date":"2026-11-07"},{"id":181,"area":"PANEL \u00b7 Outdoor / Yard","panel":"Borewell ETP","pm_date":"2026-11-29"},{"id":182,"area":"PANEL \u00b7 DG House","panel":"DG NO 01 NIS PANEL","pm_date":"2026-08-15"},{"id":183,"area":"PANEL \u00b7 DG House","panel":"DGNO 02 NIS PANEL","pm_date":"2026-08-16"},{"id":184,"area":"PANEL \u00b7 DG House","panel":"DGNO 03 NIS PANEL","pm_date":"2026-08-22"},{"id":185,"area":"PANEL \u00b7 DG House","panel":"DGNO 04 NIS PANEL","pm_date":"2026-08-23"},{"id":186,"area":"PANEL \u00b7 DG House","panel":"DGNO 05 NIS PANEL","pm_date":"2026-08-29"},{"id":187,"area":"PANEL \u00b7 DG House","panel":"DGNO 06 NIS PANEL","pm_date":"2026-08-30"},{"id":188,"area":"PANEL \u00b7 SFB Unit","panel":"SFB RAW POWER PANEL -1","pm_date":"2027-01-09"},{"id":189,"area":"PANEL \u00b7 SFB Unit","panel":"SFB RAW POWER PANEL -2","pm_date":"2027-01-10"},{"id":190,"area":"PANEL \u00b7 SFB Unit","panel":"SFB UPS POWER PANEL","pm_date":"2027-01-16"},{"id":191,"area":"PANEL \u00b7 SFB Unit","panel":"SFB MCC-1","pm_date":"2027-01-17"},{"id":192,"area":"PANEL \u00b7 SFB Unit","panel":"SFB MCC-2","pm_date":"2026-08-22"},{"id":193,"area":"PANEL \u00b7 SFB Unit","panel":"SFB MCC-3","pm_date":"2026-08-23"},{"id":194,"area":"PANEL \u00b7 SFB Unit","panel":"SFB BAG FILTER PANEL","pm_date":"2026-08-29"},{"id":195,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-14","pm_date":"2026-08-15"},{"id":196,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-25","pm_date":"2026-08-16"},{"id":197,"area":"PANEL \u00b7 Utility Electricals","panel":"MPP-4","pm_date":"2027-01-10"},{"id":198,"area":"PANEL \u00b7 Utility Electricals","panel":"MPP-3","pm_date":"2027-01-16"},{"id":199,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-13","pm_date":"2027-01-17"},{"id":200,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-26","pm_date":"2027-01-23"},{"id":201,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-9","pm_date":"2026-08-22"},{"id":202,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-9B","pm_date":"2026-08-23"},{"id":203,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-2","pm_date":"2026-08-29"},{"id":204,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-15","pm_date":"2027-01-24"},{"id":205,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-20","pm_date":"2027-01-30"},{"id":206,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-19","pm_date":"2026-08-30"},{"id":207,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-18","pm_date":"2026-08-01"},{"id":208,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-17","pm_date":"2027-01-31"},{"id":209,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-16","pm_date":"2026-08-02"},{"id":210,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-9A","pm_date":"2027-01-02"},{"id":211,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-15","pm_date":"2027-01-03"},{"id":212,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-9C","pm_date":"2026-10-31"},{"id":213,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-11","pm_date":"2026-08-08"},{"id":214,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-14B","pm_date":"2026-10-03"},{"id":215,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-24","pm_date":"2026-08-09"},{"id":216,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-10","pm_date":"2026-10-04"},{"id":217,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-8","pm_date":"2027-01-09"},{"id":218,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-9","pm_date":"2026-10-10"},{"id":219,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-11","pm_date":"2026-08-15"},{"id":220,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-3","pm_date":"2026-10-11"},{"id":221,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-12","pm_date":"2026-08-16"},{"id":222,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-22","pm_date":"2026-10-17"},{"id":223,"area":"PANEL \u00b7 Utility Electricals","panel":"CMD","pm_date":"2026-08-22"},{"id":224,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-5","pm_date":"2027-01-10"},{"id":225,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-2","pm_date":"2027-01-16"},{"id":226,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-3","pm_date":"2027-01-17"},{"id":227,"area":"PANEL \u00b7 Utility Electricals","panel":"MVP-1","pm_date":"2027-01-23"},{"id":228,"area":"PANEL \u00b7 Utility Electricals","panel":"MPP-2","pm_date":"2027-01-24"},{"id":229,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-5C","pm_date":"2027-03-27"},{"id":230,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-4","pm_date":"2026-08-23"},{"id":231,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-5","pm_date":"2026-08-29"},{"id":232,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-5B","pm_date":"2026-08-30"},{"id":233,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-10","pm_date":"2026-08-01"},{"id":234,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-12","pm_date":"2026-08-02"},{"id":235,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-7","pm_date":"2026-10-18"},{"id":236,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-8","pm_date":"2026-08-08"},{"id":237,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-7","pm_date":"2026-08-09"},{"id":238,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-6","pm_date":"2026-08-15"},{"id":239,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-11","pm_date":"2026-08-16"},{"id":240,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-6","pm_date":"2026-10-24"},{"id":241,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-7(AHU)","pm_date":"2027-03-28"},{"id":242,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-6","pm_date":"2027-03-06"},{"id":243,"area":"PANEL \u00b7 Utility Electricals","panel":"MPP2B","pm_date":"2027-01-30"},{"id":244,"area":"PANEL \u00b7 Utility Electricals","panel":"MPP-1A","pm_date":"2026-08-22"},{"id":245,"area":"PANEL \u00b7 Utility Electricals","panel":"MPP-1B","pm_date":"2026-08-23"},{"id":246,"area":"PANEL \u00b7 Utility Electricals","panel":"MPP-1C","pm_date":"2026-08-29"},{"id":247,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-1","pm_date":"2026-10-25"},{"id":248,"area":"PANEL \u00b7 Utility Electricals","panel":"SMSB-3","pm_date":"2026-10-31"},{"id":249,"area":"PANEL \u00b7 Utility Electricals","panel":"ACCP-1","pm_date":"2026-09-13"},{"id":250,"area":"PANEL \u00b7 Utility Electricals","panel":"ACCP-2","pm_date":"2026-09-19"},{"id":251,"area":"PANEL \u00b7 Utility Electricals","panel":"ACCP-3","pm_date":"2026-09-20"},{"id":252,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-1","pm_date":"2026-08-30"},{"id":253,"area":"PANEL \u00b7 Utility Electricals","panel":"MCC-2","pm_date":"2026-08-01"},{"id":254,"area":"PANEL \u00b7 Phase-2 Utility","panel":"Fire Pump Panel","pm_date":"2026-08-30"},{"id":255,"area":"PANEL \u00b7 Phase-2 Utility","panel":"STP-1","pm_date":"2026-12-27"},{"id":256,"area":"PANEL \u00b7 Phase-2 Utility","panel":"STP-2","pm_date":"2026-12-05"},{"id":257,"area":"PANEL \u00b7 HT Substation","panel":"HT panel,MRSS","pm_date":"2026-08-09"},{"id":258,"area":"PANEL \u00b7 Phase-2 Utility","panel":"HT Panel near EB Room","pm_date":"2026-08-01"},{"id":259,"area":"PANEL \u00b7 HT Substation","panel":"6.6 KV PANEL","pm_date":"2026-08-15"},{"id":260,"area":"PANEL \u00b7 Phase-2 Utility","panel":"PCC 1","pm_date":"2027-01-31"},{"id":261,"area":"PANEL \u00b7 Phase-2 Utility","panel":"PCC 2","pm_date":"2027-01-02"},{"id":262,"area":"PANEL \u00b7 Phase-2 Utility","panel":"MLDB","pm_date":"2026-08-02"},{"id":263,"area":"PANEL \u00b7 HT Substation","panel":"RTCC","pm_date":"2027-01-30"},{"id":264,"area":"PANEL \u00b7 Phase-2 Utility","panel":"DG AUXLARY PANEL","pm_date":"2026-08-08"},{"id":265,"area":"PANEL \u00b7 Phase-2 Utility","panel":"APFC-1","pm_date":"2026-11-01"},{"id":266,"area":"PANEL \u00b7 Phase-2 Utility","panel":"APFC-2","pm_date":"2026-11-07"},{"id":267,"area":"PANEL \u00b7 Phase-2 Utility","panel":"APFC-3","pm_date":"2026-11-08"},{"id":268,"area":"PANEL \u00b7 HT Substation","panel":"4 mva Traffo-1 NGR","pm_date":"2026-08-16"},{"id":269,"area":"PANEL \u00b7 HT Substation","panel":"4 mva Traffo-2 NGR","pm_date":"2026-08-22"},{"id":270,"area":"PANEL \u00b7 HT Substation","panel":"DG NGR","pm_date":"2026-08-23"},{"id":271,"area":"PANEL \u00b7 Phase-2 Utility","panel":"DG NIS-1","pm_date":"2026-08-09"},{"id":272,"area":"PANEL \u00b7 Phase-2 Utility","panel":"DG NIS-2","pm_date":"2026-08-15"},{"id":273,"area":"PANEL \u00b7 Phase-2 Utility","panel":"DG NIS-3","pm_date":"2026-08-16"},{"id":274,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers 4 mva  #1","pm_date":"2026-06-14"},{"id":275,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers 4 mva  #2","pm_date":"2026-06-20"},{"id":276,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers 2 mva  # 1","pm_date":"2026-06-21"},{"id":277,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers 2 mva # 2","pm_date":"2026-06-27"},{"id":278,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers 2 mva # 3","pm_date":"2026-06-28"},{"id":279,"area":"PANEL \u00b7 HT Substation","panel":"Premonsoon TestTransformers 2 mva # 4","pm_date":"2026-06-06"},{"id":280,"area":"PANEL \u00b7 Phase-2 Utility","panel":"Phase 2 feeder piller main gate","pm_date":"2026-09-05"},{"id":281,"area":"PANEL \u00b7 Phase-2 Utility","panel":"Phase 2 feeder piller between b1,b2 building","pm_date":"2026-09-06"},{"id":282,"area":"PANEL \u00b7 Phase-2 Utility","panel":"Phase 2 feeder piller near stp","pm_date":"2026-09-12"},{"id":283,"area":"PANEL \u00b7 Phase-2 Utility","panel":"Phase-2 ETP","pm_date":"2027-01-03"}];
 
-let STATE = { panels:[], panelExecutions:{}, panelChecklistFields:[], panelOwners:[], reschedules:[] };
+let STATE = { panels:[], panelExecutions:{}, panelChecklistFields:[], panelOwners:[], panelConfirmations:{}, reschedules:[] };
 let TODAY = new Date(); TODAY.setHours(0,0,0,0);
 let CHARTS = {};
 
@@ -675,6 +707,7 @@ async function loadFromFirebase(){
         STATE.panelExecutions = parsed.panelExecutions || {};
         STATE.panelChecklistFields = parsed.panelChecklistFields || defaultPanelChecklist();
         STATE.panelOwners = parsed.panelOwners || [];
+        STATE.panelConfirmations = parsed.panelConfirmations || {};
         STATE.reschedules = (parsed.reschedules || []).filter(r => r.type === 'panel');
 
         // ──────── Panel state migration ────────
@@ -717,6 +750,7 @@ async function loadFromFirebase(){
         STATE.panelExecutions = parsed.panelExecutions || {};
         STATE.panelChecklistFields = parsed.panelChecklistFields || STATE.panelChecklistFields;
         STATE.panelOwners = parsed.panelOwners || [];
+        STATE.panelConfirmations = parsed.panelConfirmations || {};
         renderAll();
       } catch(e){ console.error('Sync parse error:', e); }
     });
@@ -742,6 +776,7 @@ async function saveToFirebase(){
     basePayload.panelExecutions = STATE.panelExecutions;
     basePayload.panelChecklistFields = STATE.panelChecklistFields;
     basePayload.panelOwners = STATE.panelOwners;
+    basePayload.panelConfirmations = STATE.panelConfirmations;
     if(STATE._panelStateVersion) basePayload._panelStateVersion = STATE._panelStateVersion;
     // merge reschedules: keep non-panel ones from base, replace panel ones with ours
     const otherRes = (basePayload.reschedules || []).filter(r => r.type !== 'panel');
@@ -782,8 +817,23 @@ document.querySelectorAll('.nav-item').forEach(n=>{
 });
 
 // ─── Chart defaults ─────
-function chartFont(){ return { color:'#9e9ea4', font:{family:"'IBM Plex Mono', monospace", size:10, weight:'500'}}; }
+function chartFont(){ return { color:'#9e9ea4', font:{family:"'Segoe UI Variable','Segoe UI','Inter','IBM Plex Sans',sans-serif", size:11, weight:'500'}}; }
 function chartGrid(){ return { color:'#26262d', lineWidth:1, drawTicks:false }; }
+// Set Chart.js global defaults to match Power BI feel
+if(typeof Chart !== 'undefined'){
+  Chart.defaults.font.family = "'Segoe UI Variable','Segoe UI','Inter','IBM Plex Sans',sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = '#9e9ea4';
+  Chart.defaults.plugins.tooltip.bodyFont = { family: "'Segoe UI','Inter',sans-serif", size: 11.5, weight: '500' };
+  Chart.defaults.plugins.tooltip.titleFont = { family: "'Segoe UI Variable','Segoe UI','Inter',sans-serif", size: 12, weight: '600' };
+  Chart.defaults.plugins.tooltip.backgroundColor = '#18181d';
+  Chart.defaults.plugins.tooltip.borderColor = '#34343d';
+  Chart.defaults.plugins.tooltip.borderWidth = 1;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 3;
+  Chart.defaults.plugins.tooltip.titleColor = '#ededee';
+  Chart.defaults.plugins.tooltip.bodyColor = '#9e9ea4';
+}
 function clrChart(id){ if(CHARTS[id]){ CHARTS[id].destroy(); delete CHARTS[id]; } }
 
 const PALETTE = { red:'#ef4444', amber:'#f59e0b', blue:'#60a5fa', muted:'#5d5d65', green:'#22c55e', accent:'#fb923c', violet:'#a78bfa' };
@@ -1558,6 +1608,228 @@ if(window.__pmFirebaseReady) loadFromFirebase();
 STATE.panels = DEFAULT_PANELS.slice();
 STATE.panelChecklistFields = defaultPanelChecklist();
 renderAll();
+
+/* ═══ Notification bell — parity with motor-pm (Confirm only, no Reschedule per user spec) ═══ */
+function getPanelOwnerName(area){
+  if(!STATE.panelOwners) return null;
+  const o = STATE.panelOwners.find(x=>x.area===area);
+  return o ? o.name : null;
+}
+// Panel PMs that need confirmation: planned within next 7 days (panels are weekly Sat/Sun
+// scheduled, so a wider horizon than motors gives the team time to confirm Saturday work).
+function getPendingPanelConfirmations(){
+  const horizon = new Date(TODAY); horizon.setDate(horizon.getDate()+7);
+  const out = [];
+  STATE.panels.forEach(p=>{
+    if(STATE.panelExecutions[p.id]) return;  // already done
+    const d = isoToDate(p.pm_date);
+    if(d < TODAY) return;                     // overdue handled elsewhere
+    if(d > horizon) return;
+    const conf = STATE.panelConfirmations[p.id];
+    if(conf && conf.status === 'confirmed') return;
+    out.push({...p, plannedDate: p.pm_date, confirmation: conf||null});
+  });
+  // Sort by planned date ascending
+  out.sort((a,b)=>(a.plannedDate||'').localeCompare(b.plannedDate||''));
+  return out;
+}
+function getRecentPanelConfirmations(){
+  const out = [];
+  Object.entries(STATE.panelConfirmations||{}).forEach(([pid, c])=>{
+    if(c.status === 'confirmed' || c.status === 'rescheduled'){
+      const p = STATE.panels.find(x=>x.id === parseInt(pid));
+      out.push({pid: parseInt(pid), panel: p ? p.panel : '?', area: p ? p.area : '?', ...c});
+    }
+  });
+  out.sort((a,b)=>(b.confirmedAt||'').localeCompare(a.confirmedAt||''));
+  return out.slice(0, 8);
+}
+function confirmPanelPM(pid){
+  if(!requireOps('confirm panel PM')) return;
+  const p = STATE.panels.find(x=>x.id === pid);
+  if(!p) return;
+  if(!STATE.panelConfirmations) STATE.panelConfirmations = {};
+  STATE.panelConfirmations[pid] = {
+    status: 'confirmed',
+    confirmedBy: window.__pmCurrentUser ? (window.__pmCurrentUser.email || window.__pmCurrentUser.uid) : 'unknown',
+    confirmedAt: new Date().toISOString()
+  };
+  saveToFirebase();
+  renderNotifPanel();
+  toast('Confirmed', `${p.panel} · PM scheduled to proceed`, 'success');
+}
+
+// Reschedule panel PM — opens a modal to pick new date + reason
+const PANEL_RESCHEDULE_REASONS = [
+  "Panel in continuous use — can't isolate",
+  "Manpower constraint",
+  "Spare parts / consumables unavailable",
+  "Production schedule conflict",
+  "Safety / shutdown required first",
+  "Weather / site access issue",
+  "Other (specify in detail)"
+];
+function openPanelRescheduleModal(pid){
+  if(!requireOps('reschedule panel PM')) return;
+  const p = STATE.panels.find(x=>x.id === pid);
+  if(!p){ toast('Panel not found','','error'); return; }
+  // Close the bell dropdown first so the modal isn't covered
+  const bellPanel = document.getElementById('notif-panel');
+  if(bellPanel) bellPanel.classList.remove('show');
+
+  const prevCount = (STATE.panelConfirmations[pid] && STATE.panelConfirmations[pid].count) || 0;
+  if(prevCount >= 2 && !isAdmin()){
+    toast('Max reschedules', 'This panel has been rescheduled twice. Only admin can reschedule further.', 'warn');
+    return;
+  }
+
+  const reasonsHtml = PANEL_RESCHEDULE_REASONS.map(r=>`<option value="${r}">${r}</option>`).join('');
+  const owner = getPanelOwnerName(p.area) || '';
+  const warnHtml = prevCount > 0
+    ? `<div style="padding:10px;background:var(--amber-soft);border:1px solid var(--amber);border-radius:3px;font-size:11.5px;color:var(--amber);margin-bottom:14px">⚠ This panel has already been rescheduled ${prevCount} time(s). After 2, admin override is required.</div>`
+    : '';
+
+  openModal(`
+    <div class="modal-head">
+      <div>
+        <div class="modal-eyebrow">▍ Reschedule · Panel PM</div>
+        <div class="modal-title">Move Planned Date</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-strip"><div class="ttl">${p.panel}</div><div class="meta">${p.area} · Currently planned ${dateFmt(isoToDate(p.pm_date))}</div></div>
+      ${warnHtml}
+      <div class="field"><label class="req">New Planned Date</label><input type="date" id="rs-date" value="${p.pm_date}" required/></div>
+      <div class="field"><label class="req">Reason</label>
+        <select id="rs-reason" required onchange="document.getElementById('rs-other-wrap').style.display=this.value.startsWith('Other')?'block':'none'">
+          <option value="">— select reason —</option>${reasonsHtml}
+        </select>
+      </div>
+      <div class="field" id="rs-other-wrap" style="display:none"><label>Additional detail</label><textarea id="rs-note" rows="3" placeholder="Please specify..."></textarea></div>
+      <div class="field"><label>Rescheduled by</label><input type="text" id="rs-by" value="${owner || (window.__pmCurrentUser ? window.__pmCurrentUser.email.split('@')[0] : '')}"/></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" onclick="submitPanelReschedule(${pid})">↻ Submit Reschedule</button>
+    </div>
+  `);
+}
+function submitPanelReschedule(pid){
+  if(!requireOps('reschedule panel PM')) return;
+  const newDate = document.getElementById('rs-date').value;
+  const reason = document.getElementById('rs-reason').value;
+  const note = (document.getElementById('rs-note') ? document.getElementById('rs-note').value.trim() : '');
+  const by = (document.getElementById('rs-by').value || '').trim() || 'Unknown';
+
+  if(!newDate){ toast('Missing date','New planned date required','warn'); return; }
+  if(!reason){ toast('Missing reason','Please select a reason','warn'); return; }
+  if(reason.startsWith('Other') && !note){ toast('Missing detail','Please describe the reason for "Other"','warn'); return; }
+
+  const p = STATE.panels.find(x=>x.id === pid);
+  if(!p){ toast('Panel not found','','error'); return; }
+  const oldDate = p.pm_date;
+  p.pm_date = newDate;
+
+  const prevCount = (STATE.panelConfirmations[pid] && STATE.panelConfirmations[pid].count) || 0;
+  if(!STATE.panelConfirmations) STATE.panelConfirmations = {};
+  STATE.panelConfirmations[pid] = {
+    status: 'rescheduled',
+    confirmedBy: by,
+    confirmedAt: new Date().toISOString(),
+    rescheduledFrom: oldDate,
+    rescheduledTo: newDate,
+    reason: reason,
+    reasonNote: note,
+    count: prevCount + 1
+  };
+  if(!STATE.reschedules) STATE.reschedules = [];
+  STATE.reschedules.push({
+    type: 'panel',
+    pid, when: new Date().toISOString(), by,
+    fromDate: oldDate, toDate: newDate,
+    reason, note,
+    rescheduleNumber: prevCount + 1,
+  });
+
+  saveToFirebase();
+  closeModal();
+  renderAll();
+  toast('Rescheduled', `${p.panel} → ${dateFmt(isoToDate(newDate))} · ${reason}`, 'success');
+}
+function toggleNotifPanel(){
+  const panel = document.getElementById('notif-panel');
+  if(!panel) return;
+  const shown = panel.classList.contains('show');
+  if(shown){ panel.classList.remove('show'); return; }
+  renderNotifPanel();
+  panel.classList.add('show');
+}
+function renderNotifPanel(){
+  const panel = document.getElementById('notif-panel');
+  if(!panel) return;
+  const pending = getPendingPanelConfirmations();
+  const recent = getRecentPanelConfirmations();
+  let html = `<div class="notif-section-title">Pending confirmations · next 7 days</div>`;
+  if(pending.length === 0){
+    html += `<div class="notif-empty">✓ No pending panel confirmations</div>`;
+  } else {
+    html += pending.map(p=>{
+      const owner = getPanelOwnerName(p.area);
+      const ownerHTML = owner ? owner : `<span style="color:var(--amber)">no owner set</span>`;
+      const dt = isoToDate(p.plannedDate);
+      const days = Math.floor((dt - TODAY)/86400000);
+      const cls = days <= 1 ? 'urgent' : days <= 3 ? 'warn' : '';
+      return `<div class="notif-row ${cls}">
+        <div class="nm-panel">${p.panel}</div>
+        <div class="nm-meta">${unitShort(p.area)} · ${dateFmt(dt)} · ${days === 0 ? 'TODAY' : days === 1 ? 'tomorrow' : 'in '+days+' days'} · ${ownerHTML}</div>
+        <div class="nm-actions">
+          <button class="nm-btn" onclick="confirmPanelPM(${p.id})">✓ Confirm</button>
+          <button class="nm-btn ghost" onclick="openPanelRescheduleModal(${p.id})">↻ Reschedule</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  if(recent.length > 0){
+    html += `<div class="notif-section-title" style="margin-top:14px">Recent activity</div>`;
+    html += recent.map(r=>{
+      const when = r.confirmedAt ? new Date(r.confirmedAt) : null;
+      const whenStr = when ? dateFmt(when) : '';
+      const isResch = r.status === 'rescheduled';
+      const tagLabel = isResch ? '↻ Rescheduled' : '✓ Confirmed';
+      const tagColor = isResch ? 'var(--amber)' : 'var(--green)';
+      const detail = isResch && r.rescheduledTo
+        ? `→ ${dateFmt(isoToDate(r.rescheduledTo))}${r.reason ? ' · '+r.reason : ''}`
+        : '';
+      return `<div class="notif-recent">
+        <span class="tag" style="color:${tagColor}">${tagLabel}</span> · ${r.panel}
+        ${detail ? `<div style="font-size:10.5px;color:var(--text-2);margin-top:1px">${detail}</div>` : ''}
+        <div style="font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);margin-top:2px">${unitShort(r.area)} · ${whenStr} · ${r.confirmedBy||''}</div>
+      </div>`;
+    }).join('');
+  }
+  panel.innerHTML = html;
+  const badge = document.getElementById('notif-count');
+  if(badge){
+    if(pending.length > 0){ badge.textContent = pending.length; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+  }
+}
+// Auto-refresh badge count whenever renderAll runs
+const _origRenderAll = renderAll;
+renderAll = function(){
+  _origRenderAll.apply(this, arguments);
+  try{ renderNotifPanel(); }catch(e){}
+};
+// Close panel when clicking outside
+document.addEventListener('click', (e)=>{
+  const panel = document.getElementById('notif-panel');
+  const bell = document.getElementById('notif-bell');
+  if(!panel || !bell) return;
+  if(panel.classList.contains('show') && !panel.contains(e.target) && !bell.contains(e.target)){
+    panel.classList.remove('show');
+  }
+});
 
 /* ═══ Smart popups (panel side): daily + weekly ═══ */
 function _startOfWeek(d){ const x = new Date(d); const wd = x.getDay(); const diff = wd === 0 ? -6 : 1 - wd; x.setDate(x.getDate()+diff); x.setHours(0,0,0,0); return x; }
