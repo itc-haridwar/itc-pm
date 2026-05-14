@@ -362,6 +362,14 @@ body.role-user .admin-only{display:none !important}
         <p class="page-desc">Yearly preventive maintenance across 6 production units. Compliance, workload distribution, and trailing-12 trends at a glance.</p>
       </div>
 
+      <!-- Overview filters — filter KPIs/charts/notifications by Unit, Month, Status -->
+      <div class="controls" style="margin-bottom:16px">
+        <div class="ctrl"><div class="ctrl-label">Unit / Area</div><select id="ov-area"><option value="">All Units</option></select></div>
+        <div class="ctrl"><div class="ctrl-label">Month</div><select id="ov-month"><option value="">All Months · FY 26-27</option></select></div>
+        <div class="ctrl"><div class="ctrl-label">Status</div><select id="ov-status"><option value="">All Statuses</option><option value="DONE">Done</option><option value="DUE">Due</option><option value="UPCOMING">Upcoming</option><option value="OVERDUE">Overdue</option></select></div>
+        <button class="btn ghost sm" onclick="document.getElementById('ov-area').value='';document.getElementById('ov-month').value='';document.getElementById('ov-status').value='';renderOverview()">Reset</button>
+      </div>
+
       <div id="notify-host"></div>
 
       <div class="kpi-strip">
@@ -736,6 +744,12 @@ document.querySelectorAll('.nav-item').forEach(n=>{
   });
 });
 
+// Wire Overview filters (Unit, Month, Status)
+['ov-area','ov-month','ov-status'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('change', renderOverview);
+});
+
 // ─── Chart defaults ─────
 function chartFont(){ return { color:'#9e9ea4', font:{family:"'IBM Plex Mono', monospace", size:10, weight:'500'}}; }
 function chartGrid(){ return { color:'#26262d', lineWidth:1, drawTicks:false }; }
@@ -745,19 +759,51 @@ const PALETTE = { red:'#ef4444', amber:'#f59e0b', blue:'#60a5fa', muted:'#5d5d65
 
 // ─── Overview ──────────
 function renderOverview(){
-  const total = STATE.panels.length;
-  const done = STATE.panels.filter(p=>STATE.panelExecutions[p.id]).length;
-  const overdue = STATE.panels.filter(p=>getPanelStatus(p)==='OVERDUE').length;
+  // Populate filter dropdowns from current panels (idempotent — preserves selection)
+  const areaSel = document.getElementById('ov-area');
+  if(areaSel){
+    const cur = areaSel.value;
+    const areas = [...new Set(STATE.panels.map(p=>p.area))].sort();
+    areaSel.innerHTML = '<option value="">All Units</option>' + areas.map(a=>`<option value="${a}" ${a===cur?'selected':''}>${a}</option>`).join('');
+  }
+  const monthSel = document.getElementById('ov-month');
+  if(monthSel && !monthSel.dataset.populated){
+    const months = ['Apr 2026','May 2026','Jun 2026','Jul 2026','Aug 2026','Sep 2026','Oct 2026','Nov 2026','Dec 2026','Jan 2027','Feb 2027','Mar 2027'];
+    monthSel.innerHTML = '<option value="">All Months · FY 26-27</option>' + months.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+    monthSel.dataset.populated = '1';
+  }
+
+  // Read filter state
+  const fArea = (areaSel && areaSel.value) || '';
+  const fMonth = monthSel ? monthSel.value : '';
+  const fStatus = (document.getElementById('ov-status') || {}).value || '';
+
+  // Apply filters
+  const panelsAll = STATE.panels;
+  const panels = panelsAll.filter(p=>{
+    if(fArea && p.area !== fArea) return false;
+    if(fMonth !== ''){
+      const d = isoToDate(p.pm_date);
+      const idx = (d.getFullYear()-2026)*12 + d.getMonth() - 3;
+      if(idx !== parseInt(fMonth)) return false;
+    }
+    if(fStatus && getPanelStatus(p) !== fStatus) return false;
+    return true;
+  });
+
+  const total = panels.length;
+  const done = panels.filter(p=>STATE.panelExecutions[p.id]).length;
+  const overdue = panels.filter(p=>getPanelStatus(p)==='OVERDUE').length;
   const tm = TODAY.getMonth(), ty = TODAY.getFullYear();
-  const due = STATE.panels.filter(p=>{ if(STATE.panelExecutions[p.id]) return false; const d=isoToDate(p.pm_date); return d.getMonth()===tm && d.getFullYear()===ty; }).length;
-  const upcomingNext14 = STATE.panels.filter(p=>{
+  const due = panels.filter(p=>{ if(STATE.panelExecutions[p.id]) return false; const d=isoToDate(p.pm_date); return d.getMonth()===tm && d.getFullYear()===ty; }).length;
+  const upcomingNext14 = panels.filter(p=>{
     if(STATE.panelExecutions[p.id]) return false;
     const d = isoToDate(p.pm_date);
     const diff = Math.floor((d - TODAY)/86400000);
     return diff >= 0 && diff <= 14;
   }).length;
   const compl = total > 0 ? Math.min(100, Math.round((done/total)*100)) : 0;
-  const units = [...new Set(STATE.panels.map(p=>p.area))].length;
+  const units = [...new Set(panels.map(p=>p.area))].length;
 
   // Persistent notification banners
   const nh = document.getElementById('notify-host');
@@ -826,7 +872,7 @@ function renderOverview(){
   // Status doughnut
   clrChart('status');
   const buckets = {OVERDUE:0,DUE:0,UPCOMING:0,SCHEDULED:0,DONE:0};
-  STATE.panels.forEach(p=>buckets[getPanelStatus(p)]++);
+  panels.forEach(p=>buckets[getPanelStatus(p)]++);
   document.getElementById('m-status').textContent = total + ' total';
   const elStatus = document.getElementById('ch-status');
   if(elStatus) CHARTS.status = new Chart(elStatus, {
@@ -845,7 +891,7 @@ function renderOverview(){
   // Top units bar
   clrChart('unit');
   const byUnit = {};
-  STATE.panels.forEach(p=>byUnit[p.area] = (byUnit[p.area]||0)+1);
+  panels.forEach(p=>byUnit[p.area] = (byUnit[p.area]||0)+1);
   const sorted = Object.entries(byUnit).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const elUnit = document.getElementById('ch-unit');
   if(elUnit) CHARTS.unit = new Chart(elUnit, {
@@ -863,7 +909,7 @@ function renderOverview(){
   clrChart('month');
   const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
   const monthCounts = new Array(12).fill(0);
-  STATE.panels.forEach(p=>{
+  panels.forEach(p=>{
     const d = isoToDate(p.pm_date);
     const idx = (d.getFullYear()-2026)*12 + d.getMonth() - 3;
     if(idx>=0 && idx<12) monthCounts[idx]++;

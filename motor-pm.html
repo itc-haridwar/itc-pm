@@ -748,6 +748,10 @@ body.role-user #mng-tbody .btn.danger{display:none}
   </main>
 </div>
 
+<!-- Modal host (was missing — caused Mark Done checklist not to pop up) -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="closeModal()"></div>
+<div class="modal" id="modal-host"></div>
+
 <script>
 "use strict";
 
@@ -3180,7 +3184,7 @@ function commitMarkDone(pmId, data){
     loggedBy: (window.__pmCurrentUser ? (window.__pmCurrentUser.email || window.__pmCurrentUser.uid) : 'unknown'),
     loggedAt: new Date().toISOString(),
   };
-  saveState(); closeChecklistModal(); renderAll();
+  saveState(); closeModal(); renderAll();
   toast('PM logged', `${pmId} · MTTR ${mttrMin ?? '—'} min`);
 }
 function markUndo(pmId){
