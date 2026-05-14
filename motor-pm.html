@@ -858,12 +858,14 @@ function setupCloudSync(){
     const data = snap.data();
     if(!data || !data.payload) return;
     try{
-      const parsed = JSON.parse(data.payload);
-      // Only update if remote is newer (avoid echo)
+      let parsed = JSON.parse(data.payload);
+      // CRITICAL: run migrate on every snapshot to catch stale data, new motors, etc.
+      parsed = migrateState(parsed);
       const localStr = JSON.stringify(STATE);
-      if(localStr !== data.payload){
+      const newStr = JSON.stringify(parsed);
+      if(localStr !== newStr){
         STATE = parsed;
-        try{ localStorage.setItem(LS_KEY, data.payload); }catch(e){}
+        try{ localStorage.setItem(LS_KEY, newStr); }catch(e){}
         if(typeof renderAll === 'function') renderAll();
         if(data.updatedBy && data.updatedBy !== (window.__pmCurrentUser ? window.__pmCurrentUser.email : '')){
           toast('Synced', 'Updated by ' + data.updatedBy);
@@ -880,8 +882,18 @@ function initCloudStorage(){
   if(window.__pmFirebaseReady){
     loadStateFromCloud().then(cloud=>{
       if(cloud){
+        const beforeStr = JSON.stringify(STATE);
         STATE = cloud;
-        try{ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }catch(e){}
+        const afterStr = JSON.stringify(STATE);
+        try{ localStorage.setItem(LS_KEY, afterStr); }catch(e){}
+        // If migrate changed anything (new motors added, schedule regenerated), push back to cloud
+        // so other devices and future loads see the updated data
+        if(STATE._migrationStamp && beforeStr !== afterStr){
+          console.log('[init] Cloud state was migrated — pushing back');
+          saveStateToCloud();
+          // Note: the persistent banner in renderOverview() shows the migration info.
+          // No toast here — the banner stays until user clicks Got it.
+        }
         if(typeof renderAll === 'function') renderAll();
       } else {
         // First time — push current STATE to cloud
@@ -944,6 +956,12 @@ function defaultChecklistFields(){
 
 // Migrate existing STATE to add new fields if loading from older version
 function migrateState(s){
+  // ───────── STATE VERSION ─────────
+  // Bump this version when default motors/panels/schedule logic changes.
+  // Older state will be force-migrated.
+  const STATE_VERSION = 4;
+  const currentVersion = s._stateVersion || 0;
+
   // Phase 2: Seed panels if missing
   if(!s.panels) s.panels = (typeof DEFAULT_PANELS !== 'undefined') ? DEFAULT_PANELS.slice() : [];
   if(!s.panelExecutions) s.panelExecutions = {};
@@ -955,28 +973,57 @@ function migrateState(s){
   if(!s.reschedules) s.reschedules = [];
   if(!s.complaints) s.complaints = [];
   if(!s.complaintAreas) s.complaintAreas = defaultComplaintAreas();
-  // Phase 2: Auto-merge ANY new motors from DEFAULT_PAYLOAD that aren't in saved state
+
+  let needsRegen = false;
+  let mergedCount = 0;
+
+  // Auto-merge ANY new motors from DEFAULT_PAYLOAD that aren't in saved state
   // (so SFB motors appear without forcing manual regenerate)
   if(s.motors && typeof DEFAULT_PAYLOAD !== 'undefined' && DEFAULT_PAYLOAD.motors){
     const existingSrs = new Set(s.motors.map(m=>m.sr));
-    let added = 0;
     for(const dm of DEFAULT_PAYLOAD.motors){
       if(!existingSrs.has(dm.sr)){
         s.motors.push({sr:dm.sr, area:dm.area, motor:dm.motor, cat:dm.cat});
-        added++;
+        mergedCount++;
       }
     }
-    if(added > 0){
-      console.log(`[migrate] Auto-added ${added} new motors from DEFAULT_PAYLOAD`);
-      // Force re-generation of schedule for active FY
-      if(s.fys && s.activeFY && s.fys[s.activeFY]){
-        try{
-          s.fys[s.activeFY].schedule = generateSchedule(s.motors);
-          console.log('[migrate] Schedule regenerated to include new motors');
-        }catch(e){ console.warn('Schedule regen failed:', e); }
-      }
+    if(mergedCount > 0){
+      console.log(`[migrate] Auto-added ${mergedCount} new motors from DEFAULT_PAYLOAD`);
+      needsRegen = true;
     }
   }
+
+  // FORCE REGEN if state version mismatch (covers any future logic changes)
+  if(currentVersion < STATE_VERSION){
+    console.log(`[migrate] State version ${currentVersion} → ${STATE_VERSION} — forcing schedule regen`);
+    needsRegen = true;
+  }
+
+  // Detect stale schedule: if any schedule entry lacks 'day' field, regenerate
+  // (old Phase-1 schedules had only week, causing all motors to fall on April 1)
+  if(s.fys && s.activeFY && s.fys[s.activeFY] && s.fys[s.activeFY].schedule){
+    const sched = s.fys[s.activeFY].schedule;
+    if(sched.length > 0 && (sched[0].day === undefined || sched[0].day === null)){
+      console.log('[migrate] Stale schedule detected (no day field) — regenerating');
+      needsRegen = true;
+    }
+    // Also detect if motor count grew but schedule didn't (occurrence mismatch)
+    const motorOccs = s.motors.reduce((sum,m)=>{ const f=freqFor(m.area,m.cat); return sum + (FREQ_RULES[f] ? FREQ_RULES[f].n : 2); }, 0);
+    if(Math.abs(sched.length - motorOccs) > 5){
+      console.log(`[migrate] Schedule occurrences (${sched.length}) doesn't match motor count occurrences (${motorOccs}) — regenerating`);
+      needsRegen = true;
+    }
+  }
+
+  if(needsRegen && s.fys && s.activeFY && s.fys[s.activeFY]){
+    try{
+      s.fys[s.activeFY].schedule = generateSchedule(s.motors);
+      console.log('[migrate] Schedule regenerated · ' + s.fys[s.activeFY].schedule.length + ' occurrences');
+      s._migrationStamp = new Date().toISOString();
+      s._migrationInfo = { mergedMotors: mergedCount, versionFrom: currentVersion, versionTo: STATE_VERSION, at: s._migrationStamp };
+    }catch(e){ console.warn('Schedule regen failed:', e); }
+  }
+  s._stateVersion = STATE_VERSION;
   return s;
 }
 
@@ -1066,106 +1113,139 @@ document.addEventListener('pm-firebase-ready', applyRoleUI);
 //     different days within the week.
 //   - Each occurrence of a motor gets a separate date.
 function generateSchedule(motors, weekCap=24, weeks=52){
+  // POLICY:
+  // 1) Each working day (Mon-Fri) holds up to 4 motors.
+  // 2) All 4 motors on a given day MUST be from the SAME AREA.
+  // 3) Days are filled DENSELY from day 1 forward: day 1 = area-A motors,
+  //    day 2 = area-B motors, day 3 = area-C motors, etc. No empty days.
+  // 4) Each occurrence of a motor is placed independently. For multi-occurrence
+  //    frequencies (BM=6, Q=4, HY=2), occurrences are spaced approximately evenly
+  //    across the FY using "spacing" weeks. The earliest non-conflicting day is chosen.
+  // 5) Total day slots in FY: 52 weeks × 5 days = 260 day-slots × 4 = 1040 motor-slots.
+
   const PER_DAY = 4;
-  const DAYS_PER_WEEK = 5;  // Mon-Fri
-  // Step 1: ideal week placement per motor occurrence
-  const slots = [];  // {sr, week, occ, freq, area}
-  motors.forEach((m,i)=>{
+  const DAYS_PER_WEEK = 5;
+
+  // Step 1: bucket motors by area; for each area, sub-bucket by frequency
+  const areaBuckets = {};
+  motors.forEach(m=>{
+    if(!areaBuckets[m.area]) areaBuckets[m.area] = [];
+    areaBuckets[m.area].push(m);
+  });
+  // Sort areas by motor count DESCENDING so big areas get clean blocks of consecutive days first.
+  // (Small areas with < 4 motors get placed afterwards into leftover gaps.)
+  const areaList = Object.keys(areaBuckets).sort((a,b)=>areaBuckets[b].length - areaBuckets[a].length);
+
+  // Day grid: key "w-d" -> { area, count } once occupied. A day can hold up to PER_DAY (4) motors of the SAME area.
+  // Once a day is reserved for an area, only that area's motors can fill the remaining slots.
+  const dayGrid = {};       // "w-d" -> {area, count}
+
+  // Build a flat ordered list of ALL day-slots in the FY (week 1 day 1, week 1 day 2, ..., week 52 day 5).
+  const allDays = [];
+  for(let w=1; w<=weeks; w++){
+    for(let d=1; d<=DAYS_PER_WEEK; d++){
+      allDays.push({w, d, idx: (w-1)*DAYS_PER_WEEK + (d-1)});
+    }
+  }
+  const totalDays = allDays.length; // 260
+
+  // Helper: find earliest day at or after startIdx that has space for `need` motors of `area`.
+  // - An empty day always qualifies.
+  // - A day already used by the same `area` qualifies if it has < PER_DAY motors.
+  function findSlotAt(startIdx, area){
+    const tryRange = (lo, hi)=>{
+      for(let i=lo; i<hi; i++){
+        const k = `${allDays[i].w}-${allDays[i].d}`;
+        const g = dayGrid[k];
+        if(!g) return i;
+        if(g.area === area && g.count < PER_DAY) return i;
+      }
+      return -1;
+    };
+    let r = tryRange(startIdx, totalDays);
+    if(r >= 0) return r;
+    r = tryRange(0, startIdx);
+    return r;
+  }
+
+  // Fallback finder when no same-area day is available — place on the day with the FEWEST motors (capacity-relax).
+  // Used only when findSlotAt returns -1 to avoid dropping occurrences.
+  function findAnyPartialDay(){
+    let bestIdx = -1, bestCount = PER_DAY;
+    for(let i=0; i<totalDays; i++){
+      const k = `${allDays[i].w}-${allDays[i].d}`;
+      const g = dayGrid[k];
+      if(!g) return i; // empty day — perfect
+      if(g.count < bestCount){ bestCount = g.count; bestIdx = i; }
+    }
+    return bestIdx;
+  }
+
+  const slots = [];
+
+  // Helper: place a list of motors of one area into the schedule, starting at startIdx,
+  // packing up to PER_DAY motors per day, advancing densely. Returns the next idx for cursor.
+  function placeArea(area, motorList, startIdx, occNum, freqLabel){
+    let idx = startIdx;
+    for(const m of motorList){
+      let found = findSlotAt(idx, area);
+      if(found < 0){
+        // No same-area slot available — fall back to any partial day so we never drop a motor
+        found = findAnyPartialDay();
+        if(found < 0){ console.warn('Schedule full, dropping:', area, 'occ', occNum, 'motor', m.sr); break; }
+      }
+      const slot = allDays[found];
+      const key = `${slot.w}-${slot.d}`;
+      if(!dayGrid[key]) dayGrid[key] = { area, count: 0 };
+      dayGrid[key].count++;
+      const f = freqLabel || freqFor(m.area, m.cat);
+      slots.push({sr: m.sr, week: slot.w, day: slot.d, occ: occNum, freq: f, area});
+      if(dayGrid[key].count >= PER_DAY) idx = found + 1;
+      else idx = found;
+    }
+    return idx + 1;
+  }
+
+  // Phase A: place occurrence #1 for every motor of every area, densely from day 1.
+  let cursor = 0;
+  areaList.forEach(area=>{
+    cursor = placeArea(area, areaBuckets[area], cursor, 1, null);
+  });
+
+  // Phase B: place occurrences 2..nOccs per area+freq group.
+  // Order: BM first (6 occurrences), then Q (4), then HY (2). Same-area-per-day still enforced.
+
+  // Build a map: sr → its occ1 dayIdx
+  const sr_occ1 = {};
+  slots.forEach(s => {
+    sr_occ1[s.sr] = (s.week-1) * DAYS_PER_WEEK + (s.day-1);
+  });
+
+  const areaFreqGroups = {};
+  motors.forEach(m=>{
     const f = freqFor(m.area, m.cat);
-    const {n, sp} = FREQ_RULES[f];
-    const start = (i % sp) + 1;
-    for(let occ=0; occ<n; occ++){
-      const wk = Math.min(start + occ*sp, weeks);
-      slots.push({sr: m.sr, week: wk, occ: occ+1, freq: f, area: m.area});
+    const k = `${m.area}__${f}`;
+    if(!areaFreqGroups[k]) areaFreqGroups[k] = { area: m.area, freq: f, motors: [] };
+    areaFreqGroups[k].motors.push(m);
+  });
+
+  // BM > Q > HY
+  const freqOrder = {BM:0, Q:1, HY:2};
+  const groupList = Object.values(areaFreqGroups).sort((a,b)=>(freqOrder[a.freq]||9) - (freqOrder[b.freq]||9));
+
+  groupList.forEach(g => {
+    const {n: nOccs} = FREQ_RULES[g.freq] || {n:2, sp:26};
+    if(nOccs <= 1) return;
+    const spacingDays = Math.floor(totalDays / nOccs);
+    const anchorOcc1 = sr_occ1[g.motors[0].sr] !== undefined ? sr_occ1[g.motors[0].sr] : 0;
+
+    for(let occ=2; occ<=nOccs; occ++){
+      const targetIdx = (anchorOcc1 + (occ-1) * spacingDays) % totalDays;
+      placeArea(g.area, g.motors, targetIdx, occ, g.freq);
     }
   });
 
-  // Step 2: per-week load-balancing — shift earlier if over weekCap
-  const weekIdx = {};
-  for(let w=1;w<=weeks;w++) weekIdx[w] = [];
-  slots.forEach((s,i)=>weekIdx[s.week].push(i));
-  for(let pass=0; pass<10; pass++){
-    let moved = false;
-    for(let w=1; w<=weeks; w++){
-      while(weekIdx[w].length > weekCap){
-        const last = weekIdx[w].pop();
-        // find earliest prior week with space
-        let placed = false;
-        for(let nw=w-1; nw>=1; nw--){
-          if(weekIdx[nw].length < weekCap){
-            weekIdx[nw].push(last);
-            slots[last].week = nw;
-            placed = true;
-            moved = true;
-            break;
-          }
-        }
-        if(!placed){
-          // put back, give up — fine, week is over capacity
-          weekIdx[w].push(last);
-          break;
-        }
-      }
-    }
-    if(!moved) break;
-  }
-
-  // Step 3: within each week, group by area and assign days
-  for(let w=1; w<=weeks; w++){
-    const indices = weekIdx[w];
-    if(indices.length === 0) continue;
-    // Group by area
-    const byArea = {};
-    indices.forEach(i=>{
-      const a = slots[i].area;
-      if(!byArea[a]) byArea[a] = [];
-      byArea[a].push(i);
-    });
-    // Sort areas by size (largest first — fill days with full groups)
-    const areas = Object.keys(byArea).sort((a,b)=>byArea[b].length - byArea[a].length);
-    // Build day buckets
-    const dayBuckets = []; // each day = array of slot indices
-    for(let d=0; d<DAYS_PER_WEEK; d++) dayBuckets.push([]);
-    // First pass: assign full-day groups (areas with 4+ motors) — each group of 4 fills one day
-    areas.forEach(a=>{
-      const list = byArea[a];
-      while(list.length >= PER_DAY){
-        // find empty day
-        const emptyDay = dayBuckets.findIndex(d=>d.length === 0);
-        if(emptyDay < 0) break;  // no empty day; rest get filled in second pass
-        const group = list.splice(0, PER_DAY);
-        dayBuckets[emptyDay] = group;
-      }
-    });
-    // Second pass: areas with leftover motors (<4) — pack into remaining days, preferring same-area on same day
-    const leftovers = [];
-    areas.forEach(a=>{ leftovers.push(...byArea[a]); });
-    for(const i of leftovers){
-      // prefer day that already has motors from same area
-      const myArea = slots[i].area;
-      let dayChoice = -1;
-      for(let d=0; d<DAYS_PER_WEEK; d++){
-        if(dayBuckets[d].length < PER_DAY){
-          const sameArea = dayBuckets[d].length === 0 ||
-                          dayBuckets[d].some(idx => slots[idx].area === myArea);
-          if(sameArea){ dayChoice = d; break; }
-        }
-      }
-      if(dayChoice < 0){
-        // any day with space
-        dayChoice = dayBuckets.findIndex(d=>d.length < PER_DAY);
-      }
-      if(dayChoice >= 0) dayBuckets[dayChoice].push(i);
-    }
-    // Assign day index back to slots
-    for(let d=0; d<DAYS_PER_WEEK; d++){
-      for(const i of dayBuckets[d]){
-        slots[i].day = d + 1;  // 1..5
-      }
-    }
-  }
-
-  return slots.map(s => ({sr: s.sr, week: s.week, day: s.day || 1, occ: s.occ, freq: s.freq}));
+  return slots.map(s => ({sr: s.sr, week: s.week, day: s.day, occ: s.occ, freq: s.freq}));
 }
 
 function fyStartDate(fyLabel){
@@ -1313,7 +1393,7 @@ function toast(title, msg, kind){
   el.className = 'toast' + (kind==='error'?' error':kind==='warn'?' warn':'');
   el.innerHTML = `<div class="t-title">${title}</div><div class="t-msg">${msg||''}</div>`;
   document.body.appendChild(el);
-  setTimeout(()=>{ el.style.opacity = 0; setTimeout(()=>el.remove(), 300); }, 4000);
+  setTimeout(()=>{ el.style.opacity = 0; setTimeout(()=>el.remove(), 300); }, 6000);
 }
 
 function fillSelect(id, items, valKey, labelKey, keepFirst=true){
@@ -1639,18 +1719,44 @@ function exportMotors(){
 }
 
 function downloadMotorTemplate(){
-  // Blank template with column headers + a few example rows + instructions row
+  // Blank template with column headers + grouped examples to show 4-per-area pattern
   const lines = [
-    '# Instructions: Fill rows below with new motors. Category must be A B or C.',
-    '# Area names must match existing areas EXACTLY (case-sensitive) — or new areas will be created.',
-    '# Frequency is auto-determined: A/B → Q (Quarterly) · C → HY (Half-Yearly) · "Fire Pump" areas → BM (Bimonthly).',
-    '# Delete these instruction lines (lines starting with #) before importing.',
+    '# ITC COT Motor PM Upload Template',
+    '# Columns: Area, Motor / Pump, Category (A/B/C)',
+    '# ',
+    '# TIP — the scheduler groups 4 motors of the SAME AREA on the same day.',
+    '#       So list motors grouped by area, ideally in multiples of 4 per area for clean days.',
+    '# ',
+    '# Frequency auto-rules:',
+    '#   - Standard areas: A/B → Quarterly · C → Half-Yearly',
+    '#   - "Fire Pump" areas: All → Bimonthly',
+    '#   - "SFB" / "Biomass" areas: A → Bimonthly · B → Quarterly · C → Half-Yearly',
+    '# ',
+    '# DELETE all "#" lines and the example rows below before importing.',
     'Area,Motor / Pump,Category',
+    '# --- example area 1 (4 motors = exactly 1 day) ---',
     'Phase-1 WTP,Raw Water Pump 3,A',
-    'Phase-2 WTP,Backwash Pump 2,B',
-    'CETP,Aeration Blower 5,C',
-    'Boiler House,Feed Water Pump 3,A',
-    'Fire Pump House,Jockey Pump 2,A',
+    'Phase-1 WTP,Raw Water Pump 4,A',
+    'Phase-1 WTP,Backwash Pump 1,B',
+    'Phase-1 WTP,Backwash Pump 2,B',
+    '# --- example area 2 (8 motors = 2 days) ---',
+    'CETP,Aeration Blower 5,B',
+    'CETP,Aeration Blower 6,B',
+    'CETP,Sludge Pump 3,C',
+    'CETP,Sludge Pump 4,C',
+    'CETP,Transfer Pump 1,A',
+    'CETP,Transfer Pump 2,A',
+    'CETP,Decanter Motor 1,B',
+    'CETP,Decanter Motor 2,B',
+    '# --- example: SFB Biomass area ---',
+    'SFB · BIOMASS BOILER # 1,ID Fan,A',
+    'SFB · BIOMASS BOILER # 1,FD Fan,A',
+    'SFB · BIOMASS BOILER # 1,SA Fan,A',
+    'SFB · BIOMASS BOILER # 1,PA Fan,A',
+    '# --- add your motors below; delete examples above ---',
+    ',,',
+    ',,',
+    ',,',
     ',,',
     ',,',
     ',,',
@@ -1658,7 +1764,7 @@ function downloadMotorTemplate(){
     ',,',
   ];
   download('ITC_COT_Motor_Template_BLANK.csv', lines.join('\n'), 'text/csv');
-  toast('Template downloaded', 'Fill the blank rows and import via "Import Motors"');
+  toast('Template downloaded', 'Group motors by Area · 4 per area = 1 day');
 }
 
 function exportFullState(){
@@ -2685,6 +2791,21 @@ function renderOverview(){
 
   const host = document.getElementById('notify-host');
   host.innerHTML = '';
+
+  // Migration success banner — persistent until dismissed (sessionStorage)
+  if(STATE._migrationInfo && !sessionStorage.getItem('pm_mig_seen_' + STATE._migrationInfo.at)){
+    const mig = STATE._migrationInfo;
+    const mb = document.createElement('div');
+    mb.className = 'notify-banner';
+    mb.style.background = 'linear-gradient(90deg,rgba(124,242,139,0.18),rgba(0,217,255,0.06))';
+    mb.style.borderColor = 'var(--accent-4)';
+    const msg = mig.mergedMotors > 0
+      ? `Added <b>${mig.mergedMotors}</b> new motors (SFB Biomass Boiler etc) and regenerated schedule. Check Schedule tab → 4 motors per day, same area grouped.`
+      : `Schedule has been regenerated to spread motors across days (4 per day, same area).`;
+    mb.innerHTML = `<div class="notify-icon" style="color:var(--accent-4)">✓</div><div class="notify-content"><div class="notify-title">Schedule Updated</div><div class="notify-msg">${msg}</div></div><button class="notify-cta" style="background:var(--accent-4);color:#0a0e1a" onclick="sessionStorage.setItem('pm_mig_seen_${mig.at}','1'); this.parentElement.remove()">Got it</button>`;
+    host.appendChild(mb);
+  }
+
   if(overdue > 0){
     const bnr = document.createElement('div');
     bnr.className = 'notify-banner';

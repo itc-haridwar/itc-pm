@@ -23,10 +23,18 @@ window.__pmRole = 'user';
 onAuthStateChanged(auth, async (user)=>{
   if(!user){ if(window.parent === window) window.location.href = './index.html'; return; }
   window.__pmCurrentUser = user;
-  try{
-    const adminSnap = await getDoc(doc(db, 'admins', user.uid));
-    window.__pmRole = adminSnap.exists() ? 'admin' : 'user';
-  } catch(e){ window.__pmRole = 'user'; }
+  async function checkAdmin(retries){
+    try{
+      const adminSnap = await getDoc(doc(db, 'admins', user.uid));
+      window.__pmRole = adminSnap.exists() ? 'admin' : 'user';
+      console.log('[complaint] Admin check:', user.email, '→', window.__pmRole);
+    } catch(e){
+      console.error('[complaint] Admin check failed:', e.message);
+      if(retries > 0){ await new Promise(r=>setTimeout(r, 800)); return checkAdmin(retries-1); }
+      window.__pmRole = 'user';
+    }
+  }
+  await checkAdmin(1);
   window.__pmFirebaseReady = true;
   document.dispatchEvent(new CustomEvent('pm-firebase-ready'));
 });
@@ -301,7 +309,7 @@ function toast(t, m, type){
   e.className = 'toast' + (type ? ' '+type : '');
   e.innerHTML = `<div class="ts-title">${t}</div>${m?'<div class="ts-msg">'+m+'</div>':''}`;
   wrap.appendChild(e);
-  setTimeout(()=>{ e.style.opacity='0'; e.style.transform='translateX(20px)'; e.style.transition='all 0.2s'; setTimeout(()=>e.remove(),200); }, 3200);
+  setTimeout(()=>{ e.style.opacity='0'; e.style.transform='translateX(20px)'; e.style.transition='all 0.2s'; setTimeout(()=>e.remove(),200); }, 5000);
 }
 function nowDT(){ const d=new Date(); const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; }
 function fmtDT(s){ if(!s) return '—'; const d=new Date(s); const z=n=>String(n).padStart(2,'0'); return `${z(d.getDate())}·${z(d.getMonth()+1)}·${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; }
@@ -310,42 +318,48 @@ function downtimeMin(start, stop){ if(!start || !stop) return null; return Math.
 function fmtMin(m){ if(m==null) return '—'; if(m<60) return m+'m'; const h=Math.floor(m/60),mm=m%60; return h+'h '+mm+'m'; }
 
 async function loadFromFirebase(){
-  if(!window.__pmFirebase) return;
+  // Always set UI labels first so they appear regardless of Firebase state
+  document.body.className = isAdmin() ? 'role-admin' : 'role-user';
+  if(!isAdmin()) document.getElementById('user-rules-card').style.display = 'block';
+  document.getElementById('tb-by').innerHTML = '<b>' + (window.__pmCurrentUser ? window.__pmCurrentUser.email.split('@')[0] : 'guest') + '</b>';
+  const rb = document.getElementById('u-role');
+  rb.textContent = window.__pmRole.toUpperCase();
+  rb.className = 'role-tag ' + window.__pmRole;
+  if(window.__pmCurrentUser){
+    const by = document.getElementById('c-by');
+    if(!by.value) by.value = window.__pmCurrentUser.email.split('@')[0];
+  }
+  document.getElementById('c-start').value = nowDT();
+  document.getElementById('tb-date').textContent = fmtDate(new Date());
+
+  if(!window.__pmFirebase){ renderAll(); return; }
   const fb = window.__pmFirebase;
   try{
-    const ref = fb.doc(fb.db, 'shared_state', 'main');
+    const ref = fb.doc(fb.db, 'itc_pm', 'shared_state');
     const snap = await fb.getDoc(ref);
     if(snap.exists()){
-      const d = snap.data();
-      STATE.complaints = d.complaints || [];
-      STATE.complaintAreas = d.complaintAreas && d.complaintAreas.length ? d.complaintAreas : defaultAreas();
-    } else {
-      STATE.complaintAreas = defaultAreas();
-      await saveToFirebase();
+      const data = snap.data();
+      if(data && data.payload){
+        const parsed = JSON.parse(data.payload);
+        STATE.complaints = parsed.complaints || [];
+        STATE.complaintAreas = parsed.complaintAreas && parsed.complaintAreas.length ? parsed.complaintAreas : defaultAreas();
+      }
     }
     fb.onSnapshot(ref, (snap2)=>{
       if(!snap2.exists()) return;
-      const d = snap2.data();
-      STATE.complaints = d.complaints || [];
-      STATE.complaintAreas = d.complaintAreas && d.complaintAreas.length ? d.complaintAreas : defaultAreas();
-      renderAll();
+      const data = snap2.data();
+      if(!data || !data.payload) return;
+      try{
+        const parsed = JSON.parse(data.payload);
+        STATE.complaints = parsed.complaints || [];
+        STATE.complaintAreas = parsed.complaintAreas && parsed.complaintAreas.length ? parsed.complaintAreas : defaultAreas();
+        renderAll();
+      } catch(e){ console.error('Sync parse error:', e); }
     });
-    document.body.className = isAdmin() ? 'role-admin' : 'role-user';
-    if(!isAdmin()) document.getElementById('user-rules-card').style.display = 'block';
-    document.getElementById('tb-by').innerHTML = '<b>' + (window.__pmCurrentUser ? window.__pmCurrentUser.email.split('@')[0] : '') + '</b>';
-    const rb = document.getElementById('u-role');
-    rb.textContent = window.__pmRole.toUpperCase();
-    rb.className = 'role-tag ' + window.__pmRole;
-    if(window.__pmCurrentUser){
-      const by = document.getElementById('c-by');
-      if(!by.value) by.value = window.__pmCurrentUser.email.split('@')[0];
-    }
-    document.getElementById('c-start').value = nowDT();
-    document.getElementById('tb-date').textContent = fmtDate(new Date());
     renderAll();
   } catch(e){
     console.error('load failed', e);
-    STATE.complaintAreas = defaultAreas();
+    toast('Load error', e.message || 'Using local copy', 'warn');
     renderAll();
   }
 }
@@ -353,13 +367,27 @@ async function saveToFirebase(){
   if(!window.__pmFirebase || !window.__pmCurrentUser) return;
   const fb = window.__pmFirebase;
   try{
-    const ref = fb.doc(fb.db, 'shared_state', 'main');
+    const ref = fb.doc(fb.db, 'itc_pm', 'shared_state');
     const snap = await fb.getDoc(ref);
-    const base = snap.exists() ? snap.data() : {};
-    base.complaints = STATE.complaints;
-    base.complaintAreas = STATE.complaintAreas;
-    await fb.setDoc(ref, base);
-  } catch(e){ console.error('save failed', e); toast('Save error','Not synced','error'); }
+    let basePayload = {};
+    if(snap.exists() && snap.data().payload){
+      try{ basePayload = JSON.parse(snap.data().payload); }catch(e){ basePayload = {}; }
+    }
+    basePayload.complaints = STATE.complaints;
+    basePayload.complaintAreas = STATE.complaintAreas;
+    await fb.setDoc(ref, {
+      payload: JSON.stringify(basePayload),
+      updatedAt: new Date().toISOString(),
+      updatedBy: window.__pmCurrentUser.email || window.__pmCurrentUser.uid
+    });
+  } catch(e){
+    console.error('save failed', e);
+    if(e.code === 'permission-denied'){
+      toast('Permission denied','Admin rights needed','error');
+    } else {
+      toast('Save error', e.message || 'Not synced', 'error');
+    }
+  }
 }
 
 function renderAreaSelects(){

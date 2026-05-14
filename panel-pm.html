@@ -24,10 +24,22 @@ window.__pmRole = 'user';
 onAuthStateChanged(auth, async (user)=>{
   if(!user){ if(window.parent === window) window.location.href = './index.html'; return; }
   window.__pmCurrentUser = user;
-  try{
-    const adminSnap = await getDoc(doc(db, 'admins', user.uid));
-    window.__pmRole = adminSnap.exists() ? 'admin' : 'user';
-  } catch(e){ window.__pmRole = 'user'; }
+  // Robust admin check with logging — retries once on network glitch
+  async function checkAdmin(retries){
+    try{
+      const adminSnap = await getDoc(doc(db, 'admins', user.uid));
+      window.__pmRole = adminSnap.exists() ? 'admin' : 'user';
+      console.log('[panel-pm] Admin check:', user.email, '→', window.__pmRole, '(uid:', user.uid + ')');
+    } catch(e){
+      console.error('[panel-pm] Admin check failed:', e.message, e.code);
+      if(retries > 0){
+        await new Promise(r=>setTimeout(r, 800));
+        return checkAdmin(retries - 1);
+      }
+      window.__pmRole = 'user';
+    }
+  }
+  await checkAdmin(1);
   window.__pmFirebaseReady = true;
   document.dispatchEvent(new CustomEvent('pm-firebase-ready'));
 });
@@ -244,6 +256,27 @@ html,body{background:var(--bg-0);color:var(--text);font-family:'IBM Plex Sans',-
 .toast .ts-msg{color:var(--text-2);font-size:11.5px}
 @keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
 
+/* Notification banners — persistent, not auto-dismissed */
+.notify-host{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.notify-banner{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:3px;background:var(--bg-1);border:1px solid var(--line);border-left:3px solid var(--text-3);animation:slideDown 0.3s ease-out}
+.notify-banner.danger{border-left-color:var(--red);background:linear-gradient(90deg,var(--red-soft),transparent 80%)}
+.notify-banner.warn{border-left-color:var(--amber);background:linear-gradient(90deg,var(--amber-soft),transparent 80%)}
+.notify-banner.info{border-left-color:var(--blue);background:linear-gradient(90deg,var(--blue-soft),transparent 80%)}
+.notify-banner.success{border-left-color:var(--green);background:linear-gradient(90deg,var(--green-soft),transparent 80%)}
+.notify-icon{font-family:'IBM Plex Mono',monospace;font-size:18px;width:24px;text-align:center}
+.notify-banner.danger .notify-icon{color:var(--red)}
+.notify-banner.warn .notify-icon{color:var(--amber)}
+.notify-banner.info .notify-icon{color:var(--blue)}
+.notify-banner.success .notify-icon{color:var(--green)}
+.notify-text{flex:1}
+.notify-title{font-weight:600;font-size:13.5px;color:var(--text);margin-bottom:2px;letter-spacing:0.01em}
+.notify-msg{font-size:12px;color:var(--text-2);line-height:1.4}
+.notify-cta{padding:7px 12px;border-radius:2px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border:1px solid var(--line-2);background:transparent;color:var(--text);transition:all 0.12s;white-space:nowrap}
+.notify-cta:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.notify-banner.danger .notify-cta:hover{border-color:var(--red);background:var(--red-soft);color:var(--red)}
+.notify-banner.warn .notify-cta:hover{border-color:var(--amber);background:var(--amber-soft);color:var(--amber)}
+@keyframes slideDown{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+
 /* sparkline svg style */
 svg.spark{stroke:currentColor;stroke-width:1.2;fill:none;color:var(--text-2)}
 
@@ -328,6 +361,8 @@ body.role-user .admin-only{display:none !important}
         <h1 class="page-title">Operations Overview</h1>
         <p class="page-desc">Yearly preventive maintenance across 6 production units. Compliance, workload distribution, and trailing-12 trends at a glance.</p>
       </div>
+
+      <div id="notify-host"></div>
 
       <div class="kpi-strip">
         <div class="kpi"><div class="kpi-label">Total Panels</div><div class="kpi-value" id="k-total">—</div><div class="kpi-meta">across <b id="k-units">6</b> units</div></div>
@@ -576,7 +611,7 @@ function toast(t, m, type){
   e.className = 'toast' + (type ? ' '+type : '');
   e.innerHTML = `<div class="ts-title">${t}</div>${m?'<div class="ts-msg">'+m+'</div>':''}`;
   wrap.appendChild(e);
-  setTimeout(()=>{ e.style.opacity='0'; e.style.transform='translateX(20px)'; e.style.transition='all 0.2s'; setTimeout(()=>e.remove(),200); }, 3200);
+  setTimeout(()=>{ e.style.opacity='0'; e.style.transform='translateX(20px)'; e.style.transition='all 0.2s'; setTimeout(()=>e.remove(),200); }, 5000);
 }
 function unitShort(area){ return (area||'').replace('PANEL · ',''); }
 
@@ -595,50 +630,62 @@ function computeMTTR(){
   return t.length ? Math.round(t.reduce((a,b)=>a+b,0)/t.length) : 0;
 }
 
-// ─── Firebase ──────────
+// ─── Role + Firebase load ──────────
+// CRITICAL: This module shares Firebase storage with motor-pm and complaint pages.
+// All three modules read/write the same document: itc_pm/shared_state, with all
+// data stored as a single JSON string in the `payload` field.
 async function loadFromFirebase(){
-  if(!window.__pmFirebase) return;
+  // Always set role tag first (independent of Firebase data load)
+  document.body.className = isAdmin() ? 'role-admin' : 'role-user';
+  document.getElementById('u-email').textContent = window.__pmCurrentUser ? window.__pmCurrentUser.email : 'not signed in';
+  const rb = document.getElementById('u-role');
+  rb.textContent = window.__pmRole.toUpperCase();
+  rb.className = 'role-tag ' + window.__pmRole;
+
+  if(!window.__pmFirebase) { renderAll(); return; }
   const fb = window.__pmFirebase;
   try{
-    const ref = fb.doc(fb.db, 'shared_state', 'main');
+    const ref = fb.doc(fb.db, 'itc_pm', 'shared_state');
     const snap = await fb.getDoc(ref);
     if(snap.exists()){
-      const d = snap.data();
-      STATE.panels = d.panels && d.panels.length ? d.panels : DEFAULT_PANELS.slice();
-      STATE.panelExecutions = d.panelExecutions || {};
-      STATE.panelChecklistFields = d.panelChecklistFields || defaultPanelChecklist();
-      STATE.panelOwners = d.panelOwners || [];
-      STATE.reschedules = (d.reschedules || []).filter(r => r.type === 'panel');
-      const existing = new Set(STATE.panels.map(p=>p.id));
-      let added = 0;
-      for(const dp of DEFAULT_PANELS){
-        if(!existing.has(dp.id)){ STATE.panels.push(dp); added++; }
+      const data = snap.data();
+      if(data && data.payload){
+        const parsed = JSON.parse(data.payload);
+        STATE.panels = parsed.panels && parsed.panels.length ? parsed.panels : DEFAULT_PANELS.slice();
+        STATE.panelExecutions = parsed.panelExecutions || {};
+        STATE.panelChecklistFields = parsed.panelChecklistFields || defaultPanelChecklist();
+        STATE.panelOwners = parsed.panelOwners || [];
+        STATE.reschedules = (parsed.reschedules || []).filter(r => r.type === 'panel');
+        // Auto-merge new panels from defaults
+        const existing = new Set(STATE.panels.map(p=>p.id));
+        let added = 0;
+        for(const dp of DEFAULT_PANELS){
+          if(!existing.has(dp.id)){ STATE.panels.push(dp); added++; }
+        }
+        if(added > 0 && isAdmin()){
+          // Only admin can write back (rules enforce); push merged data
+          await saveToFirebase();
+        }
       }
-      if(added > 0){ await saveToFirebase(); }
-    } else {
-      STATE.panels = DEFAULT_PANELS.slice();
-      STATE.panelChecklistFields = defaultPanelChecklist();
-      await saveToFirebase();
     }
+    // Live sync listener
     fb.onSnapshot(ref, (snap2)=>{
       if(!snap2.exists()) return;
-      const d = snap2.data();
-      STATE.panels = d.panels || STATE.panels;
-      STATE.panelExecutions = d.panelExecutions || {};
-      STATE.panelChecklistFields = d.panelChecklistFields || STATE.panelChecklistFields;
-      STATE.panelOwners = d.panelOwners || [];
-      renderAll();
+      const data = snap2.data();
+      if(!data || !data.payload) return;
+      try{
+        const parsed = JSON.parse(data.payload);
+        STATE.panels = parsed.panels || STATE.panels;
+        STATE.panelExecutions = parsed.panelExecutions || {};
+        STATE.panelChecklistFields = parsed.panelChecklistFields || STATE.panelChecklistFields;
+        STATE.panelOwners = parsed.panelOwners || [];
+        renderAll();
+      } catch(e){ console.error('Sync parse error:', e); }
     });
-    document.body.className = isAdmin() ? 'role-admin' : 'role-user';
-    document.getElementById('u-email').textContent = window.__pmCurrentUser ? window.__pmCurrentUser.email : '';
-    const rb = document.getElementById('u-role');
-    rb.textContent = window.__pmRole.toUpperCase();
-    rb.className = 'role-tag ' + window.__pmRole;
     renderAll();
   } catch(e){
     console.error('Firebase load failed', e);
-    STATE.panels = DEFAULT_PANELS.slice();
-    STATE.panelChecklistFields = defaultPanelChecklist();
+    toast('Load error','Using local copy. '+(e.message||''),'warn');
     renderAll();
   }
 }
@@ -646,17 +693,33 @@ async function saveToFirebase(){
   if(!window.__pmFirebase || !window.__pmCurrentUser) return;
   const fb = window.__pmFirebase;
   try{
-    const ref = fb.doc(fb.db, 'shared_state', 'main');
+    const ref = fb.doc(fb.db, 'itc_pm', 'shared_state');
     const snap = await fb.getDoc(ref);
-    const base = snap.exists() ? snap.data() : {};
-    base.panels = STATE.panels;
-    base.panelExecutions = STATE.panelExecutions;
-    base.panelChecklistFields = STATE.panelChecklistFields;
-    base.panelOwners = STATE.panelOwners;
-    const motorRes = (base.reschedules || []).filter(r => r.type !== 'panel');
-    base.reschedules = motorRes.concat(STATE.reschedules);
-    await fb.setDoc(ref, base);
-  } catch(e){ console.error('save failed', e); toast('Save error','Not synced','error'); }
+    let basePayload = {};
+    if(snap.exists() && snap.data().payload){
+      try{ basePayload = JSON.parse(snap.data().payload); }catch(e){ basePayload = {}; }
+    }
+    // Preserve motor module's data; only update panel-related fields
+    basePayload.panels = STATE.panels;
+    basePayload.panelExecutions = STATE.panelExecutions;
+    basePayload.panelChecklistFields = STATE.panelChecklistFields;
+    basePayload.panelOwners = STATE.panelOwners;
+    // merge reschedules: keep non-panel ones from base, replace panel ones with ours
+    const otherRes = (basePayload.reschedules || []).filter(r => r.type !== 'panel');
+    basePayload.reschedules = otherRes.concat(STATE.reschedules);
+    await fb.setDoc(ref, {
+      payload: JSON.stringify(basePayload),
+      updatedAt: new Date().toISOString(),
+      updatedBy: window.__pmCurrentUser.email || window.__pmCurrentUser.uid
+    });
+  } catch(e){
+    console.error('save failed', e);
+    if(e.code === 'permission-denied'){
+      toast('Permission denied','You need admin rights to save changes','error');
+    } else {
+      toast('Save error', e.message || 'Not synced','error');
+    }
+  }
 }
 
 // ─── Nav ───────────────
@@ -687,8 +750,61 @@ function renderOverview(){
   const overdue = STATE.panels.filter(p=>getPanelStatus(p)==='OVERDUE').length;
   const tm = TODAY.getMonth(), ty = TODAY.getFullYear();
   const due = STATE.panels.filter(p=>{ if(STATE.panelExecutions[p.id]) return false; const d=isoToDate(p.pm_date); return d.getMonth()===tm && d.getFullYear()===ty; }).length;
+  const upcomingNext14 = STATE.panels.filter(p=>{
+    if(STATE.panelExecutions[p.id]) return false;
+    const d = isoToDate(p.pm_date);
+    const diff = Math.floor((d - TODAY)/86400000);
+    return diff >= 0 && diff <= 14;
+  }).length;
   const compl = total > 0 ? Math.min(100, Math.round((done/total)*100)) : 0;
   const units = [...new Set(STATE.panels.map(p=>p.area))].length;
+
+  // Persistent notification banners
+  const nh = document.getElementById('notify-host');
+  if(nh){
+    nh.className = 'notify-host';
+    let html = '';
+    if(overdue > 0){
+      html += `<div class="notify-banner danger">
+        <div class="notify-icon">⚠</div>
+        <div class="notify-text">
+          <div class="notify-title">${overdue} Panel PM${overdue===1?'':'s'} OVERDUE</div>
+          <div class="notify-msg">Past planned date · requires immediate action</div>
+        </div>
+        <button class="notify-cta" onclick="document.querySelector('[data-page=daily]').click()">Open Daily View →</button>
+      </div>`;
+    }
+    if(due > 0){
+      html += `<div class="notify-banner warn">
+        <div class="notify-icon">●</div>
+        <div class="notify-text">
+          <div class="notify-title">${due} Panel PM${due===1?'':'s'} DUE this month</div>
+          <div class="notify-msg">Planned within current month · schedule resources</div>
+        </div>
+        <button class="notify-cta" onclick="document.querySelector('[data-page=daily]').click()">Plan →</button>
+      </div>`;
+    }
+    if(upcomingNext14 > 0 && due === 0 && overdue === 0){
+      html += `<div class="notify-banner info">
+        <div class="notify-icon">▸</div>
+        <div class="notify-text">
+          <div class="notify-title">${upcomingNext14} Panel PM${upcomingNext14===1?'':'s'} upcoming in 14 days</div>
+          <div class="notify-msg">All within planned window · in good shape</div>
+        </div>
+        <button class="notify-cta" onclick="document.querySelector('[data-page=daily]').click()">Preview →</button>
+      </div>`;
+    }
+    if(!html && total > 0){
+      html += `<div class="notify-banner success">
+        <div class="notify-icon">✓</div>
+        <div class="notify-text">
+          <div class="notify-title">All clear</div>
+          <div class="notify-msg">No overdue or due Panel PMs this month</div>
+        </div>
+      </div>`;
+    }
+    nh.innerHTML = html;
+  }
 
   document.getElementById('k-total').textContent = total.toLocaleString();
   document.getElementById('k-units').textContent = units;
