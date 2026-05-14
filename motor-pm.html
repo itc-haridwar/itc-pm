@@ -1132,128 +1132,144 @@ document.addEventListener('pm-firebase-ready', applyRoleUI);
 //     different days within the week.
 //   - Each occurrence of a motor gets a separate date.
 function generateSchedule(motors, weekCap=20, weeks=52){
-  // ════════ PHASE 3.4 SCHEDULER ════════
-  // 1) 4 motors/day standard cap (Mon-Fri). 20 motors/week.
-  // 2) BOOST: last 50 working days of the FY allow 6 motors/day to reduce
-  //    area-mixing for small areas. This expands capacity by 100 extra slots,
-  //    eliminating most mid-year mixing without spreading the overload.
-  // 3) All motors on a given day MUST be from the SAME area whenever possible.
-  // 4) Frequency by category: A → BM (6/yr), B → Q (4/yr), C → HY (2/yr).
-  // 5) Occurrences spaced evenly: BM ≈ 8.7 wk, Q ≈ 13 wk, HY ≈ 26 wk.
+  // ════════ PHASE 3.5 SCHEDULER ════════
+  // SPEC:
+  //   Frequency by category: A → BM (6/yr), B → Q (4/yr), C → HY (2/yr)
+  //   Spacing between same motor\'s consecutive PMs (working days):
+  //     BM:  43 wd (~60 cal days)
+  //     Q:   65 wd (~91 cal days)
+  //     HY:  130 wd (~182 cal days)
+  //   4 motors/day standard, 6/day on last 50 days as overflow buffer
+  //   All motors on a given day from the SAME area
+  //
+  // ALGORITHM (3-pass, freq-first):
+  //   Pass 1: place all BM motors (tightest constraint: occ-1 must be in days 0-45)
+  //           Grouped area-by-area, 4-per-day same-area packing.
+  //   Pass 2: place all Q motors (occ-1 in days 0-65), same packing.
+  //   Pass 3: place all HY motors (occ-1 in days 0-129), same packing.
+  //   For each motor: occ-1 anchored at cursor, occ-N at occ-(N-1) + spacing.
 
   const PER_DAY_NORMAL = 4;
   const PER_DAY_BOOST  = 6;
-  const BOOST_DAYS     = 50;                       // last 50 working days get the boost
+  const BOOST_DAYS     = 50;
   const DAYS_PER_WEEK  = 5;
-  const TOTAL_DAYS     = weeks * DAYS_PER_WEEK;    // 260
-  const BOOST_START    = TOTAL_DAYS - BOOST_DAYS;  // day index where boost starts (210)
-  // Per-day capacity: standard for first 210 days, boosted for last 50
+  const TOTAL_DAYS     = weeks * DAYS_PER_WEEK;          // 260
+  const BOOST_START    = TOTAL_DAYS - BOOST_DAYS;        // 210
   function capFor(idx){ return idx >= BOOST_START ? PER_DAY_BOOST : PER_DAY_NORMAL; }
-  const dayGrid = {};                              // dayIdx -> {area, count}
 
-  // Group motors by area
+  const SPACING = { BM: 43, Q: 65, HY: 130 };
+  const dayGrid = {};   // dayIdx → {area, count}
+  const slots = [];
+
+  function reserve(dayIdx, area, m, occNum, freq){
+    if(!dayGrid[dayIdx]) dayGrid[dayIdx] = { area, count: 0 };
+    dayGrid[dayIdx].count++;
+    const w = Math.floor(dayIdx / DAYS_PER_WEEK) + 1;
+    const d = (dayIdx % DAYS_PER_WEEK) + 1;
+    slots.push({ sr: m.sr, week: w, day: d, occ: occNum, freq });
+  }
+
+  // Find earliest day at/after startIdx that is empty OR same-area with capacity.
+  // If maxIdx is provided, search is bounded.
+  function findSameAreaSlot(startIdx, area, maxIdx){
+    const limit = (typeof maxIdx === 'number') ? Math.min(maxIdx + 1, TOTAL_DAYS) : TOTAL_DAYS;
+    for(let i=startIdx; i<limit; i++){
+      const g = dayGrid[i];
+      if(!g) return i;
+      if(g.area === area && g.count < capFor(i)) return i;
+    }
+    return -1;
+  }
+  // Find earliest day at/after startIdx with ANY remaining capacity (cross-area allowed).
+  function findAnyOpen(startIdx){
+    for(let i=startIdx; i<TOTAL_DAYS; i++){
+      const g = dayGrid[i];
+      if(!g) return i;
+      if(g.count < capFor(i)) return i;
+    }
+    return -1;
+  }
+
+  // Place ALL occurrences for one motor. Returns occ-1 dayIdx so caller can advance cursor.
+  function placeMotorChain(m, area, freq, anchor){
+    const nOccs = FREQ_RULES[freq].n;
+    const spacing = SPACING[freq] || 0;
+    // occ-1 must allow occ-N to fit: anchor + (nOccs-1)*spacing < TOTAL_DAYS
+    const maxAnchor = TOTAL_DAYS - 1 - (nOccs - 1) * spacing;
+
+    // Prefer same-area in the window starting at anchor
+    let occ1 = findSameAreaSlot(anchor, area, maxAnchor);
+    if(occ1 < 0){
+      // Same-area not found from anchor — scan whole window for same-area
+      occ1 = findSameAreaSlot(0, area, maxAnchor);
+    }
+    if(occ1 < 0){
+      // Same-area exhausted — scan whole window for ANY open slot (cross-area)
+      for(let i=0; i<=maxAnchor && i<TOTAL_DAYS; i++){
+        const g = dayGrid[i];
+        if(!g){ occ1 = i; break; }
+        if(g.count < capFor(i)){ occ1 = i; break; }
+      }
+    }
+    if(occ1 < 0){ console.warn('No occ-1 slot for sr', m.sr, area, freq); return -1; }
+
+    reserve(occ1, area, m, 1, freq);
+    let lastIdx = occ1;
+    for(let occ=2; occ<=nOccs; occ++){
+      const target = lastIdx + spacing;
+      let found = -1;
+      if(target < TOTAL_DAYS){
+        // Search same-area at/after target first
+        found = findSameAreaSlot(target, area);
+        // Then any open at/after target
+        if(found < 0) found = findAnyOpen(target);
+      }
+      if(found < 0){
+        // target overshoots — find last available open slot
+        for(let i=TOTAL_DAYS-1; i>lastIdx; i--){
+          const g = dayGrid[i];
+          if(!g || g.count < capFor(i)){ found = i; break; }
+        }
+      }
+      if(found < 0){ console.warn('No slot for occ', occ, 'sr', m.sr); break; }
+      reserve(found, area, m, occ, freq);
+      lastIdx = found;
+    }
+    return occ1;
+  }
+
+  // Bucket motors by area (preserves data-entry order within area)
   const areaBuckets = {};
   motors.forEach(m=>{
     if(!areaBuckets[m.area]) areaBuckets[m.area] = [];
     areaBuckets[m.area].push(m);
   });
 
-  // Sort areas by total annual PM load (descending) so big-load areas anchor first
+  // Sort areas by total annual PM load — heavier areas anchor first so they get the cleanest blocks
   const areaList = Object.keys(areaBuckets).sort((a,b)=>{
     const loadA = areaBuckets[a].reduce((s,m)=>s + FREQ_RULES[freqFor(a,m.cat)].n, 0);
     const loadB = areaBuckets[b].reduce((s,m)=>s + FREQ_RULES[freqFor(b,m.cat)].n, 0);
     return loadB - loadA;
   });
 
-  // Assign anchor day for each area (occurrence #1 starts here).
-  // Anchor advances by the count of days that area needs for round-1, using NORMAL capacity
-  // so we don't accidentally start small areas inside the boost zone.
-  const areaAnchor = {};
-  let runningCursor = 0;
-  for(const area of areaList){
-    areaAnchor[area] = runningCursor;
-    const daysNeeded = Math.ceil(areaBuckets[area].length / PER_DAY_NORMAL);
-    runningCursor += daysNeeded;
-  }
-
-  const slots = [];
-
-  // Find earliest free slot at/after startIdx for given area.
-  // Empty day, OR a same-area day with < capacity-for-that-day motors. Wraps.
-  function findSlot(startIdx, area){
-    for(let i=startIdx; i<TOTAL_DAYS; i++){
-      const g = dayGrid[i];
-      if(!g) return i;
-      if(g.area === area && g.count < capFor(i)) return i;
-    }
-    for(let i=0; i<startIdx; i++){
-      const g = dayGrid[i];
-      if(!g) return i;
-      if(g.area === area && g.count < capFor(i)) return i;
-    }
-    return -1;
-  }
-
-  // Fallback: any partial day (allows occ#2+ of small areas to fill leftover slots in large-area days)
-  function findAnyPartial(startIdx){
-    for(let i=startIdx; i<TOTAL_DAYS; i++){
-      const g = dayGrid[i];
-      if(!g) return i;
-      if(g.count < capFor(i)) return i;
-    }
-    for(let i=0; i<startIdx; i++){
-      const g = dayGrid[i];
-      if(!g) return i;
-      if(g.count < capFor(i)) return i;
-    }
-    return -1;
-  }
-
-  function placeGroup(area, motorList, startIdx, occNum, freqLabelOrNull){
-    let cursor = startIdx;
-    for(const m of motorList){
-      let found = findSlot(cursor, area);
-      // For occ 2+ small areas, if same-area is impossible, fall back to ANY partial slot
-      // so we don\'t drop occurrences. This is what causes the rare mixed days.
-      if(found < 0 && occNum > 1){
-        found = findAnyPartial(cursor);
+  // ─── PASS 1: BM motors (tightest spacing window) ───
+  // ─── PASS 2: Q motors  ─── 
+  // ─── PASS 3: HY motors ─── 
+  for(const passFreq of ['BM', 'Q', 'HY']){
+    let cursor = 0;
+    for(const area of areaList){
+      const motorsThisFreq = areaBuckets[area].filter(m => freqFor(m.area, m.cat) === passFreq);
+      if(motorsThisFreq.length === 0) continue;
+      for(const m of motorsThisFreq){
+        const placedAt = placeMotorChain(m, area, passFreq, cursor);
+        if(placedAt >= 0){
+          const g = dayGrid[placedAt];
+          if(g && g.count >= capFor(placedAt)) cursor = placedAt + 1;
+          else cursor = placedAt;
+        }
       }
-      if(found < 0){ console.warn('No slot for', area, 'occ', occNum, 'sr', m.sr); break; }
-      if(!dayGrid[found]) dayGrid[found] = { area, count: 0 };
-      dayGrid[found].count++;
-      const w = Math.floor(found / DAYS_PER_WEEK) + 1;
-      const d = (found % DAYS_PER_WEEK) + 1;
-      const f = freqLabelOrNull || freqFor(m.area, m.cat);
-      slots.push({sr: m.sr, week: w, day: d, occ: occNum, freq: f});
-      cursor = (dayGrid[found].count >= capFor(found)) ? found + 1 : found;
-    }
-  }
-
-  // OCCURRENCE #1: place ALL motors of each area on consecutive days starting at anchor
-  for(const area of areaList){
-    placeGroup(area, areaBuckets[area], areaAnchor[area], 1, null);
-  }
-
-  // OCCURRENCES 2..N: split per area by frequency, target anchor + (occ-1)*spacing
-  for(const area of areaList){
-    const byFreq = { BM: [], Q: [], HY: [] };
-    areaBuckets[area].forEach(m=>{
-      const f = freqFor(m.area, m.cat);
-      byFreq[f].push(m);
-    });
-    const anchor = areaAnchor[area];
-
-    for(const freq of ['BM','Q','HY']){
-      const list = byFreq[freq];
-      if(list.length === 0) continue;
-      const nOccs = FREQ_RULES[freq].n;
-      if(nOccs <= 1) continue;
-      const spacing = Math.floor(TOTAL_DAYS / nOccs);
-
-      for(let occ=2; occ<=nOccs; occ++){
-        const targetIdx = (anchor + (occ-1) * spacing) % TOTAL_DAYS;
-        placeGroup(area, list, targetIdx, occ, freq);
-      }
+      // After each area\'s block, jump to next empty day so next area gets a clean start
+      while(cursor < TOTAL_DAYS && dayGrid[cursor] && dayGrid[cursor].count >= capFor(cursor)) cursor++;
     }
   }
 
