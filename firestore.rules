@@ -2,18 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Shared PM state — readable by any signed-in user
-    // Writable only by admins (users whose UID has a doc in /admins)
+    // Shared PM state — readable AND writable by any signed-in user.
+    // Per requirement: standard users can mark PMs done, upload data, and edit operational records.
+    // Admin-only actions (e.g. factory reset, delete FY) are enforced in the client UI, not Firestore rules.
+    // Audit fields (updatedAt, updatedBy) are written by the client on every save.
     match /itc_pm/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null
-                   && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      allow write: if request.auth != null;
     }
 
-    // Admin list — readable by any signed-in user (to check their own status);
+    // Admin list — readable by any signed-in user (so role can be detected);
     // writable only by existing admins.
-    // BOOTSTRAP: the very first admin must be added manually from Firebase Console
-    // (see "How to make someone admin" in the guide).
+    // BOOTSTRAP: the very first admin must be added manually from Firebase Console.
     match /admins/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null

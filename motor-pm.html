@@ -428,6 +428,18 @@ body.role-user #mng-tbody .btn.danger{display:none}
         </div>
         <div class="card"><div class="card-header"><div><div class="card-title">Weekly Workload Profile</div><div class="card-subtitle">52-week rolling — capacity ceiling at 20/week</div></div></div><div class="chart-wrap"><canvas id="ch-week"></canvas></div></div>
 
+        <!-- Overdue & Pending Motors — by name & location (per user request) -->
+        <div class="card" id="card-overdue-motors" style="margin-top:20px;border-left:3px solid var(--accent-3)">
+          <div class="card-header">
+            <div>
+              <div class="card-title" style="color:var(--accent-3)">▍ Overdue & Pending Motors</div>
+              <div class="card-subtitle">Click any row to open Daily View · Top 20 shown</div>
+            </div>
+            <span class="card-tag" id="ov-overdue-count" style="background:rgba(255,80,80,0.15);color:var(--accent-3)">0</span>
+          </div>
+          <div id="overdue-list" style="display:grid;gap:6px;padding:14px 20px 18px"></div>
+        </div>
+
         <!-- Reliability glance — quick KPIs at-a-glance. Detailed view: Reliability page -->
         <div style="margin-top:24px;display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px">
           <div>
@@ -552,6 +564,12 @@ body.role-user #mng-tbody .btn.danger{display:none}
         <div class="grid grid-2" style="margin-bottom:20px">
           <div class="card"><div class="card-header"><div><div class="card-title">MTTR by Area (mins)</div><div class="card-subtitle">Lower is better — fast repair</div></div></div><div class="chart-wrap tall"><canvas id="ch-rel-mttr"></canvas></div></div>
           <div class="card"><div class="card-header"><div><div class="card-title">MTBF by Area (hours)</div><div class="card-subtitle">Higher is better — fewer breakdowns</div></div></div><div class="chart-wrap tall"><canvas id="ch-rel-mtbf"></canvas></div></div>
+        </div>
+
+        <!-- Monthly trend — MTTR / MTBF / breakdown count by month -->
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-header"><div><div class="card-title">Monthly MTTR / MTBF Trend</div><div class="card-subtitle">Weighted by execution count · FY 26-27</div></div></div>
+          <div class="chart-wrap" style="height:280px"><canvas id="ch-rel-monthly"></canvas></div>
         </div>
 
         <div class="card">
@@ -1685,7 +1703,7 @@ function commitExecutionImport(items){
 }
 
 function downloadTemplate(){
-  if(!isAdmin() && !confirm('You are signed in as VIEWER. You can still download the template to give to the team. Continue?')) return;
+  // Available to everyone — template is just a CSV with column headers
   const fyKey = STATE.activeFY;
   const rows = buildRows(fyKey);
   const lines = ['PM ID,Area,Motor,Frequency,Planned Date,Actual Date,PM Start,PM Stop,B/D Start,B/D Stop,Remarks'];
@@ -2816,19 +2834,13 @@ function renderOverview(){
     bnr.innerHTML = `<div class="notify-icon">⚠</div><div class="notify-content"><div class="notify-title">${overdue} PMs OVERDUE — action required</div><div class="notify-msg">These PMs are past their planned date. Open Daily View to act.</div></div><button class="notify-cta" onclick="document.querySelector('[data-page=daily]').click()">Daily View →</button>`;
     host.appendChild(bnr);
   }
-  if(dueCritical > 0){
-    const bnr2 = document.createElement('div');
-    bnr2.className = 'notify-banner';
-    bnr2.style.background = 'linear-gradient(90deg,rgba(255,176,0,0.18),rgba(255,138,61,0.05))';
-    bnr2.style.borderColor = 'var(--accent-2)';
-    bnr2.innerHTML = `<div class="notify-icon" style="color:var(--accent-2)">⏰</div><div class="notify-content"><div class="notify-title">${dueCritical} PMs due in next 3 days</div><div class="notify-msg">Plan resources now to execute before due date.</div></div><button class="notify-cta" style="background:var(--accent-2);color:#1a0e00" onclick="document.querySelector('[data-page=daily]').click()">Plan →</button>`;
-    host.appendChild(bnr2);
-  } else if(dueWeek > 0 && overdue === 0){
+  // Weekly summary only — removed daily "due in 3 days" banner per user request
+  if(dueWeek > 0){
     const bnr3 = document.createElement('div');
     bnr3.className = 'notify-banner';
     bnr3.style.background = 'linear-gradient(90deg,rgba(0,217,255,0.12),rgba(61,139,255,0.04))';
     bnr3.style.borderColor = 'var(--accent)';
-    bnr3.innerHTML = `<div class="notify-icon" style="color:var(--accent)">▸</div><div class="notify-content"><div class="notify-title">${dueWeek} PMs due this week</div><div class="notify-msg">All within planned window. Good shape.</div></div><button class="notify-cta" style="background:var(--accent);color:#0a0e1a" onclick="document.querySelector('[data-page=daily]').click()">View →</button>`;
+    bnr3.innerHTML = `<div class="notify-icon" style="color:var(--accent)">▸</div><div class="notify-content"><div class="notify-title">${dueWeek} PMs due this week</div><div class="notify-msg">Week of ${dateFmt(sow)} — plan resources & schedule.</div></div><button class="notify-cta" style="background:var(--accent);color:#0a0e1a" onclick="document.querySelector('[data-page=daily]').click()">View Week →</button>`;
     host.appendChild(bnr3);
   }
 
@@ -2881,6 +2893,41 @@ function renderOverview(){
     data:{labels:Array.from({length:52},(_,i)=>'W'+(i+1)),datasets:[{label:'PMs Scheduled',data:Object.values(wlByWeek),backgroundColor:Object.values(wlByWeek).map(v=>v>20?COLORS.coral:v>=17?COLORS.amber:COLORS.q),borderRadius:2}]},
     options:{maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:COLORS.border},suggestedMax:25}},plugins:{legend:{display:false}}}
   });
+
+  // ─── Overdue & Pending motors — by name & location ─────
+  const overdueRows = rows.filter(r=>isoToDate(r.date) < sow && !r.actualDate)
+    .map(r=>{
+      const motor = STATE.motors.find(m=>m.sr===r.sr) || {motor:'Unknown', area:'—'};
+      const daysOverdue = Math.floor((sow - isoToDate(r.date)) / 86400000);
+      return {
+        sr: r.sr, motor: motor.motor, area: motor.area, cat: motor.cat,
+        plannedDate: r.date, daysOverdue, pmId: r.pmId
+      };
+    })
+    .sort((a,b)=>b.daysOverdue - a.daysOverdue);
+  const ovListEl = document.getElementById('overdue-list');
+  const ovCountEl = document.getElementById('ov-overdue-count');
+  if(ovCountEl) ovCountEl.textContent = overdueRows.length;
+  if(ovListEl){
+    if(overdueRows.length === 0){
+      ovListEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px">✓ No overdue motors · all caught up</div>';
+    } else {
+      const top = overdueRows.slice(0, 20);
+      ovListEl.innerHTML = top.map(r=>{
+        const sevPct = Math.min(100, (r.daysOverdue / 30) * 100);
+        const sevColor = r.daysOverdue >= 14 ? 'var(--accent-3)' : r.daysOverdue >= 7 ? 'var(--accent-2)' : 'var(--accent)';
+        return `<div onclick="document.querySelector('[data-page=daily]').click()" style="display:grid;grid-template-columns:30px 1fr auto 80px;gap:12px;align-items:center;padding:10px 12px;background:var(--bg-panel-2);border-left:3px solid ${sevColor};border-radius:3px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='var(--bg-panel-3)'" onmouseout="this.style.background='var(--bg-panel-2)'">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${String(r.sr).padStart(3,'0')}</div>
+          <div>
+            <div style="font-size:12.5px;font-weight:600;color:var(--text);line-height:1.2">${r.motor}</div>
+            <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px"><b style="color:${sevColor}">${r.area}</b> · cat ${r.cat || '?'} · planned ${dateFmt(isoToDate(r.plannedDate))}</div>
+          </div>
+          <div style="font-size:11px;font-weight:700;color:${sevColor};text-align:right">${r.daysOverdue}d<div style="font-size:9px;color:var(--text-muted);font-weight:400;letter-spacing:0.5px">OVERDUE</div></div>
+          <div style="height:6px;background:var(--bg-panel-3);border-radius:3px;overflow:hidden"><div style="height:100%;width:${sevPct}%;background:${sevColor}"></div></div>
+        </div>`;
+      }).join('') + (overdueRows.length > 20 ? `<div style="text-align:center;padding:8px;font-size:11px;color:var(--text-muted)">+${overdueRows.length-20} more · open Daily View to see all</div>` : '');
+    }
+  }
 
   // ─── Reliability glance widgets ───
   const fyKey = STATE.activeFY;
@@ -3349,6 +3396,53 @@ function renderReliability(){
     data:{labels:summary.map(s=>s.area),datasets:[{data:summary.map(s=>s.mtbf),backgroundColor:COLORS.mint,borderRadius:3}]},
     options:{indexAxis:'y',maintainAspectRatio:false,scales:{x:{grid:{color:COLORS.border},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:10}}}},plugins:{legend:{display:false}}}
   });
+
+  // Monthly MTTR/MTBF trend — weighted by execution count
+  const monthlyBuckets = {};
+  for(const e of execEntries){
+    if(!e.actualDate) continue;
+    const d = isoToDate(e.actualDate);
+    const monthIdx = (d.getFullYear()-2026)*12 + d.getMonth() - 3;
+    if(monthIdx < 0 || monthIdx >= 12) continue;
+    if(!monthlyBuckets[monthIdx]) monthlyBuckets[monthIdx] = { mttr:[], mtbf:[], bd:0 };
+    if(e.mttrMin > 0) monthlyBuckets[monthIdx].mttr.push(e.mttrMin);
+    if(e.bdHrs > 0){ monthlyBuckets[monthIdx].mtbf.push(e.bdHrs); monthlyBuckets[monthIdx].bd++; }
+  }
+  const monthLabels = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+  const monthlyMttr = monthLabels.map((_,i)=>{
+    const b = monthlyBuckets[i];
+    if(!b || !b.mttr.length) return 0;
+    return Math.round(b.mttr.reduce((a,x)=>a+x,0)/b.mttr.length);
+  });
+  const monthlyMtbf = monthLabels.map((_,i)=>{
+    const b = monthlyBuckets[i];
+    if(!b || !b.mtbf.length) return 0;
+    return +(b.mtbf.reduce((a,x)=>a+x,0)/b.mtbf.length).toFixed(1);
+  });
+
+  const elMon = document.getElementById('ch-rel-monthly');
+  if(elMon){
+    if(chartRefs.relMonthly) chartRefs.relMonthly.destroy();
+    chartRefs.relMonthly = new Chart(elMon, {
+      data:{
+        labels: monthLabels,
+        datasets:[
+          { type:'bar', label:'MTTR (min)', data: monthlyMttr, backgroundColor: COLORS.amber, yAxisID:'y1', borderRadius:2 },
+          { type:'line', label:'MTBF (hrs)', data: monthlyMtbf, borderColor: COLORS.mint, backgroundColor: 'rgba(124,242,139,0.1)', yAxisID:'y2', tension:0.3, fill:true, pointBackgroundColor: COLORS.mint, pointRadius:4, borderWidth:2 }
+        ]
+      },
+      options:{
+        maintainAspectRatio:false,
+        scales:{
+          x:{grid:{display:false}},
+          y1:{position:'left',grid:{color:COLORS.border},title:{display:true,text:'MTTR (min)',color:COLORS.amber,font:{size:10}}},
+          y2:{position:'right',grid:{display:false},title:{display:true,text:'MTBF (hrs)',color:COLORS.mint,font:{size:10}}}
+        },
+        plugins:{legend:{labels:{boxWidth:12, font:{size:11}}}, tooltip:{mode:'index', intersect:false}},
+        interaction:{mode:'index', intersect:false}
+      }
+    });
+  }
 }
 ['rel-area','rel-method'].forEach(id=>document.getElementById(id).addEventListener('change',renderReliability));
 
@@ -3407,8 +3501,125 @@ document.querySelectorAll('.nav-item').forEach(el=>{
   });
 });
 
+/* ═══ Smart popups: daily (today's planned) + weekly (due/overdue) ═══
+   - Daily popup: shown ONCE per day on first visit, lists today's planned motors
+   - Weekly popup: shown ONCE per week on first visit (any day), lists due-this-week + overdue
+   Both close with × button or click outside. Both have sessionStorage + localStorage to prevent re-showing. */
+function maybeShowDailyPopup(){
+  try{
+    const todayKey = 'pm_daily_popup_' + isoDate(TODAY);
+    if(localStorage.getItem(todayKey)) return; // already shown today
+    if(!cachedRows || !cachedRows.length) return;
+    const todayStr = isoDate(TODAY);
+    const todayItems = cachedRows.filter(r => r.date === todayStr && !r.actualDate);
+    if(todayItems.length === 0) return; // nothing planned today
+
+    const list = todayItems.slice(0, 30).map(r=>{
+      const m = STATE.motors.find(mm=>mm.sr===r.sr) || {motor:'?', area:'?', cat:'?'};
+      return `<div style="display:grid;grid-template-columns:30px 1fr auto;gap:10px;padding:8px 10px;background:var(--bg-panel-2);border-radius:3px;align-items:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${String(r.sr).padStart(3,'0')}</div>
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--text)">${m.motor}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${m.area} · cat ${m.cat} · ${r.freq}</div>
+        </div>
+        <div><span class="cat-pill cat-${m.cat}">${m.cat}</span></div>
+      </div>`;
+    }).join('');
+
+    const content = `
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">📅 Today's Plan</div>
+          <div class="modal-subtitle">${dateFmt(TODAY)} · ${todayItems.length} motor${todayItems.length===1?'':'s'} scheduled</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+        <div style="display:grid;gap:6px">${list}</div>
+        ${todayItems.length > 30 ? `<div style="text-align:center;padding:10px;font-size:11px;color:var(--text-muted)">+${todayItems.length-30} more · open Daily View to see all</div>` : ''}
+      </div>
+      <div class="modal-footer">
+        <button class="btn secondary" onclick="closeModal()">Dismiss</button>
+        <button class="btn" onclick="closeModal(); document.querySelector('[data-page=daily]').click()">Open Daily View →</button>
+      </div>
+    `;
+    openModal(content);
+    localStorage.setItem(todayKey, '1');
+  }catch(e){ console.warn('Daily popup failed:', e); }
+}
+
+function maybeShowWeeklyPopup(){
+  try{
+    // Show once per ISO week (Mon-Sun). Key is YYYY-Www format.
+    const sow = startOfWeek(TODAY);
+    const weekKey = 'pm_weekly_popup_' + isoDate(sow);
+    if(localStorage.getItem(weekKey)) return;
+    if(!cachedRows || !cachedRows.length) return;
+
+    const eow = new Date(sow); eow.setDate(eow.getDate()+6);
+    const dueRows = cachedRows.filter(r=>{ const d=isoToDate(r.date); return d>=sow && d<=eow && !r.actualDate; });
+    const overdueRows = cachedRows.filter(r=>isoToDate(r.date) < sow && !r.actualDate);
+
+    if(dueRows.length === 0 && overdueRows.length === 0) return;
+
+    const fmtItems = (items, color)=>items.slice(0,10).map(r=>{
+      const m = STATE.motors.find(mm=>mm.sr===r.sr) || {motor:'?', area:'?'};
+      return `<div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 10px;background:var(--bg-panel-2);border-left:2px solid ${color};border-radius:2px;font-size:11.5px">
+        <div><b>${m.motor}</b><div style="font-size:10px;color:var(--text-muted)">${m.area}</div></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${color};text-align:right">${dateFmt(isoToDate(r.date))}</div>
+      </div>`;
+    }).join('');
+
+    let body = '';
+    if(overdueRows.length > 0){
+      body += `<div style="font-size:11px;font-weight:700;color:var(--accent-3);margin:0 0 8px;letter-spacing:1.5px">▍ OVERDUE (${overdueRows.length})</div>
+        <div style="display:grid;gap:5px;margin-bottom:18px">${fmtItems(overdueRows, 'var(--accent-3)')}</div>
+        ${overdueRows.length > 10 ? `<div style="font-size:10px;color:var(--text-muted);margin-bottom:14px;text-align:center">+${overdueRows.length-10} more overdue</div>` : ''}`;
+    }
+    if(dueRows.length > 0){
+      body += `<div style="font-size:11px;font-weight:700;color:var(--accent-2);margin:0 0 8px;letter-spacing:1.5px">▍ DUE THIS WEEK (${dueRows.length})</div>
+        <div style="display:grid;gap:5px">${fmtItems(dueRows, 'var(--accent-2)')}</div>
+        ${dueRows.length > 10 ? `<div style="font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center">+${dueRows.length-10} more due this week</div>` : ''}`;
+    }
+
+    const content = `
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">📋 Weekly Summary</div>
+          <div class="modal-subtitle">Week of ${dateFmt(sow)} · review & plan</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">×</button>
+      </div>
+      <div class="modal-body" style="max-height:65vh;overflow-y:auto">${body}</div>
+      <div class="modal-footer">
+        <button class="btn secondary" onclick="closeModal()">Dismiss</button>
+        <button class="btn" onclick="closeModal(); document.querySelector('[data-page=daily]').click()">Plan Week →</button>
+      </div>
+    `;
+    openModal(content);
+    localStorage.setItem(weekKey, '1');
+  }catch(e){ console.warn('Weekly popup failed:', e); }
+}
+
+// Show popups on first visit per session, prefer weekly > daily (only show one at a time)
+let _popupsShown = false;
+function maybeShowPopups(){
+  if(_popupsShown) return;
+  _popupsShown = true;
+  // Try weekly first (more important). If skipped, try daily.
+  const sow = startOfWeek(TODAY);
+  const weekKey = 'pm_weekly_popup_' + isoDate(sow);
+  if(!localStorage.getItem(weekKey)){
+    maybeShowWeeklyPopup();
+  } else {
+    maybeShowDailyPopup();
+  }
+}
+
 /* Initial */
 renderAll();
+// Show popups after initial render + small delay for Firebase load
+setTimeout(maybeShowPopups, 1500);
 </script>
 </body>
 </html>
