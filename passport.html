@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITC Haridwar — Factory Passport</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+window.__pmFirebase = { db, auth, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot };
+window.__pmScanFs  = { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot };
+window.__pmFirebaseReady = false;
+window.__pmRole = 'user';
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){ if(window.parent === window) window.location.href = './index.html'; return; }
+  window.__pmCurrentUser = user;
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      const snap = await getDoc(doc(db, 'admins', user.uid));
+      window.__pmRole = snap.exists() ? 'admin' : 'user';
+      break;
+    }catch(e){
+      console.warn('[role] admin check failed:', e.code || e.message);
+      window.__pmRole = 'user';
+      await new Promise(r=>setTimeout(r, 800));
+    }
+  }
+  window.__pmFirebaseReady = true;
+  document.dispatchEvent(new CustomEvent('pm-firebase-ready'));
+  document.dispatchEvent(new CustomEvent('pm-scanfs-ready'));
+});
+</script>
+<style>
+:root{
+  --bg-0:#0c0c0e; --bg-1:#111114; --bg-2:#18181d; --bg-3:#222227;
+  --line:#26262d; --line-2:#34343d;
+  --text:#ededee; --text-2:#a1a1a8; --text-3:#72727b;
+  --green:#22c55e; --green-soft:rgba(34,197,94,.12);
+  --amber:#f59e0b; --amber-soft:rgba(245,158,11,.12);
+  --red:#ef4444;   --red-soft:rgba(239,68,68,.12);
+  --blue:#60a5fa;  --blue-soft:rgba(96,165,250,.12);
+  --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+html,body{background:var(--bg-0);color:var(--text);
+  font-family:'Segoe UI Variable Display','Segoe UI Variable','Segoe UI','Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:13.5px;line-height:1.5;letter-spacing:-.003em}
+button,input,select,textarea{font-family:inherit}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:'tnum'}
+/* header + tabs */
+.app-head{position:sticky;top:0;z-index:50;background:rgba(12,12,14,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.app-head-in{max-width:1100px;margin:0 auto;padding:14px 16px 0}
+.title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.mod-title{font-size:19px;font-weight:650;letter-spacing:-.015em;line-height:1.25}
+.mod-title::before{content:'';display:inline-block;width:4px;height:15px;background:var(--accent);border-radius:1px;margin-right:9px;vertical-align:-1px}
+.mod-sub{font-size:11.5px;color:var(--text-2);margin-top:3px}
+.role{flex:none;font:700 10px/1 var(--mono);letter-spacing:.1em;padding:6px 8px;border-radius:3px;border:1px solid var(--line-2);color:var(--text-2)}
+.role.admin{color:var(--green);border-color:rgba(34,197,94,.45);background:var(--green-soft)}
+.role.user{color:var(--blue);border-color:rgba(96,165,250,.45);background:var(--blue-soft)}
+.seg{display:flex;gap:2px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{flex:none;background:none;border:0;border-bottom:2px solid transparent;color:var(--text-2);padding:10px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.seg button:hover{color:var(--text)}
+.seg button.on{color:var(--text);border-bottom-color:var(--accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 16px 60px}
+/* KPI tiles */
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+@media (min-width:760px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--bg-1);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.kpi .l{font-size:11.5px;color:var(--text-2)}
+.kpi .v{font-size:27px;font-weight:650;line-height:1.1;margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .m{font-size:10.5px;color:var(--text-3);margin-top:3px}
+.kpi.good .v{color:var(--green)} .kpi.bad .v{color:var(--red)} .kpi.warn .v{color:var(--amber)}
+/* cards */
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:6px;margin-bottom:14px}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line)}
+.card-t{font-weight:650;font-size:14px}
+.card-m{font-size:11.5px;color:var(--text-2);margin-top:1px;max-width:640px}
+.card-b{padding:12px 14px}
+.sec-t{font-size:12.5px;font-weight:650;margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--line)}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:8px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#0c0c0e;font-size:12.5px;font-weight:650;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{filter:brightness(1.08)}
+.btn:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--line-2)}
+.btn.ghost:hover{border-color:var(--text-2)}
+.btn.danger{background:transparent;color:var(--red);border-color:rgba(239,68,68,.5)}
+.btn.sm{min-height:32px;padding:5px 11px;font-size:11.5px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+/* forms */
+.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+@media (min-width:760px){.filters{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.filters .wide{grid-column:1/-1}
+.fld{margin-bottom:11px;min-width:0}
+.fld > label{display:block;font-size:11.5px;color:var(--text-2);font-weight:600;margin-bottom:4px}
+.fld > label.req::after{content:' *';color:var(--red)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.row2{grid-template-columns:1fr}}
+input,select,textarea{width:100%;min-height:38px;background:var(--bg-2);border:1px solid var(--line-2);color:var(--text);border-radius:5px;padding:8px 10px;font-size:13px}
+textarea{resize:vertical;min-height:60px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+.hint{font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.45}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line-2);border-radius:5px;font-size:12.5px;color:var(--text);cursor:pointer}
+.checks input{width:auto;min-height:0}
+/* pills */
+.pill{display:inline-block;font:700 10px/1 var(--mono);letter-spacing:.04em;padding:4px 7px;border-radius:3px;border:1px solid var(--line-2);color:var(--text-2);white-space:nowrap;vertical-align:1px}
+.pill.ok{color:var(--green);border-color:rgba(34,197,94,.4);background:var(--green-soft)}
+.pill.due{color:var(--amber);border-color:rgba(245,158,11,.4);background:var(--amber-soft)}
+.pill.over,.pill.notok{color:var(--red);border-color:rgba(239,68,68,.45);background:var(--red-soft)}
+.pill.none{color:var(--text-3)}
+.pill.acc{color:var(--accent);border-color:var(--accent)}
+/* list rows */
+.list{display:flex;flex-direction:column}
+.li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:0}
+.li.click{cursor:pointer}
+.li.click:hover{background:var(--bg-2)}
+.li .main{flex:1 1 230px;min-width:0}
+.li .t{font-weight:600;font-size:13.5px;word-break:break-word}
+.li .s{font-size:11.5px;color:var(--text-2);margin-top:2px;word-break:break-word}
+.li .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.empty{padding:26px 16px;text-align:center;color:var(--text-2);font-size:12.5px;line-height:1.6}
+.more{padding:10px 14px;font-size:11.5px;color:var(--text-3);text-align:center}
+.banner{padding:10px 12px;border-radius:5px;font-size:12.5px;margin-bottom:12px;border:1px solid}
+.banner.ok{color:var(--green);border-color:rgba(34,197,94,.4);background:var(--green-soft)}
+.banner.info{color:var(--text-2);border-color:var(--line-2);background:var(--bg-2)}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.facts .k{font-size:10.5px;color:var(--text-3)}
+.facts .v{font-size:13px;font-weight:600;word-break:break-word}
+.facts .full{grid-column:1/-1}
+.pre{white-space:pre-wrap}
+/* modal + toast */
+#modal-bd{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:2000;display:none}
+#modal-bd.show{display:block}
+#modal-host{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:94vw;max-width:640px;max-height:92vh;display:none;flex-direction:column;background:var(--bg-1);border:1px solid var(--line-2);border-radius:8px;z-index:2001;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+#modal-host.show{display:flex}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--bg-2);border-radius:8px 8px 0 0}
+.modal-title{font-weight:650;font-size:15.5px;line-height:1.3}
+.modal-sub{font-size:11.5px;color:var(--text-2);margin-top:2px}
+.modal-close{flex:none;background:none;border:0;color:var(--text-2);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+.modal-body{padding:14px 16px;overflow-y:auto;flex:1}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line)}
+#toast-wrap{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2100;display:flex;flex-direction:column;gap:8px;width:min(92vw,420px);pointer-events:none}
+.toast{background:var(--bg-2);border:1px solid var(--line-2);border-left:3px solid var(--green);border-radius:5px;padding:10px 12px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.5);transition:opacity .25s}
+.toast b{display:block;font-size:12.5px}
+.toast.warn{border-left-color:var(--amber)} .toast.error{border-left-color:var(--red)}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+:root{--accent:#34d399}
+.unit-tile{display:block;width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.unit-tile:hover{border-color:var(--line-2)}
+.unit-tile.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.unit-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.f-sum{padding:0 14px 12px;font-size:11.5px;color:var(--text-2)}
+.f-sum a{color:var(--accent);margin-left:6px}
+.fp-key{font-family:var(--mono);font-size:11px}
+.chev{font-size:20px;color:var(--text-3);line-height:1}
+.att{font-size:11.5px;color:var(--text-2);font-family:var(--mono)}
+.plate{position:relative;border:1.5px solid var(--line-2);border-radius:8px;padding:18px 20px 16px;background:linear-gradient(180deg,#1c1c22,#141418);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.plate .rv{position:absolute;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#6a6a74,#2a2a31);box-shadow:0 0 0 1px #0c0c0e}
+.rv.tl{top:7px;left:7px}.rv.tr{top:7px;right:7px}.rv.bl{bottom:7px;left:7px}.rv.br{bottom:7px;right:7px}
+.ptype{font:700 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.pname{font-size:17px;font-weight:650;margin-top:6px;line-height:1.3;word-break:break-word}
+.ptag{font-size:12px;color:var(--text-2);margin-top:4px}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--line-2)}
+.pgrid .k{font-size:10px;color:var(--text-3);letter-spacing:.06em;text-transform:uppercase}
+.pgrid .v{font:600 12.5px/1.35 var(--mono);word-break:break-word}
+.spec{width:100%;border-collapse:collapse}
+.spec td{padding:8px 0;border-bottom:1px dashed var(--line-2);font-size:12.5px;vertical-align:top}
+.spec td:first-child{color:var(--text-2);padding-right:12px}
+.spec td:last-child{text-align:right;font-family:var(--mono);font-weight:600;word-break:break-word}
+.xrow{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px}
+.maprow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)}
+.maprow .main{min-width:0}.maprow .t{font-weight:600;font-size:13px;word-break:break-word}.maprow .s{font-size:11px;color:var(--text-2)}
+.maprow select{width:auto;max-width:52%}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* ═══ Phase 3.8 add-on styles — checklist scans + mandatory toggle ═══
+   Uses each module's own colour variables, with fallbacks, so it blends in. */
+.sx-chip{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 10px;min-height:26px;
+  border:1px dashed var(--border-bright, var(--line-2, #3a3f55));border-radius:13px;background:transparent;
+  color:var(--text-dim, var(--text-2, #9aa3b5));font-family:inherit;font-size:10.5px;font-weight:600;
+  letter-spacing:.02em;line-height:1;cursor:pointer;white-space:nowrap;
+  transition:border-color .15s,color .15s,background .15s}
+.sx-chip:hover{border-color:var(--accent);color:var(--accent)}
+.sx-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sx-chip.has{border-style:solid;border-color:var(--accent-4, var(--green, #22c55e));
+  color:var(--accent-4, var(--green, #22c55e));background:rgba(34,197,94,.08)}
+
+.sx-upload{display:flex;gap:10px;flex-wrap:wrap;margin:2px 0 8px}
+.sx-upload.busy{opacity:.45;pointer-events:none}
+.sx-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;min-height:40px;border-radius:5px;border:1px solid var(--border-bright, var(--line-2, #3a3f55));
+  background:transparent;color:var(--text, #e8ecf3);font-family:inherit;font-size:12px;font-weight:600;
+  cursor:pointer;text-decoration:none;transition:border-color .15s,background .15s}
+.sx-btn:hover{border-color:var(--accent)}
+.sx-btn:focus-within,.sx-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sx-btn.sx-primary{background:var(--accent);border-color:var(--accent);color:#0a0e1a}
+.sx-btn.sm{padding:6px 11px;min-height:32px;font-size:11px}
+.sx-btn.danger{color:var(--accent-3, var(--red, #ef4444));border-color:var(--accent-3, var(--red, #ef4444))}
+.sx-file{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.sx-hint{font-size:11px;color:var(--text-muted, var(--text-3, #6b7488));line-height:1.5;margin:0 0 10px}
+.sx-status{font-size:12px;line-height:1.45;margin:0 0 10px}
+.sx-status:empty{display:none}
+.sx-status.info{color:var(--text-dim, var(--text-2, #9aa3b5))}
+.sx-status.ok{color:var(--accent-4, var(--green, #22c55e))}
+.sx-status.warn{color:var(--accent-2, var(--amber, #f59e0b))}
+.sx-status.err{color:var(--accent-3, var(--red, #ef4444))}
+.sx-list{display:flex;flex-direction:column;gap:8px}
+.sx-item{display:grid;grid-template-columns:26px 1fr;gap:4px 10px;padding:10px 12px;
+  background:var(--bg-panel-2, var(--bg-2, #161e35));border:1px solid var(--border, var(--line, #1f2a44));border-radius:6px}
+.sx-ico{font-size:18px;line-height:1.3}
+.sx-name{font-size:12.5px;font-weight:600;color:var(--text, #e8ecf3);word-break:break-word}
+.sx-sub{font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488));margin-top:3px;word-break:break-word}
+.sx-acts{grid-column:2;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.sx-empty{padding:16px;text-align:center;font-size:12px;line-height:1.5;color:var(--text-muted, var(--text-3, #6b7488));
+  border:1px dashed var(--border-bright, var(--line-2, #3a3f55));border-radius:6px}
+.sx-empty.sx-bad{color:var(--accent-3, var(--red, #ef4444))}
+.sx-row{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.sx-view{margin-top:12px}
+.sx-view:empty{margin-top:0}
+.sx-view img{display:block;width:100%;height:auto;border-radius:6px;background:#fff;
+  border:1px solid var(--border, var(--line, #1f2a44))}
+.sx-view-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;
+  font-size:11.5px;color:var(--text-dim, var(--text-2, #9aa3b5));word-break:break-word}
+.sx-usage{margin-right:auto;align-self:center;font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488))}
+
+/* Mandatory / optional switch in Checklist Config (admin) */
+.req-toggle{display:inline-flex;align-items:center;gap:7px;padding:4px 11px 4px 5px;min-height:28px;
+  border-radius:14px;border:1px solid var(--border-bright, var(--line-2, #3a3f55));background:transparent;
+  color:var(--text-dim, var(--text-2, #9aa3b5));font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+.req-toggle .knob{width:16px;height:16px;border-radius:50%;background:var(--border-bright, var(--line-2, #3a3f55));
+  transition:background .15s}
+.req-toggle.on{border-color:var(--accent-3, var(--red, #ef4444));color:var(--accent-3, var(--red, #ef4444));
+  background:rgba(239,68,68,.08)}
+.req-toggle.on .knob{background:var(--accent-3, var(--red, #ef4444))}
+.req-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.req-bulk{display:flex;gap:8px;flex-wrap:wrap}
+@media (prefers-reduced-motion: reduce){ .sx-chip,.sx-btn,.req-toggle,.req-toggle .knob{transition:none} }
+
+/* Phase 3.9 — shared ScanKit panel + Mark Done check-sheet block */
+.sx-kit{display:block}
+.sx-usage{display:block;margin:10px 0 0;font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488))}
+.sx-usage:empty{display:none}
+.sx-embed{margin-top:18px;padding-top:14px;border-top:1px solid var(--border, var(--line, #26262d))}
+.sx-embed-title{font-size:13px;font-weight:700;color:var(--text, #e8ecf3);margin-bottom:2px}
+.sx-embed-sub{font-size:11px;line-height:1.5;color:var(--text-muted, var(--text-3, #6b7488));margin-bottom:10px}
+
+</style>
+</head>
+<body>
+<div id="toast-wrap" aria-live="polite"></div>
+<div id="modal-bd" onclick="closeModal()"></div>
+<div id="modal-host" role="dialog" aria-modal="true"></div>
+<header class="app-head"><div class="app-head-in">
+  <div class="title-row">
+    <div><div class="mod-title">Factory Passport</div>
+      <div class="mod-sub">Technical specifications of every equipment installed — Ph-1 (Foods · PCPB · COT) and Ph-2 (PPB)</div></div>
+    <span class="role" id="role-pill">…</span>
+  </div>
+  <nav class="seg" aria-label="Sections">
+    <button type="button" data-v="find" class="on">Find equipment</button>
+    <button type="button" data-v="tools">Import &amp; export</button>
+  </nav>
+</div></header>
+<main class="wrap" id="view"></main>
+<script>
+/* ═══ Shared helpers — Phase 3.9 modules (Statutory register, Factory Passport) ═══ */
+const UNITS = [
+  { id: 'P1-FOODS', phase: 'Ph-1', name: 'Foods' },
+  { id: 'P1-PCPB',  phase: 'Ph-1', name: 'PCPB'  },
+  { id: 'P1-COT',   phase: 'Ph-1', name: 'COT'   },
+  { id: 'P2-PPB',   phase: 'Ph-2', name: 'PPB'   },
+];
+function unitById(id){ return UNITS.find(u=>u.id === id) || null; }
+function unitLabel(id){ const u = unitById(id); return u ? `${u.phase} · ${u.name}` : (id || '—'); }
+function unitOptions(sel, allLabel){
+  return (allLabel ? `<option value="">${esc(allLabel)}</option>` : '') +
+    UNITS.map(u=>`<option value="${u.id}" ${u.id === sel ? 'selected' : ''}>${esc(u.phase + ' · ' + u.name)}</option>`).join('');
+}
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(title, msg, kind){
+  const w = document.getElementById('toast-wrap'); if(!w) return;
+  const e = document.createElement('div');
+  e.className = 'toast' + (kind === 'warn' ? ' warn' : kind === 'error' ? ' error' : '');
+  e.innerHTML = `<b>${esc(title)}</b>${msg ? `<div>${esc(msg)}</div>` : ''}`;
+  w.appendChild(e);
+  setTimeout(()=>{ e.style.opacity = '0'; setTimeout(()=>e.remove(), 260); }, 4500);
+}
+function openModal(html){
+  const h = document.getElementById('modal-host');
+  h.innerHTML = html; h.classList.add('show');
+  document.getElementById('modal-bd').classList.add('show');
+  const b = h.querySelector('.modal-body'); if(b) b.scrollTop = 0;
+}
+function closeModal(){
+  document.getElementById('modal-host').classList.remove('show');
+  document.getElementById('modal-bd').classList.remove('show');
+}
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeModal(); });
+function isAdmin(){ return window.__pmRole === 'admin'; }
+function me(){ const u = window.__pmCurrentUser; return u ? { uid: u.uid, email: u.email || u.uid } : null; }
+function requireAdmin(what){ if(isAdmin()) return true; toast('Admin only', `"${what}" needs admin rights.`, 'warn'); return false; }
+function requireReady(){ if(window.__pmFirebase && window.__pmCurrentUser) return true; toast('Not connected yet', 'Still connecting to the server — try again in a few seconds.', 'warn'); return false; }
+function z2(n){ return String(n).padStart(2, '0'); }
+function todayIso(){ const d = new Date(); return `${d.getFullYear()}-${z2(d.getMonth() + 1)}-${z2(d.getDate())}`; }
+function isoToDate(s){ return new Date(String(s) + 'T00:00:00'); }
+function fmtDate(iso){ if(!iso) return '—'; const d = isoToDate(iso); if(isNaN(d)) return '—'; return `${z2(d.getDate())}-${z2(d.getMonth() + 1)}-${d.getFullYear()}`; }
+function fmtStamp(iso){ const d = new Date(iso); if(!iso || isNaN(d)) return '—'; return `${z2(d.getDate())}-${z2(d.getMonth() + 1)}-${d.getFullYear()} ${z2(d.getHours())}:${z2(d.getMinutes())}`; }
+function addMonthsIso(iso, n){
+  const d = isoToDate(iso); const day = d.getDate();
+  d.setMonth(d.getMonth() + (+n || 0));
+  if(d.getDate() < day) d.setDate(0);
+  return `${d.getFullYear()}-${z2(d.getMonth() + 1)}-${z2(d.getDate())}`;
+}
+function daysBetween(a, b){ return Math.round((isoToDate(b) - isoToDate(a)) / 86400000); }
+function fyOfIso(iso){ const d = isoToDate(iso); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `FY${y}-${z2((y + 1) % 100)}`; }
+function newId(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function fb(){ return window.__pmFirebase; }
+function docRef(id){ const f = fb(); return f.doc(f.db, 'itc_pm', id); }
+function setMerge(id, data){ return fb().setDoc(docRef(id), data, { merge: true }); }
+function updateFields(id, data){ return fb().updateDoc(docRef(id), data); }
+function delField(){ return fb().deleteField(); }
+function listen(id, cb){
+  return fb().onSnapshot(docRef(id), snap=>cb(snap.exists() ? snap.data() : null),
+    err=>{ console.warn('[listen]', id, err); cb(undefined, err); });
+}
+function friendlyErr(e){
+  const c = e && e.code;
+  if(c === 'permission-denied') return 'Permission denied — sign out and sign in again.';
+  if(c === 'unavailable') return 'No connection — check mobile data or Wi-Fi.';
+  if(c === 'not-found') return 'That record no longer exists — it may have been deleted.';
+  return (e && e.message) || String(e);
+}
+function downloadText(name, text, mime){
+  const blob = new Blob([text], { type: mime || 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
+}
+function csvCell(v){ const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function parseCSV(text){
+  const rows = []; let row = [], cur = '', i = 0, q = false;
+  text = String(text || '').replace(/^\ufeff/, '');
+  while(i < text.length){
+    const c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i + 1] === '"'){ cur += '"'; i += 2; continue; } q = false; i++; continue; }
+      cur += c; i++; continue;
+    }
+    if(c === '"'){ q = true; i++; continue; }
+    if(c === ','){ row.push(cur); cur = ''; i++; continue; }
+    if(c === '\r'){ i++; continue; }
+    if(c === '\n'){ row.push(cur); rows.push(row); row = []; cur = ''; i++; continue; }
+    cur += c; i++;
+  }
+  if(cur !== '' || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim() !== ''));
+}
+function whenReady(fn){
+  if(window.__pmFirebaseReady) fn();
+  else document.addEventListener('pm-firebase-ready', ()=>fn(), { once: true });
+}
+function setRolePill(){
+  const e = document.getElementById('role-pill'); if(!e) return;
+  e.textContent = isAdmin() ? 'ADMIN' : 'USER';
+  e.className = 'role ' + (isAdmin() ? 'admin' : 'user');
+}
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   ScanKit — shared attachment engine (Phase 3.9)
+   One engine for every attachment in the app: Daily-row checklist scans,
+   the Mark Done check-sheet block, statutory test reports and Factory
+   Passport documents.
+   Storage (inside the existing itc_pm collection — no rules change):
+       itc_pm/scanidx_<module>_<shard>   index: items.{fileId} = meta
+       itc_pm/scandata_<fileId>_<part>   file data, ≤ 700 K base64 chars
+   API: ScanKit.mount(el,{module,shard,key,...}) · count() · list()
+        onChange(fn) · deleteAllFor(module,shard,key)
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if(window.ScanKit) return;
+
+  const CHUNK = 700000;               // base64 chars per Firestore document (limit ≈ 1 MiB)
+  const MAX_BYTES = 4 * 1024 * 1024;  // per file, after compression
+  const IMG_MAX_SIDE = 1600;          // px, long side of stored photos
+  const IMG_QUALITY = 0.62;           // JPEG quality for stored photos
+
+  const S = { idx:{}, subs:{}, listeners:[], mounts:[], busy:false };
+
+  const fs    = ()=>window.__pmScanFs;
+  const fbx   = ()=>window.__pmFirebase;
+  const user  = ()=>window.__pmCurrentUser || null;
+  const ready = ()=>!!(fs() && fbx() && fbx().db && user());
+  const admin = ()=>window.__pmRole === 'admin';
+  const esc   = s=>String(s == null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sid     = (mod, shard)=>`${mod}_${shard}`;
+  const idxDoc  = (mod, shard)=>`scanidx_${mod}_${shard}`;
+  const dataDoc = (id, k)=>`scandata_${id}_${k}`;
+
+  function note(t, m, k){ try{ if(typeof window.toast === 'function') window.toast(t, m, k); }catch(e){} }
+  function fmtBytes(n){ n = +n || 0; if(n < 1024) return n + ' B'; if(n < 1048576) return Math.round(n/1024) + ' KB'; return (n/1048576).toFixed(1) + ' MB'; }
+  function fmtWhen(iso){ const d = new Date(iso); if(isNaN(d)) return ''; const z = n=>String(n).padStart(2,'0'); return `${z(d.getDate())}-${z(d.getMonth()+1)}-${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; }
+  function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function baseName(n){ return String(n || 'scan').replace(/\.[^.]+$/, '') || 'scan'; }
+  function friendly(e){
+    const code = (e && e.code) || '';
+    if(code === 'permission-denied') return new Error('the server refused the request (permission denied). Sign out, sign in again and retry.');
+    if(code === 'resource-exhausted') return new Error('the free daily Firebase quota is used up. Try again tomorrow.');
+    if(code === 'unavailable') return new Error('no connection to the server. Check mobile data or Wi-Fi and retry.');
+    return e instanceof Error ? e : new Error(String(e));
+  }
+
+  /* ─── Index subscriptions ─── */
+  function ensure(mod, shard){
+    if(!mod || !shard) return;
+    const id = sid(mod, shard);
+    if(S.subs[id] || !ready()) return;
+    const f = fs(), db = fbx().db;
+    S.subs[id] = 'pending';
+    try{
+      S.subs[id] = f.onSnapshot(f.doc(db, 'itc_pm', idxDoc(mod, shard)), snap=>{
+        S.idx[id] = (snap.exists() && snap.data().items) || {};
+        changed();
+      }, err=>{
+        console.warn('[ScanKit] could not read index', id, err);
+        S.subs[id] = 'error';
+        if(S.idx[id] === undefined) S.idx[id] = {};
+        changed();
+      });
+    }catch(e){ console.warn('[ScanKit] subscribe failed', e); S.subs[id] = null; }
+  }
+  function list(mod, shard, key){
+    const m = S.idx[sid(mod, shard)];
+    if(m === undefined) return undefined;
+    return Object.keys(m).filter(id=>m[id] && m[id].pm === key)
+      .map(id=>Object.assign({ id }, m[id]))
+      .sort((a, b)=>String(a.at).localeCompare(String(b.at)));
+  }
+  function count(mod, shard, key){ ensure(mod, shard); const l = list(mod, shard, key); return l === undefined ? undefined : l.length; }
+  function metaOf(m, id){ const x = (S.idx[sid(m.mod, m.shard)] || {})[id]; return x ? Object.assign({ id }, x) : null; }
+  function changed(){
+    S.mounts = S.mounts.filter(m=>m.el.isConnected);
+    S.mounts.forEach(render);
+    S.listeners.forEach(fn=>{ try{ fn(); }catch(e){ console.warn('[ScanKit] listener failed', e); } });
+  }
+  function kick(){ S.mounts.forEach(m=>ensure(m.mod, m.shard)); changed(); }
+  document.addEventListener('pm-firebase-ready', kick);
+  document.addEventListener('pm-scanfs-ready', kick);
+
+  /* ─── Mounted attachment panel ─── */
+  const q = (m, name)=>m.el.querySelector(`[data-sx="${name}"]`);
+  function status(m, msg, kind){
+    if(!m.el.isConnected) return false;
+    const e = q(m, 'status'); if(!e) return false;
+    e.className = 'sx-status ' + (kind || 'info');
+    e.textContent = msg || '';
+    return true;
+  }
+  function mount(el, o){
+    o = o || {};
+    const m = { el, mod: o.module, shard: o.shard, key: o.key,
+      accept: o.accept || 'image/*,application/pdf',
+      pickLabel: o.pickLabel || 'Upload photo or PDF',
+      emptyText: o.emptyText || 'No scans yet. Take a photo of the filled checklist or upload a PDF.',
+      itemWord: o.itemWord || 'Scan', showUsage: !!o.showUsage, viewId: null, url: null };
+    el.classList.add('sx-kit');
+    el.innerHTML = `
+      <div class="sx-upload">
+        <label class="sx-btn sx-primary">📷 Take photo<input class="sx-file" data-sx="cam" type="file" accept="image/*" capture="environment"></label>
+        <label class="sx-btn">📁 ${esc(m.pickLabel)}<input class="sx-file" data-sx="pick" type="file" accept="${esc(m.accept)}" multiple></label>
+      </div>
+      ${o.hint ? `<div class="sx-hint">${esc(o.hint)}</div>` : ''}
+      <div class="sx-status info" data-sx="status" role="status" aria-live="polite"></div>
+      <div class="sx-list" data-sx="list"></div>
+      <div class="sx-view" data-sx="view"></div>
+      ${m.showUsage ? '<div class="sx-usage" data-sx="usage"></div>' : ''}`;
+    el.querySelectorAll('input.sx-file').forEach(inp=>inp.addEventListener('change', ()=>onFiles(m, inp)));
+    el.addEventListener('click', ev=>{
+      const b = ev.target.closest('[data-sx-act]');
+      if(!b || !el.contains(b)) return;
+      ev.preventDefault(); ev.stopPropagation();
+      const act = b.getAttribute('data-sx-act'), id = b.getAttribute('data-id');
+      if(act === 'view') view(m, id); else if(act === 'save') save(m, id);
+      else if(act === 'del') del(m, id); else if(act === 'hide') hide(m);
+    });
+    S.mounts.push(m);
+    ensure(m.mod, m.shard);
+    render(m);
+    if(S.busy) status(m, 'An upload is still running in the background…', 'info');
+    return m;
+  }
+  function itemHTML(m, x, i){
+    const me = user();
+    const canDel = admin() || (me && x.uid === me.uid);
+    const icon = (x.kind === 'pdf' || /pdf/i.test(x.type || '')) ? '📄' : (x.kind === 'image' || /^image\//.test(x.type || '')) ? '🖼' : '📎';
+    return `<div class="sx-item">
+      <div class="sx-ico" aria-hidden="true">${icon}</div>
+      <div class="sx-meta">
+        <div class="sx-name">${esc(m.itemWord)} ${i + 1} · ${esc(x.name || 'file')}</div>
+        <div class="sx-sub">${esc(x.by || 'unknown')} · ${fmtWhen(x.at)} · ${fmtBytes(x.size)}</div>
+      </div>
+      <div class="sx-acts">
+        <button type="button" class="sx-btn sm" data-sx-act="view" data-id="${esc(x.id)}">View</button>
+        <button type="button" class="sx-btn sm" data-sx-act="save" data-id="${esc(x.id)}">Save to phone</button>
+        ${canDel ? `<button type="button" class="sx-btn sm danger" data-sx-act="del" data-id="${esc(x.id)}">Delete</button>` : ''}
+      </div>
+    </div>`;
+  }
+  function render(m){
+    const listEl = q(m, 'list'); if(!listEl) return;
+    const items = list(m.mod, m.shard, m.key);
+    if(!ready()) listEl.innerHTML = '<div class="sx-empty">Connecting to the server…</div>';
+    else if(items === undefined) listEl.innerHTML = '<div class="sx-empty">Loading attachments…</div>';
+    else if(!items.length) listEl.innerHTML = `<div class="sx-empty">${esc(m.emptyText)}</div>`;
+    else listEl.innerHTML = items.map((x, i)=>itemHTML(m, x, i)).join('');
+    const usage = q(m, 'usage');
+    if(usage){
+      const all = Object.values(S.idx[sid(m.mod, m.shard)] || {});
+      const stored = all.reduce((s, x)=>s + (+x.stored || Math.round((+x.size || 0) * 1.34)), 0);
+      usage.textContent = S.idx[sid(m.mod, m.shard)] ? `${m.shard}: ${all.length} file${all.length === 1 ? '' : 's'} · ${fmtBytes(stored)} stored` : '';
+    }
+    const up = m.el.querySelector('.sx-upload');
+    if(up) up.classList.toggle('busy', S.busy);
+  }
+
+  /* ─── Upload ─── */
+  function readB64(file){
+    return new Promise((resolve, reject)=>{
+      const r = new FileReader();
+      r.onload = ()=>{ const s = String(r.result || ''); resolve(s.slice(s.indexOf(',') + 1)); };
+      r.onerror = ()=>reject(new Error('the file could not be read'));
+      r.readAsDataURL(file);
+    });
+  }
+  function compressImage(file){
+    return new Promise((resolve, reject)=>{
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = ()=>{
+        try{
+          const w0 = img.naturalWidth, h0 = img.naturalHeight;
+          if(!w0 || !h0) throw new Error('empty image');
+          const scale = Math.min(1, IMG_MAX_SIDE / Math.max(w0, h0));
+          const w = Math.max(1, Math.round(w0 * scale)), h = Math.max(1, Math.round(h0 * scale));
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = c.toDataURL('image/jpeg', IMG_QUALITY);
+          const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+          resolve({ b64, bytes: Math.round(b64.length * 0.75) });
+        }catch(e){ reject(e); }
+        finally{ URL.revokeObjectURL(url); }
+      };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('this image format cannot be opened by the browser')); };
+      img.src = url;
+    });
+  }
+  async function prepare(file){
+    const type = String(file.type || '').toLowerCase();
+    const isPdf = type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+    const isImg = type.indexOf('image/') === 0;
+    if(isImg && !/heic|heif/.test(type)){
+      try{
+        const out = await compressImage(file);
+        if(out.bytes <= MAX_BYTES && (out.bytes < file.size || file.size > MAX_BYTES)){
+          return { b64: out.b64, mime: 'image/jpeg', kind: 'image', name: baseName(file.name) + '.jpg' };
+        }
+      }catch(e){ console.warn('[ScanKit] compression skipped:', e && e.message ? e.message : e); }
+    }
+    if(file.size > MAX_BYTES){
+      throw new Error(`${fmtBytes(file.size)} is over the 4 MB limit. ${isPdf ? 'Compress the PDF or photograph the pages instead.' : 'Use a smaller file.'}`);
+    }
+    const b64 = await readB64(file);
+    return { b64, mime: type || (isPdf ? 'application/pdf' : 'application/octet-stream'),
+             kind: isPdf ? 'pdf' : (isImg ? 'image' : 'file'), name: file.name || 'file' };
+  }
+  async function upload(p, m, onPct){
+    const f = fs(), db = fbx().db, me = user();
+    const id = newId();
+    const parts = Math.max(1, Math.ceil(p.b64.length / CHUNK));
+    const written = [];
+    try{
+      for(let k = 0; k < parts; k++){
+        await f.setDoc(f.doc(db, 'itc_pm', dataDoc(id, k)),
+          { d: p.b64.slice(k * CHUNK, (k + 1) * CHUNK), k, n: parts, scan: id, pm: m.key, module: m.mod });
+        written.push(dataDoc(id, k));
+        if(onPct) onPct(Math.round((k + 1) / parts * 100));
+      }
+      const at = new Date().toISOString();
+      const meta = { pm: m.key, name: String(p.name).slice(0, 120), type: p.mime, kind: p.kind,
+                     size: Math.round(p.b64.length * 0.75), stored: p.b64.length, parts,
+                     by: me.email || me.uid, uid: me.uid, at };
+      await f.setDoc(f.doc(db, 'itc_pm', idxDoc(m.mod, m.shard)),
+        { items: { [id]: meta }, module: m.mod, shard: m.shard, updatedAt: at }, { merge: true });
+    }catch(e){
+      for(const d of written){ try{ await f.deleteDoc(f.doc(db, 'itc_pm', d)); }catch(_){ /* best effort */ } }
+      throw friendly(e);
+    }
+  }
+  function renderAll(){ S.mounts = S.mounts.filter(x=>x.el.isConnected); S.mounts.forEach(render); }
+  async function onFiles(m, input){
+    const files = Array.from((input && input.files) || []);
+    if(input) input.value = '';
+    if(!files.length) return;
+    if(!ready()){ status(m, 'Still connecting to the server. Wait a few seconds and try again.', 'err'); return; }
+    if(S.busy){ status(m, 'An upload is already running. Wait for it to finish.', 'warn'); return; }
+    S.busy = true; renderAll();
+    let ok = 0; const failed = [];
+    for(let i = 0; i < files.length; i++){
+      const file = files[i];
+      const tag = files.length > 1 ? ` ${i + 1} of ${files.length}` : '';
+      try{
+        status(m, `Preparing file${tag}…`, 'info');
+        const p = await prepare(file);
+        await upload(p, m, pct=>status(m, `Uploading file${tag} — ${pct}%. Keep this screen open.`, 'info'));
+        ok++;
+      }catch(e){
+        console.error('[ScanKit] upload failed', e);
+        failed.push(`${file.name || 'file'}: ${e && e.message ? e.message : e}`);
+      }
+    }
+    S.busy = false; renderAll();
+    const word = m.itemWord.toLowerCase();
+    const msg = failed.length
+      ? `${ok} uploaded, ${failed.length} failed. ${failed.join(' · ')}`
+      : `${ok} ${word}${ok === 1 ? '' : 's'} uploaded.`;
+    if(!status(m, msg, failed.length ? 'err' : 'ok')) note(failed.length ? 'Upload incomplete' : 'Uploaded', msg, failed.length ? 'warn' : undefined);
+  }
+
+  /* ─── View / save / delete ─── */
+  async function loadData(m, id){
+    const meta = metaOf(m, id);
+    if(!meta) throw new Error('file not found — it may have been deleted');
+    if(!ready()) throw new Error('not connected to the server yet');
+    const f = fs(), db = fbx().db, parts = meta.parts || 1;
+    const snaps = await Promise.all(Array.from({ length: parts }, (_, k)=>f.getDoc(f.doc(db, 'itc_pm', dataDoc(id, k)))));
+    const b64 = snaps.map((s, k)=>{
+      if(!s.exists()) throw new Error(`part ${k + 1} of ${parts} is missing`);
+      return (s.data() || {}).d || '';
+    }).join('');
+    return { meta, b64 };
+  }
+  function b64ToBlob(b64, type){
+    const bin = atob(b64); const n = bin.length; const arr = new Uint8Array(n);
+    for(let i = 0; i < n; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: type || 'application/octet-stream' });
+  }
+  function downloadName(x){
+    const safe = s=>String(s || '').replace(/[^\w.-]+/g, '_');
+    let name = safe(x.name) || 'file';
+    if(!/\.[a-z0-9]{2,4}$/i.test(name)) name += /pdf/i.test(x.type || '') ? '.pdf' : /jpe?g/i.test(x.type || '') ? '.jpg' : /png/i.test(x.type || '') ? '.png' : '';
+    return `${safe(x.pm)}_${name}`;
+  }
+  function hide(m){
+    const v = q(m, 'view'); if(v) v.innerHTML = '';
+    if(m.url){ URL.revokeObjectURL(m.url); m.url = null; }
+    m.viewId = null;
+  }
+  async function view(m, id){
+    const box = q(m, 'view'); if(!box) return;
+    box.innerHTML = '<div class="sx-empty">Loading…</div>';
+    try{
+      const { meta, b64 } = await loadData(m, id);
+      if(!m.el.isConnected) return;
+      if(m.url){ URL.revokeObjectURL(m.url); m.url = null; }
+      m.url = URL.createObjectURL(b64ToBlob(b64, meta.type));
+      m.viewId = id;
+      const isImg = String(meta.type || '').indexOf('image/') === 0;
+      const isPdf = /pdf/i.test(meta.type || '');
+      const head = `<div class="sx-view-head"><span>${esc(meta.name)}</span><button type="button" class="sx-btn sm" data-sx-act="hide">Hide</button></div>`;
+      box.innerHTML = head + (isImg
+        ? `<a href="${m.url}" target="_blank" rel="noopener" title="Open full size"><img src="${m.url}" alt="${esc(meta.name)}"></a><div class="sx-hint">Tap the image to open it full size.</div>`
+        : `<div class="sx-empty">${isPdf ? "PDF files open in your phone's viewer." : 'This file type opens in its own app.'}<div class="sx-row"><a class="sx-btn sx-primary" href="${m.url}" target="_blank" rel="noopener">${isPdf ? 'Open PDF' : 'Open file'}</a></div></div>`);
+      if(box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }catch(e){
+      if(m.el.isConnected) box.innerHTML = `<div class="sx-empty sx-bad">Could not open this file: ${esc(friendly(e).message)}</div>`;
+    }
+  }
+  async function save(m, id){
+    try{
+      status(m, 'Preparing download…', 'info');
+      const { meta, b64 } = await loadData(m, id);
+      const url = URL.createObjectURL(b64ToBlob(b64, meta.type));
+      const a = document.createElement('a');
+      a.href = url; a.download = downloadName(meta); a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 60000);
+      status(m, 'Download started — check your Downloads folder.', 'ok');
+    }catch(e){ status(m, 'Could not download this file: ' + friendly(e).message, 'err'); }
+  }
+  async function del(m, id){
+    const x = metaOf(m, id); if(!x) return;
+    const me = user();
+    if(!(admin() || (me && x.uid === me.uid))){ status(m, 'Only an admin or the person who uploaded this file can delete it.', 'err'); return; }
+    if(!ready()){ status(m, 'Still connecting to the server. Try again in a few seconds.', 'err'); return; }
+    if(!confirm(`Delete "${x.name}"? This cannot be undone.`)) return;
+    const f = fs(), db = fbx().db;
+    try{
+      await f.setDoc(f.doc(db, 'itc_pm', idxDoc(m.mod, m.shard)), { items: { [id]: f.deleteField() }, updatedAt: new Date().toISOString() }, { merge: true });
+      let orphan = 0;
+      for(let k = 0; k < (x.parts || 1); k++){
+        try{ await f.deleteDoc(f.doc(db, 'itc_pm', dataDoc(id, k))); }catch(e){ orphan++; }
+      }
+      if(m.viewId === id) hide(m);
+      status(m, orphan ? 'File removed from the list, but part of it could not be cleared from storage.' : 'File deleted.', orphan ? 'warn' : 'ok');
+    }catch(e){ status(m, 'Delete failed: ' + friendly(e).message, 'err'); }
+  }
+  // Remove every attachment of one record (used when an admin deletes the record itself)
+  async function deleteAllFor(mod, shard, key){
+    if(!ready()) throw new Error('not connected to the server yet');
+    const f = fs(), db = fbx().db;
+    let items = list(mod, shard, key);
+    if(items === undefined){
+      const snap = await f.getDoc(f.doc(db, 'itc_pm', idxDoc(mod, shard)));
+      const all = (snap.exists() && snap.data().items) || {};
+      items = Object.keys(all).filter(id=>all[id] && all[id].pm === key).map(id=>Object.assign({ id }, all[id]));
+    }
+    if(!items.length) return 0;
+    const patch = {}; items.forEach(x=>{ patch[x.id] = f.deleteField(); });
+    await f.setDoc(f.doc(db, 'itc_pm', idxDoc(mod, shard)), { items: patch, updatedAt: new Date().toISOString() }, { merge: true });
+    for(const x of items) for(let k = 0; k < (x.parts || 1); k++){ try{ await f.deleteDoc(f.doc(db, 'itc_pm', dataDoc(x.id, k))); }catch(e){} }
+    return items.length;
+  }
+
+  window.ScanKit = { mount, count, list, ensure, deleteAllFor, fmtBytes,
+                     onChange(fn){ if(typeof fn === 'function') S.listeners.push(fn); } };
+})();
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   FACTORY PASSPORT — module logic (Phase 3.9)
+   Technical specifications of every piece of equipment in Ph-1 (Foods ·
+   PCPB · COT) and Ph-2 (PPB), with a cascading drop-down finder.
+   Storage (inside the existing itc_pm collection — no rules change):
+     itc_pm/passport_b00 … passport_b15   items.{id} — 16 shards, ~16 MB total
+     documents / photos                   ScanKit module 'passport', shard = item's shard
+   ═══════════════════════════════════════════════════════════════════════ */
+const BUCKETS = 16;
+const ALL_BUCKETS = Array.from({ length: BUCKETS }, (_, i)=>'b' + z2(i));
+function bucketOf(id){ let h = 0; const s = String(id); for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return 'b' + z2(h % BUCKETS); }
+const bucketDoc = b=>'passport_' + b;
+const STATUSES = ['In service', 'Standby', 'Under repair', 'Decommissioned'];
+const DOC_ACCEPT = 'image/*,application/pdf,.xlsx,.xls,.docx,.doc,.csv';
+const NO_AREA = '__none__';
+const TYPES = [
+  { t: 'Transformer',           f: ['Rating (kVA)', 'Primary voltage (kV)', 'Secondary voltage (V)', 'Vector group', 'Impedance (%)', 'Cooling (ONAN/ONAF)', 'Tap changer (OLTC/OCTC)', 'Tap range', 'Oil quantity (L)', 'Total weight (kg)'] },
+  { t: 'DG set',                f: ['Rating (kVA)', 'Voltage (V)', 'Engine make / model', 'Alternator make / model', 'Speed (RPM)', 'Fuel', 'Fuel consumption at 75% load (L/h)', 'AMF / sync panel', 'Fuel tank capacity (L)'] },
+  { t: 'Motor',                 f: ['Power (kW)', 'Voltage (V)', 'Full-load current (A)', 'Speed (RPM)', 'Frame size', 'Efficiency class (IE)', 'Mounting', 'Insulation class', 'Duty', 'Bearing DE', 'Bearing NDE', 'Starter (DOL/SD/VFD/Soft)'] },
+  { t: 'Pump',                  f: ['Flow (m³/h)', 'Head (m)', 'Motor power (kW)', 'Speed (RPM)', 'Pump type', 'Impeller dia (mm)', 'Seal type', 'MOC'] },
+  { t: 'Fire pump',             f: ['Flow (m³/h)', 'Head (m)', 'Driver (electric/diesel)', 'Power (kW / HP)', 'Speed (RPM)', 'Service (hydrant/sprinkler/jockey)'] },
+  { t: 'Air compressor',        f: ['FAD (CFM)', 'Working pressure (bar)', 'Motor power (kW)', 'Compressor type', 'Dryer type', 'Receiver capacity (L)'] },
+  { t: 'Chiller',               f: ['Capacity (TR)', 'Refrigerant', 'Compressor type', 'Input power (kW)', 'Condenser type', 'Chilled water flow (m³/h)'] },
+  { t: 'Cooling tower',         f: ['Capacity (TR)', 'Flow (m³/h)', 'Fan motor (kW)', 'Type', 'No. of cells', 'Fill type'] },
+  { t: 'AHU',                   f: ['Airflow (CFM)', 'Motor power (kW)', 'Cooling capacity (TR)', 'Filter class', 'Coil rows'] },
+  { t: 'Boiler',                f: ['Capacity (TPH)', 'Working pressure (kg/cm²)', 'Design pressure (kg/cm²)', 'Fuel', 'IBR registration no', 'Heating surface (m²)', 'Year of manufacture', 'Boiler type'] },
+  { t: 'Panel / MCC / PCC',     f: ['Voltage (V)', 'Incomer rating (A)', 'Busbar rating (A)', 'Fault level (kA)', 'IP rating', 'No. of feeders', 'Form of separation'] },
+  { t: 'ACB',                   f: ['Rated current (A)', 'Breaking capacity (kA)', 'Poles', 'Release type', 'Operation (manual/motorised)', 'Frame size'] },
+  { t: 'VCB',                   f: ['Rated current (A)', 'Rated voltage (kV)', 'Breaking capacity (kA)', 'Operating mechanism', 'Control voltage'] },
+  { t: 'UPS',                   f: ['Rating (kVA)', 'Input / output voltage', 'Battery type', 'Battery capacity (Ah)', 'Backup time (min)', 'No. of batteries'] },
+  { t: 'Capacitor bank / APFC', f: ['Rating (kVAr)', 'Voltage (V)', 'No. of steps', 'Detuned reactor (%)', 'Controller'] },
+  { t: 'Other',                 f: [] },
+];
+const P = { byBucket: {}, items: {}, loadedBuckets: new Set(), view: 'find', f: { unit: '', area: '', type: '', q: '' }, form: null, importPlan: null, pmCand: null };
+
+const byId = id=>document.getElementById(id);
+const val = id=>{ const e = byId(id); return e ? String(e.value || '').trim() : ''; };
+function typeDef(t){ return TYPES.find(x=>x.t === t) || TYPES[TYPES.length - 1]; }
+function allItems(){ return Object.values(P.items).filter(i=>i && i.id); }
+function rebuildItems(){ const out = {}; Object.values(P.byBucket).forEach(m=>Object.assign(out, m || {})); P.items = out; }
+function localPut(obj){ const b = bucketOf(obj.id); (P.byBucket[b] = P.byBucket[b] || {})[obj.id] = obj; rebuildItems(); }
+function localDel(id){ const b = bucketOf(id); if(P.byBucket[b]) delete P.byBucket[b][id]; rebuildItems(); }
+function statusClass(s){ return s === 'Under repair' ? 'due' : s === 'Decommissioned' ? 'none' : s === 'Standby' ? 'acc' : 'ok'; }
+function mHead(title, sub){
+  return `<div class="modal-head"><div><div class="modal-title">${esc(title)}</div>${sub ? `<div class="modal-sub">${esc(sub)}</div>` : ''}</div><button type="button" class="modal-close" onclick="closeModal()" aria-label="Close">×</button></div>`;
+}
+function formErr(id, msg){ const e = byId(id); if(e){ e.hidden = false; e.textContent = msg; e.scrollIntoView && e.scrollIntoView({ block: 'nearest' }); } else toast('Check the form', msg, 'warn'); }
+function sortItems(list){
+  return list.sort((a, b)=>String(a.unit).localeCompare(String(b.unit)) || String(a.area || '').localeCompare(String(b.area || ''), undefined, { numeric: true })
+    || String(a.name).localeCompare(String(b.name), undefined, { numeric: true }));
+}
+function hay(i){ return [i.name, i.tag, i.make, i.model, i.serial, i.area, i.type, i.year, i.notes, unitLabel(i.unit)].concat((i.specs || []).map(s=>s.k + ' ' + s.v)).join(' ').toLowerCase(); }
+function keySpecs(i){
+  const tf = typeDef(i.type).f; const specs = (i.specs || []).filter(s=>s.v !== '' && s.v != null);
+  const ordered = tf.map(k=>specs.find(s=>s.k === k)).filter(Boolean).concat(specs.filter(s=>!tf.includes(s.k)));
+  return ordered.slice(0, 2);
+}
+function allLoaded(){ return P.loadedBuckets.size >= BUCKETS; }
+
+/* ─── Views ─── */
+function setView(v){
+  P.view = v;
+  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on', b.dataset.v === v));
+  renderView(); window.scrollTo(0, 0);
+}
+function renderView(){ if(P.view === 'find') renderFind(); else renderTools(); }
+function refresh(){
+  if(!byId('view-' + P.view)) return renderView();
+  if(P.view === 'find') fillFind(); else fillTools();
+}
+
+/* Find — cascading drop-downs + search */
+function renderFind(){
+  byId('view').innerHTML = `<div id="view-find">
+    <div class="kpis" id="f-kpis"></div>
+    <div class="card">
+      <div class="card-h"><div><div class="card-t">Find equipment</div>
+        <div class="card-m">Narrow down with the drop-downs in order, or search any detail — tag, make, model, serial number or a rating.</div></div>
+        <button type="button" class="btn sm" onclick="fpForm()">＋ Add equipment</button></div>
+      <div class="filters">
+        <div class="fld"><label for="f-unit">1 · Plant unit</label><select id="f-unit"></select></div>
+        <div class="fld"><label for="f-area">2 · Area / location</label><select id="f-area"></select></div>
+        <div class="fld"><label for="f-type">3 · Equipment type</label><select id="f-type"></select></div>
+        <div class="fld"><label for="f-eq">4 · Equipment</label><select id="f-eq"></select></div>
+        <div class="fld wide"><label for="f-q">Search</label><input id="f-q" type="search" placeholder="e.g. TR-2, 1600 kVA, IE3, serial number" value="${esc(P.f.q)}"></div>
+      </div>
+      <div class="f-sum"><span id="f-sum"></span> <a href="#" id="f-clear" onclick="fpClear();return false">Clear filters</a></div>
+    </div>
+    <div class="card"><div class="list" id="f-list"></div></div>
+  </div>`;
+  byId('f-unit').onchange = e=>{ P.f.unit = e.target.value; P.f.area = ''; P.f.type = ''; fillFind(); };
+  byId('f-area').onchange = e=>{ P.f.area = e.target.value; P.f.type = ''; fillFind(); };
+  byId('f-type').onchange = e=>{ P.f.type = e.target.value; fillFind(); };
+  byId('f-eq').onchange = e=>{ const id = e.target.value; e.target.value = ''; if(id) fpOpen(id); };
+  byId('f-q').oninput = e=>{ P.f.q = e.target.value; fillFind(); };
+  fillFind();
+}
+function counts(list, fn){ const m = {}; list.forEach(i=>{ const k = fn(i); m[k] = (m[k] || 0) + 1; }); return m; }
+function findList(){
+  const f = P.f; let l = allItems();
+  if(f.unit) l = l.filter(i=>i.unit === f.unit);
+  if(f.area) l = l.filter(i=>(i.area || NO_AREA) === f.area);
+  if(f.type) l = l.filter(i=>i.type === f.type);
+  const q = f.q.trim().toLowerCase();
+  if(q){ const words = q.split(/\s+/); l = l.filter(i=>{ const h = hay(i); return words.every(w=>h.includes(w)); }); }
+  return sortItems(l);
+}
+function fillFind(){
+  const all = allItems(), f = P.f;
+  const uc = counts(all, i=>i.unit);
+  byId('f-kpis').innerHTML = UNITS.map(u=>`<button type="button" class="kpi unit-tile ${f.unit === u.id ? 'on' : ''}" onclick="fpUnitTile('${u.id}')" aria-pressed="${f.unit === u.id}">
+      <div class="l">${esc(u.phase)} · ${esc(u.name)}</div><div class="v">${uc[u.id] || 0}</div><div class="m">equipment</div></button>`).join('');
+  byId('f-unit').innerHTML = `<option value="">All units (${all.length})</option>` + UNITS.map(u=>`<option value="${u.id}">${esc(u.phase + ' · ' + u.name)} (${uc[u.id] || 0})</option>`).join('');
+  byId('f-unit').value = f.unit;
+  const l1 = f.unit ? all.filter(i=>i.unit === f.unit) : all;
+  const ac = counts(l1, i=>i.area || NO_AREA);
+  const areas = Object.keys(ac).sort((a, b)=>a.localeCompare(b, undefined, { numeric: true }));
+  if(f.area && !ac[f.area]) f.area = '';
+  byId('f-area').innerHTML = `<option value="">All areas (${l1.length})</option>` + areas.map(a=>`<option value="${esc(a)}">${esc(a === NO_AREA ? '(no area given)' : a)} (${ac[a]})</option>`).join('');
+  byId('f-area').value = f.area;
+  const l2 = f.area ? l1.filter(i=>(i.area || NO_AREA) === f.area) : l1;
+  const tc = counts(l2, i=>i.type);
+  const types = TYPES.map(t=>t.t).filter(t=>tc[t]).concat(Object.keys(tc).filter(t=>!TYPES.some(x=>x.t === t)));
+  if(f.type && !tc[f.type]) f.type = '';
+  byId('f-type').innerHTML = `<option value="">All types (${l2.length})</option>` + types.map(t=>`<option value="${esc(t)}">${esc(t)} (${tc[t]})</option>`).join('');
+  byId('f-type').value = f.type;
+  const list = findList();
+  byId('f-eq').innerHTML = `<option value="">${list.length ? `Choose from ${list.length} to open its passport…` : 'Nothing matches'}</option>` +
+    list.slice(0, 500).map(i=>`<option value="${esc(i.id)}">${esc(i.name)}${i.tag ? ' — ' + esc(i.tag) : ''}</option>`).join('');
+  byId('f-sum').textContent = allLoaded() ? `Showing ${list.length} of ${all.length} equipment` : 'Loading the passport…';
+  byId('f-clear').hidden = !(f.unit || f.area || f.type || f.q);
+  byId('f-list').innerHTML = list.length ? list.slice(0, 200).map(itemRow).join('') + (list.length > 200 ? `<div class="more">Showing the first 200 of ${list.length}. Narrow down with the drop-downs or search.</div>` : '')
+    : `<div class="empty">${!allLoaded() ? 'Loading…' : all.length ? 'No equipment matches. Clear the filters or try another search.' :
+       'No equipment in the passport yet.<br>Tap “＋ Add equipment”, or an admin can load all motors and panels from the PM modules under Import &amp; export.'}</div>`;
+}
+function itemRow(i){
+  const ks = keySpecs(i); const n = ScanKit.count('passport', bucketOf(i.id), i.id);
+  return `<div class="li click" onclick="fpOpen('${i.id}')">
+    <div class="main"><div class="t">${esc(i.name)} ${i.status && i.status !== 'In service' ? `<span class="pill ${statusClass(i.status)}">${esc(i.status)}</span>` : ''}</div>
+      <div class="s">${esc(i.type)}${i.tag ? ' · <span class="mono">' + esc(i.tag) + '</span>' : ''} · ${esc(unitLabel(i.unit))}${i.area ? ' · ' + esc(i.area) : ''}</div>
+      ${ks.length ? `<div class="s fp-key">${ks.map(s=>esc(s.k) + ': ' + esc(s.v)).join(' · ')}</div>` : ''}</div>
+    <div class="acts">${n ? `<span class="att">📎 ${n}</span>` : ''}<span class="chev" aria-hidden="true">›</span></div>
+  </div>`;
+}
+function fpUnitTile(u){ P.f.unit = P.f.unit === u ? '' : u; P.f.area = ''; P.f.type = ''; fillFind(); }
+function fpClear(){ P.f = { unit: '', area: '', type: '', q: '' }; const q = byId('f-q'); if(q) q.value = ''; fillFind(); }
+
+/* ─── Passport card ─── */
+function fpOpen(id){
+  const i = P.items[id]; if(!i){ toast('Not found', 'This equipment may have been deleted.', 'warn'); return; }
+  const specs = (i.specs || []).filter(s=>s.v !== '' && s.v != null);
+  openModal(`${mHead('Factory passport', `${unitLabel(i.unit)}${i.area ? ' · ' + i.area : ''}`)}
+    <div class="modal-body">
+      <div class="plate"><span class="rv tl"></span><span class="rv tr"></span><span class="rv bl"></span><span class="rv br"></span>
+        <div class="ptype">${esc(i.type)}</div>
+        <div class="pname">${esc(i.name)}</div>
+        <div class="ptag"><span class="mono">${esc(i.tag || 'No tag')}</span> · <span class="pill ${statusClass(i.status)}">${esc(i.status || 'In service')}</span></div>
+        <div class="pgrid">
+          <div><div class="k">Make</div><div class="v">${esc(i.make || '—')}</div></div>
+          <div><div class="k">Model</div><div class="v">${esc(i.model || '—')}</div></div>
+          <div><div class="k">Serial no.</div><div class="v">${esc(i.serial || '—')}</div></div>
+          <div><div class="k">Year installed</div><div class="v">${esc(i.year || '—')}</div></div>
+        </div>
+      </div>
+      <div class="sec-t">Technical specifications</div>
+      ${specs.length ? `<table class="spec">${specs.map(s=>`<tr><td>${esc(s.k)}</td><td>${esc(s.v)}</td></tr>`).join('')}</table>`
+        : '<div class="empty" style="padding:12px">No technical specs yet — tap Edit to add them.</div>'}
+      ${i.notes ? `<div class="sec-t">Notes</div><div class="pre" style="font-size:12.5px">${esc(i.notes)}</div>` : ''}
+      <div class="sec-t">Documents &amp; photos</div>
+      <div id="fp-att"></div>
+      <div class="hint" style="margin-top:12px">Added by ${esc(i.by || '—')} · ${fmtStamp(i.at)}${i.editedAt ? ` · last edited by ${esc(i.editedBy || '')} · ${fmtStamp(i.editedAt)}` : ''}${i.src && /^(motor|panel):/.test(i.src) ? ` · created from ${i.src.indexOf('motor') === 0 ? 'Motor PM' : 'Panel PM'}` : ''}</div>
+    </div>
+    <div class="modal-foot">
+      ${isAdmin() ? `<button type="button" class="btn danger" onclick="fpDelete('${i.id}')">Delete</button>` : ''}
+      <button type="button" class="btn ghost" onclick="fpForm('${i.id}')">Edit</button>
+      <button type="button" class="btn" onclick="closeModal()">Done</button>
+    </div>`);
+  ScanKit.mount(byId('fp-att'), { module: 'passport', shard: bucketOf(i.id), key: i.id, accept: DOC_ACCEPT,
+    pickLabel: 'Upload datasheet, manual or photo', itemWord: 'File',
+    emptyText: 'No documents yet. Add a nameplate photo, datasheet, test certificate or manual.' });
+}
+
+/* ─── Add / edit ─── */
+function fpForm(id){
+  if(!requireReady()) return;
+  const i = id ? P.items[id] : { unit: P.f.unit || '', area: (P.f.area && P.f.area !== NO_AREA) ? P.f.area : '', type: P.f.type || 'Transformer',
+                                 name: '', tag: '', make: '', model: '', serial: '', year: '', status: 'In service', specs: [], notes: '' };
+  if(!i){ toast('Not found', '', 'warn'); return; }
+  const areas = [...new Set(allItems().map(x=>x.area).filter(Boolean))].sort((a, b)=>a.localeCompare(b, undefined, { numeric: true }));
+  openModal(`${mHead(id ? 'Edit equipment' : 'Add equipment', 'Factory passport entry')}
+    <div class="modal-body">
+      <div class="banner info" id="pf-err" hidden></div>
+      <div class="row2">
+        <div class="fld"><label class="req" for="pf-unit">Plant unit</label><select id="pf-unit">${unitOptions(i.unit, 'Select unit…')}</select></div>
+        <div class="fld"><label for="pf-area">Area / location</label><input id="pf-area" list="pf-areas" value="${esc(i.area || '')}" placeholder="e.g. HT substation"><datalist id="pf-areas">${areas.map(a=>`<option value="${esc(a)}">`).join('')}</datalist></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label class="req" for="pf-type">Equipment type</label><select id="pf-type">${TYPES.map(t=>`<option ${t.t === i.type ? 'selected' : ''}>${esc(t.t)}</option>`).join('')}</select></div>
+        <div class="fld"><label for="pf-status">Status</label><select id="pf-status">${STATUSES.map(s=>`<option ${s === (i.status || 'In service') ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="fld"><label class="req" for="pf-name">Equipment name</label><input id="pf-name" value="${esc(i.name)}" placeholder="e.g. Transformer TR-2, HT substation"></div>
+      <div class="row2">
+        <div class="fld"><label for="pf-tag">Tag / equipment ID</label><input id="pf-tag" value="${esc(i.tag || '')}" placeholder="e.g. TR-02"></div>
+        <div class="fld"><label for="pf-year">Year of installation</label><input id="pf-year" inputmode="numeric" maxlength="4" value="${esc(i.year || '')}" placeholder="e.g. 2018"></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label for="pf-make">Make</label><input id="pf-make" value="${esc(i.make || '')}"></div>
+        <div class="fld"><label for="pf-model">Model</label><input id="pf-model" value="${esc(i.model || '')}"></div>
+      </div>
+      <div class="fld"><label for="pf-serial">Serial no.</label><input id="pf-serial" value="${esc(i.serial || '')}"></div>
+      <div class="sec-t">Technical specifications</div>
+      <div id="pf-specs"></div>
+      <div class="sec-t">Additional specifications</div>
+      <div id="pf-extra"></div>
+      <button type="button" class="btn sm ghost" onclick="fpAddExtra()">＋ Add a spec</button>
+      <div class="fld" style="margin-top:14px"><label for="pf-notes">Notes</label><textarea id="pf-notes" rows="2">${esc(i.notes || '')}</textarea></div>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn" id="pf-save" onclick="fpSave(${id ? `'${id}'` : ''})">Save</button></div>`);
+  const tf = typeDef(i.type).f;
+  P.form = { type: i.type, vals: {}, extras: (i.specs || []).filter(s=>!tf.includes(s.k)).map(s=>({ k: s.k, v: s.v })) };
+  (i.specs || []).forEach(s=>{ if(tf.includes(s.k)) P.form.vals[s.k] = s.v; });
+  renderSpecFields(); renderExtras();
+  byId('pf-type').onchange = e=>{
+    captureSpecs();
+    const oldF = typeDef(P.form.type).f, newF = typeDef(e.target.value).f;
+    oldF.forEach(k=>{ const v = P.form.vals[k]; if(v && !newF.includes(k) && !P.form.extras.some(x=>x.k === k)) P.form.extras.push({ k, v }); if(!newF.includes(k)) delete P.form.vals[k]; });
+    P.form.extras = P.form.extras.filter(x=>{ if(newF.includes(x.k)){ if(!P.form.vals[x.k]) P.form.vals[x.k] = x.v; return false; } return true; });
+    P.form.type = e.target.value;
+    renderSpecFields(); renderExtras();
+  };
+}
+function renderSpecFields(){
+  const tf = typeDef(P.form.type).f;
+  byId('pf-specs').innerHTML = tf.length
+    ? `<div class="row2">${tf.map((k, n)=>`<div class="fld"><label for="pf-s${n}">${esc(k)}</label><input id="pf-s${n}" class="pf-spec" data-k="${esc(k)}" value="${esc(P.form.vals[k] || '')}"></div>`).join('')}</div>`
+    : '<div class="hint" style="margin-bottom:8px">No standard fields for this type — add them below.</div>';
+}
+function captureSpecs(){ document.querySelectorAll('.pf-spec').forEach(inp=>{ P.form.vals[inp.dataset.k] = inp.value.trim(); }); captureExtras(); }
+function renderExtras(){
+  byId('pf-extra').innerHTML = P.form.extras.map((s, n)=>`<div class="xrow">
+      <input class="pf-xk" placeholder="Spec name, e.g. Winding material" value="${esc(s.k)}" aria-label="Spec name ${n + 1}">
+      <input class="pf-xv" placeholder="Value" value="${esc(s.v)}" aria-label="Spec value ${n + 1}">
+      <button type="button" class="btn sm ghost" onclick="fpDelExtra(${n})" aria-label="Remove this spec">×</button></div>`).join('')
+    || '<div class="hint" style="margin-bottom:8px">Add any spec that is not listed above.</div>';
+}
+function captureExtras(){
+  const ks = document.querySelectorAll('.pf-xk'), vs = document.querySelectorAll('.pf-xv');
+  if(!ks.length && !P.form.extras.length) return;
+  P.form.extras = [...ks].map((k, n)=>({ k: k.value.trim(), v: vs[n] ? vs[n].value.trim() : '' }));
+}
+function fpAddExtra(){ captureSpecs(); P.form.extras.push({ k: '', v: '' }); renderExtras(); const ks = document.querySelectorAll('.pf-xk'); if(ks.length) ks[ks.length - 1].focus(); }
+function fpDelExtra(n){ captureSpecs(); P.form.extras.splice(n, 1); renderExtras(); }
+async function fpSave(id){
+  if(!requireReady()) return;
+  captureSpecs();
+  const unit = val('pf-unit'), type = val('pf-type'), name = val('pf-name'), tag = val('pf-tag'), year = val('pf-year');
+  if(!unit || !type || !name) return formErr('pf-err', 'Fill in plant unit, equipment type and equipment name.');
+  if(year && !/^(19|20)\d{2}$/.test(year)) return formErr('pf-err', 'Year of installation should be four digits, e.g. 2018.');
+  if(tag){
+    const dup = allItems().find(x=>x.id !== id && x.unit === unit && String(x.tag || '').toLowerCase() === tag.toLowerCase());
+    if(dup && !confirm(`Tag "${tag}" is already used by "${dup.name}" in ${unitLabel(unit)}. Save anyway?`)) return;
+  }
+  const tf = typeDef(type).f;
+  const specs = tf.map(k=>({ k, v: String(P.form.vals[k] || '').trim() })).filter(s=>s.v !== '');
+  P.form.extras.forEach(s=>{ if(s.k && s.v && !specs.some(x=>x.k.toLowerCase() === s.k.toLowerCase())) specs.push({ k: s.k, v: s.v }); });
+  const u = me(); const now = new Date().toISOString();
+  const base = id ? P.items[id] : { id: newId('eq'), by: u.email, uid: u.uid, at: now };
+  const obj = Object.assign({}, base, { unit, area: val('pf-area'), type, name, tag, make: val('pf-make'), model: val('pf-model'),
+    serial: val('pf-serial'), year, status: val('pf-status') || 'In service', specs, notes: val('pf-notes') }, id ? { editedBy: u.email, editedAt: now } : {});
+  const b = bucketOf(obj.id); const btn = byId('pf-save'); if(btn) btn.disabled = true;
+  try{
+    if(id) await updateFields(bucketDoc(b), { ['items.' + id]: obj });
+    else await setMerge(bucketDoc(b), { items: { [obj.id]: obj } });
+    localPut(obj); refresh();
+    fpOpen(obj.id);
+    toast(id ? 'Passport updated' : 'Equipment added', name);
+  }catch(e){ if(btn) btn.disabled = false; formErr('pf-err', 'Could not save: ' + friendlyErr(e)); }
+}
+async function fpDelete(id){
+  if(!requireAdmin('Delete equipment') || !requireReady()) return;
+  const i = P.items[id]; if(!i) return;
+  if(!confirm(`Delete the passport for "${i.name}" and all its documents? This cannot be undone.`)) return;
+  const b = bucketOf(id);
+  try{
+    await updateFields(bucketDoc(b), { ['items.' + id]: delField() });
+    localDel(id);
+    let n = 0; try{ n = await ScanKit.deleteAllFor('passport', b, id); }catch(e){ console.warn('[fp] document cleanup', e); }
+    closeModal(); refresh();
+    toast('Equipment deleted', n ? `${n} document${n > 1 ? 's' : ''} removed too` : i.name);
+  }catch(e){ toast('Delete failed', friendlyErr(e), 'error'); }
+}
+
+/* ─── Import & export ─── */
+const BASE_COLS = ['Unit', 'Area', 'Type', 'Name', 'Tag', 'Make', 'Model', 'Serial No', 'Year', 'Status', 'Notes'];
+const ALIAS = { unit: ['unit', 'plant', 'plant unit'], area: ['area', 'location', 'area / location', 'section'], type: ['type', 'equipment type', 'category'],
+  name: ['name', 'equipment', 'equipment name'], tag: ['tag', 'tag no', 'tag no.', 'equipment id', 'asset id', 'id'], make: ['make', 'manufacturer'],
+  model: ['model'], serial: ['serial no', 'serial no.', 'serial', 'serial number'], year: ['year', 'year of installation', 'year installed', 'installed'],
+  status: ['status'], notes: ['notes', 'remarks'] };
+function renderTools(){
+  const adm = isAdmin();
+  const upload = (inputId)=>`<label class="btn" style="position:relative;overflow:hidden">Upload filled file<input type="file" id="${inputId}" class="sx-file" accept=".csv,.xlsx,.xls"></label>`;
+  byId('view').innerHTML = `<div id="view-tools">
+    <div class="card"><div class="card-h"><div><div class="card-t">Export</div><div class="card-m">Download the passport as a CSV file that opens in Excel. “Current selection” uses the filters on the Find page.</div></div></div>
+      <div class="card-b tools"><button type="button" class="btn ghost" onclick="fpExport(true)">Download current selection</button><button type="button" class="btn ghost" onclick="fpExport(false)">Download everything</button></div></div>
+    <div class="card"><div class="card-h"><div><div class="card-t">Import from Excel / CSV</div>
+      <div class="card-m">Fill the template in Excel and upload it. A row whose tag already exists in the same unit updates that equipment; every other row is added. Any extra column becomes a technical spec — the column heading is the spec name.</div></div></div>
+      <div class="card-b tools"><button type="button" class="btn ghost" onclick="fpTemplate()">Download template</button>${adm ? upload('fp-import') : '<span class="hint">Only admins can import.</span>'}</div></div>
+    <div class="card"><div class="card-h"><div><div class="card-t">Start from the PM modules</div>
+      <div class="card-m">Creates a passport entry for every motor in Motor PM and every panel in Panel PM, so only their specs need adding. You choose the plant unit for each area first. Entries already created are skipped.</div></div></div>
+      <div class="card-b tools">${adm ? '<button type="button" class="btn ghost" onclick="fpPmImport()">Load motors and panels</button>' : '<span class="hint">Only admins can do this.</span>'}</div></div>
+    <div class="card"><div class="card-b"><div class="card-m" id="fp-storage"></div></div></div>
+  </div>`;
+  const inp = byId('fp-import'); if(inp) inp.onchange = e=>{ const f = e.target.files && e.target.files[0]; e.target.value = ''; if(f) fpImportFile(f); };
+  fillTools();
+}
+function fillTools(){
+  const el = byId('fp-storage'); if(!el) return;
+  const bytes = JSON.stringify(P.byBucket).length;
+  el.textContent = `Passport data: ${allItems().length} equipment · about ${Math.max(1, Math.round(bytes / 1024))} KB of text, spread over ${BUCKETS} storage blocks (room for roughly 10,000 detailed entries). Documents and photos are stored separately.`;
+}
+function fpExport(selection){
+  const list = selection ? findList() : sortItems(allItems());
+  if(!list.length){ toast('Nothing to export', selection ? 'No equipment matches the current filters.' : 'The passport is empty.', 'warn'); return; }
+  const specKeys = []; list.forEach(i=>(i.specs || []).forEach(s=>{ if(!specKeys.includes(s.k)) specKeys.push(s.k); }));
+  const rows = [BASE_COLS.concat(specKeys)];
+  list.forEach(i=>{ const m = {}; (i.specs || []).forEach(s=>{ m[s.k] = s.v; });
+    rows.push([unitLabel(i.unit), i.area, i.type, i.name, i.tag, i.make, i.model, i.serial, i.year, i.status, i.notes].concat(specKeys.map(k=>m[k] || ''))); });
+  downloadText(`Factory_Passport_${selection ? 'selection' : 'all'}_${todayIso()}.csv`, '\ufeff' + rows.map(r=>r.map(csvCell).join(',')).join('\r\n'));
+  toast('Export ready', `${list.length} equipment · check your Downloads folder`);
+}
+function fpTemplate(){
+  const spec = ['Rating (kVA)', 'Primary voltage (kV)', 'Secondary voltage (V)', 'Vector group', 'Power (kW)', 'Speed (RPM)', 'Rated current (A)', 'Breaking capacity (kA)'];
+  const rows = [BASE_COLS.concat(spec),
+    ['Ph-1 · COT', 'HT substation', 'Transformer', 'Transformer TR-1', 'TR-01', '', '', '', '2016', 'In service', '', '2000', '33', '433', 'Dyn11', '', '', '', ''],
+    ['Ph-2 · PPB', 'Utility block', 'Motor', 'Cooling water pump motor 1', 'M-201', '', '', '', '2021', 'In service', '', '', '', '', '', '37', '1480', '', ''],
+    ['Ph-1 · Foods', 'Main LT panel room', 'ACB', 'Incomer ACB-1', 'ACB-01', '', '', '', '2019', 'In service', '', '', '', '', '', '', '', '3200', '50']];
+  downloadText('Factory_Passport_template.csv', '\ufeff' + rows.map(r=>r.map(csvCell).join(',')).join('\r\n'));
+  toast('Template downloaded', 'Keep the first row as headings. Add columns for any other spec.');
+}
+function matchUnit(s){ const t = String(s || '').toLowerCase().trim(); if(!t) return ''; const u = UNITS.find(x=>t === x.id.toLowerCase() || new RegExp('\\b' + x.name.toLowerCase() + '\\b').test(t)); return u ? u.id : ''; }
+function matchType(s){
+  const t = String(s || '').toLowerCase().trim(); if(!t) return '';
+  const exact = TYPES.find(x=>x.t.toLowerCase() === t); if(exact) return exact.t;
+  if(/\b(panel|mcc|pcc|pdb|ldb)\b/.test(t)) return 'Panel / MCC / PCC';
+  if(/\b(dg|genset|diesel generator)\b/.test(t)) return 'DG set';
+  if(/capacitor|apfc/.test(t)) return 'Capacitor bank / APFC';
+  if(/compressor/.test(t)) return 'Air compressor';
+  if(/fire/.test(t) && /pump/.test(t)) return 'Fire pump';
+  const loose = TYPES.find(x=>x.t !== 'Other' && t.includes(x.t.toLowerCase())); return loose ? loose.t : 'Other';
+}
+function matchStatus(s){ const t = String(s || '').toLowerCase().trim(); if(!t) return ''; return STATUSES.find(x=>x.toLowerCase() === t) || ''; }
+async function fpImportFile(file){
+  if(!requireAdmin('Import') || !requireReady()) return;
+  let rows;
+  try{
+    if(/\.csv$/i.test(file.name)) rows = parseCSV(await file.text());
+    else {
+      if(!window.XLSX || !window.XLSX.read) throw new Error('The Excel reader did not load. Save the sheet as CSV and upload that instead.');
+      const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false });
+    }
+  }catch(e){ toast('Could not read the file', friendlyErr(e), 'error'); return; }
+  const plan = planImport(rows);
+  if(plan.error){ toast('Import stopped', plan.error, 'warn'); return; }
+  P.importPlan = plan;
+  const sample = plan.add.slice(0, 6).map(r=>['New', r]).concat(plan.upd.slice(0, 4).map(x=>['Update', x.rec]));
+  openModal(`${mHead('Check the import', file.name)}
+    <div class="modal-body">
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+        <div class="kpi good"><div class="l">New</div><div class="v">${plan.add.length}</div></div>
+        <div class="kpi"><div class="l">Updates</div><div class="v">${plan.upd.length}</div></div>
+        <div class="kpi ${plan.errors.length ? 'bad' : ''}"><div class="l">Skipped</div><div class="v">${plan.errors.length}</div></div>
+      </div>
+      ${plan.specCols.length ? `<div class="hint" style="margin-bottom:10px">Spec columns found: ${plan.specCols.map(esc).join(', ')}</div>` : ''}
+      <div class="list">${sample.map(([k, r])=>`<div class="li"><div class="main"><div class="t">${esc(r.name)} <span class="pill ${k === 'New' ? 'ok' : 'acc'}">${k}</span></div>
+        <div class="s">${esc(r.type || 'Other')}${r.tag ? ' · ' + esc(r.tag) : ''} · ${esc(unitLabel(r.unit))}${r.area ? ' · ' + esc(r.area) : ''} · ${r.specs.length} spec${r.specs.length === 1 ? '' : 's'}</div></div></div>`).join('')}</div>
+      ${plan.errors.length ? `<div class="sec-t">Skipped rows</div><div class="hint">${plan.errors.slice(0, 12).map(esc).join('<br>')}${plan.errors.length > 12 ? `<br>…and ${plan.errors.length - 12} more` : ''}</div>` : ''}
+    </div>
+    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn" id="imp-go" onclick="fpApplyImport()" ${plan.add.length + plan.upd.length ? '' : 'disabled'}>Import ${plan.add.length + plan.upd.length} row${plan.add.length + plan.upd.length === 1 ? '' : 's'}</button></div>`);
+}
+function planImport(rows){
+  if(!rows || rows.length < 2) return { error: 'The file has no data rows under the headings.' };
+  const head = rows[0].map(h=>String(h == null ? '' : h).trim());
+  const map = {};
+  head.forEach((h, idx)=>{ const k = h.toLowerCase(); for(const [c, al] of Object.entries(ALIAS)){ if(al.includes(k) && map[c] === undefined){ map[c] = idx; return; } } });
+  if(map.name === undefined || map.unit === undefined) return { error: 'The file needs at least a "Unit" and a "Name" column. Download the template to see the layout.' };
+  const used = new Set(Object.values(map));
+  const specCols = head.map((h, idx)=>({ h, idx })).filter(x=>x.h && !used.has(x.idx));
+  const out = { add: [], upd: [], errors: [], specCols: specCols.map(x=>x.h) };
+  const byTag = {}; allItems().forEach(i=>{ if(i.tag) byTag[i.unit + '|' + String(i.tag).toLowerCase()] = i; });
+  const seen = new Set();
+  rows.slice(1).forEach((r, n)=>{
+    const g = c=>map[c] === undefined ? '' : String(r[map[c]] == null ? '' : r[map[c]]).trim();
+    const line = n + 2, name = g('name'), unit = matchUnit(g('unit'));
+    if(!name){ out.errors.push(`Row ${line}: equipment name is empty`); return; }
+    if(!unit){ out.errors.push(`Row ${line}: unit "${g('unit')}" not recognised — use Foods, PCPB, COT or PPB`); return; }
+    const specs = specCols.map(x=>({ k: x.h, v: String(r[x.idx] == null ? '' : r[x.idx]).trim() })).filter(s=>s.v !== '');
+    const rec = { unit, area: g('area'), type: matchType(g('type')), name, tag: g('tag'), make: g('make'), model: g('model'),
+                  serial: g('serial'), year: g('year'), status: matchStatus(g('status')), notes: g('notes'), specs };
+    const key = rec.tag ? unit + '|' + rec.tag.toLowerCase() : '';
+    if(key && seen.has(key)){ out.errors.push(`Row ${line}: tag "${rec.tag}" appears twice in this file`); return; }
+    if(key) seen.add(key);
+    const ex = key ? byTag[key] : null;
+    if(ex) out.upd.push({ ex, rec }); else out.add.push(rec);
+  });
+  return out;
+}
+async function fpApplyImport(){
+  if(!requireAdmin('Import') || !requireReady()) return;
+  const plan = P.importPlan; if(!plan) return;
+  const u = me(); const now = new Date().toISOString(); const byB = {};
+  const slot = b=>(byB[b] = byB[b] || { set: {}, upd: {} });
+  plan.add.forEach(rec=>{ const id = newId('eq');
+    slot(bucketOf(id)).set[id] = Object.assign({ id, by: u.email, uid: u.uid, at: now, src: 'import' }, rec, { type: rec.type || 'Other', status: rec.status || 'In service' }); });
+  plan.upd.forEach(({ ex, rec })=>{
+    const m = Object.assign({}, ex, { specs: (ex.specs || []).map(s=>({ k: s.k, v: s.v })) });
+    ['name', 'area', 'type', 'make', 'model', 'serial', 'year', 'status', 'notes'].forEach(k=>{ if(rec[k]) m[k] = rec[k]; });
+    rec.specs.forEach(s=>{ const hit = m.specs.find(x=>x.k.toLowerCase() === s.k.toLowerCase()); if(hit) hit.v = s.v; else m.specs.push({ k: s.k, v: s.v }); });
+    m.editedBy = u.email; m.editedAt = now;
+    slot(bucketOf(ex.id)).upd['items.' + ex.id] = m;
+  });
+  const btn = byId('imp-go'); if(btn){ btn.disabled = true; btn.textContent = 'Importing…'; }
+  try{
+    for(const [b, w] of Object.entries(byB)){
+      if(Object.keys(w.set).length) await setMerge(bucketDoc(b), { items: w.set });
+      if(Object.keys(w.upd).length) await updateFields(bucketDoc(b), w.upd);
+      Object.values(w.set).forEach(localPut);
+      Object.values(w.upd).forEach(localPut);
+    }
+    P.importPlan = null; closeModal(); refresh();
+    toast('Import complete', `${plan.add.length} added · ${plan.upd.length} updated`);
+  }catch(e){ if(btn){ btn.disabled = false; btn.textContent = 'Try again'; } toast('Import stopped part-way', friendlyErr(e) + ' — rows already saved are kept; re-importing the same file updates them instead of duplicating.', 'error'); refresh(); }
+}
+async function fpPmImport(){
+  if(!requireAdmin('Load motors and panels') || !requireReady()) return;
+  let payload;
+  try{
+    const snap = await fb().getDoc(docRef('shared_state'));
+    if(!snap.exists()) throw new Error('No Motor PM / Panel PM data found yet.');
+    payload = JSON.parse(snap.data().payload || '{}');
+  }catch(e){ toast('Could not read the PM data', friendlyErr(e), 'error'); return; }
+  const motors = payload.motors || [], panels = payload.panels || [];
+  const have = new Set(allItems().map(i=>i.src).filter(Boolean));
+  const cand = [];
+  motors.forEach(m=>{ const src = 'motor:' + m.sr; if(have.has(src)) return;
+    cand.push({ src, area: String(m.area || '').trim(), type: 'Motor', name: String(m.motor || 'Motor ' + m.sr).trim(), tag: 'M-' + String(m.sr).padStart(3, '0'), notes: `From Motor PM · category ${m.cat || '—'}` }); });
+  panels.forEach(p=>{ const src = 'panel:' + p.id; if(have.has(src)) return;
+    cand.push({ src, area: String(p.area || '').replace(/^PANEL\s*·\s*/i, '').trim(), type: 'Panel / MCC / PCC', name: String(p.panel || 'Panel ' + p.id).trim(), tag: 'P-' + String(p.id).padStart(4, '0'), notes: 'From Panel PM' }); });
+  if(!cand.length){ toast('Nothing new to load', 'Every motor and panel already has a passport entry.'); return; }
+  P.pmCand = cand;
+  const areas = counts(cand, c=>c.area);
+  const guess = a=>/phase[\s-]*2|ph[\s-]*2|ppb/i.test(a) ? 'P2-PPB' : 'P1-COT';
+  openModal(`${mHead('Load motors and panels', `${cand.length} new entries · ${motors.length} motors and ${panels.length} panels in the PM modules`)}
+    <div class="modal-body">
+      <div class="banner info">Choose the plant unit for each area. Areas with “Phase-2” in the name start as Ph-2 · PPB and the rest as Ph-1 · COT — please check each one.</div>
+      ${Object.keys(areas).sort((a, b)=>a.localeCompare(b, undefined, { numeric: true })).map(a=>`<div class="maprow">
+        <div class="main"><div class="t">${esc(a || '(no area)')}</div><div class="s">${areas[a]} item${areas[a] > 1 ? 's' : ''}</div></div>
+        <select class="pm-map" data-area="${esc(a)}" aria-label="Plant unit for ${esc(a || 'no area')}">${unitOptions(guess(a))}</select></div>`).join('')}
+    </div>
+    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn" id="pm-go" onclick="fpPmApply()">Load ${cand.length} entries</button></div>`);
+}
+async function fpPmApply(){
+  if(!requireAdmin('Load motors and panels') || !requireReady()) return;
+  const cand = P.pmCand || []; if(!cand.length) return;
+  const map = {}; document.querySelectorAll('.pm-map').forEach(s=>{ map[s.dataset.area] = s.value; });
+  const u = me(); const now = new Date().toISOString(); const byB = {};
+  cand.forEach(c=>{ const id = newId('eq');
+    const obj = { id, unit: map[c.area] || 'P1-COT', area: c.area, type: c.type, name: c.name, tag: c.tag, make: '', model: '', serial: '', year: '',
+                  status: 'In service', specs: [], notes: c.notes, src: c.src, by: u.email, uid: u.uid, at: now };
+    (byB[bucketOf(id)] = byB[bucketOf(id)] || {})[id] = obj; });
+  const btn = byId('pm-go'); if(btn){ btn.disabled = true; btn.textContent = 'Loading…'; }
+  try{
+    for(const [b, items] of Object.entries(byB)){ await setMerge(bucketDoc(b), { items }); Object.values(items).forEach(localPut); }
+    P.pmCand = null; closeModal(); setView('find');
+    toast('Passport entries created', `${cand.length} motors and panels — open any of them to add specs`);
+  }catch(e){ if(btn){ btn.disabled = false; btn.textContent = 'Try again'; } toast('Stopped part-way', friendlyErr(e) + ' — run it again; entries already created are skipped.', 'error'); refresh(); }
+}
+
+/* ─── Start ─── */
+function start(){
+  setRolePill();
+  ALL_BUCKETS.forEach(b=>listen(bucketDoc(b), (data, err)=>{
+    if(err){ P.loadedBuckets.add(b); refresh(); return; }
+    P.byBucket[b] = (data && data.items) || {};
+    P.loadedBuckets.add(b);
+    rebuildItems(); refresh();
+  }));
+  ScanKit.onChange(()=>{ if(P.view === 'find' && byId('f-list')) fillFind(); });
+  if(P.view === 'tools') renderTools();   // admin-only controls depend on the role
+}
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click', ()=>setView(b.dataset.v)));
+renderView();
+whenReady(start);
+</script>
+</body>
+</html>

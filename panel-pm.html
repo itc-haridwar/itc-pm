@@ -340,6 +340,79 @@ body.role-user .admin-only{display:none !important}
   .f-row{grid-template-columns:1fr}
 }
 </style>
+<style id="scanx-css">
+/* ═══ Phase 3.8 add-on styles — checklist scans + mandatory toggle ═══
+   Uses each module's own colour variables, with fallbacks, so it blends in. */
+.sx-chip{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 10px;min-height:26px;
+  border:1px dashed var(--border-bright, var(--line-2, #3a3f55));border-radius:13px;background:transparent;
+  color:var(--text-dim, var(--text-2, #9aa3b5));font-family:inherit;font-size:10.5px;font-weight:600;
+  letter-spacing:.02em;line-height:1;cursor:pointer;white-space:nowrap;
+  transition:border-color .15s,color .15s,background .15s}
+.sx-chip:hover{border-color:var(--accent);color:var(--accent)}
+.sx-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sx-chip.has{border-style:solid;border-color:var(--accent-4, var(--green, #22c55e));
+  color:var(--accent-4, var(--green, #22c55e));background:rgba(34,197,94,.08)}
+
+.sx-upload{display:flex;gap:10px;flex-wrap:wrap;margin:2px 0 8px}
+.sx-upload.busy{opacity:.45;pointer-events:none}
+.sx-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;min-height:40px;border-radius:5px;border:1px solid var(--border-bright, var(--line-2, #3a3f55));
+  background:transparent;color:var(--text, #e8ecf3);font-family:inherit;font-size:12px;font-weight:600;
+  cursor:pointer;text-decoration:none;transition:border-color .15s,background .15s}
+.sx-btn:hover{border-color:var(--accent)}
+.sx-btn:focus-within,.sx-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sx-btn.sx-primary{background:var(--accent);border-color:var(--accent);color:#0a0e1a}
+.sx-btn.sm{padding:6px 11px;min-height:32px;font-size:11px}
+.sx-btn.danger{color:var(--accent-3, var(--red, #ef4444));border-color:var(--accent-3, var(--red, #ef4444))}
+.sx-file{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.sx-hint{font-size:11px;color:var(--text-muted, var(--text-3, #6b7488));line-height:1.5;margin:0 0 10px}
+.sx-status{font-size:12px;line-height:1.45;margin:0 0 10px}
+.sx-status:empty{display:none}
+.sx-status.info{color:var(--text-dim, var(--text-2, #9aa3b5))}
+.sx-status.ok{color:var(--accent-4, var(--green, #22c55e))}
+.sx-status.warn{color:var(--accent-2, var(--amber, #f59e0b))}
+.sx-status.err{color:var(--accent-3, var(--red, #ef4444))}
+.sx-list{display:flex;flex-direction:column;gap:8px}
+.sx-item{display:grid;grid-template-columns:26px 1fr;gap:4px 10px;padding:10px 12px;
+  background:var(--bg-panel-2, var(--bg-2, #161e35));border:1px solid var(--border, var(--line, #1f2a44));border-radius:6px}
+.sx-ico{font-size:18px;line-height:1.3}
+.sx-name{font-size:12.5px;font-weight:600;color:var(--text, #e8ecf3);word-break:break-word}
+.sx-sub{font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488));margin-top:3px;word-break:break-word}
+.sx-acts{grid-column:2;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.sx-empty{padding:16px;text-align:center;font-size:12px;line-height:1.5;color:var(--text-muted, var(--text-3, #6b7488));
+  border:1px dashed var(--border-bright, var(--line-2, #3a3f55));border-radius:6px}
+.sx-empty.sx-bad{color:var(--accent-3, var(--red, #ef4444))}
+.sx-row{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.sx-view{margin-top:12px}
+.sx-view:empty{margin-top:0}
+.sx-view img{display:block;width:100%;height:auto;border-radius:6px;background:#fff;
+  border:1px solid var(--border, var(--line, #1f2a44))}
+.sx-view-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;
+  font-size:11.5px;color:var(--text-dim, var(--text-2, #9aa3b5));word-break:break-word}
+.sx-usage{margin-right:auto;align-self:center;font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488))}
+
+/* Mandatory / optional switch in Checklist Config (admin) */
+.req-toggle{display:inline-flex;align-items:center;gap:7px;padding:4px 11px 4px 5px;min-height:28px;
+  border-radius:14px;border:1px solid var(--border-bright, var(--line-2, #3a3f55));background:transparent;
+  color:var(--text-dim, var(--text-2, #9aa3b5));font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+.req-toggle .knob{width:16px;height:16px;border-radius:50%;background:var(--border-bright, var(--line-2, #3a3f55));
+  transition:background .15s}
+.req-toggle.on{border-color:var(--accent-3, var(--red, #ef4444));color:var(--accent-3, var(--red, #ef4444));
+  background:rgba(239,68,68,.08)}
+.req-toggle.on .knob{background:var(--accent-3, var(--red, #ef4444))}
+.req-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.req-bulk{display:flex;gap:8px;flex-wrap:wrap}
+@media (prefers-reduced-motion: reduce){ .sx-chip,.sx-btn,.req-toggle,.req-toggle .knob{transition:none} }
+
+/* Phase 3.9 — shared ScanKit panel + Mark Done check-sheet block */
+.sx-kit{display:block}
+.sx-usage{display:block;margin:10px 0 0;font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488))}
+.sx-usage:empty{display:none}
+.sx-embed{margin-top:18px;padding-top:14px;border-top:1px solid var(--border, var(--line, #26262d))}
+.sx-embed-title{font-size:13px;font-weight:700;color:var(--text, #e8ecf3);margin-bottom:2px}
+.sx-embed-sub{font-size:11px;line-height:1.5;color:var(--text-muted, var(--text-3, #6b7488));margin-bottom:10px}
+</style>
 </head>
 <body>
 <div class="app">
@@ -566,7 +639,7 @@ body.role-user .admin-only{display:none !important}
         </div>
       </div>
       <div class="card">
-        <div class="card-head"><div class="card-title">Active Fields</div><div class="card-meta" id="ck-count">—</div></div>
+        <div class="card-head"><div class="card-title">Active Fields</div><div class="req-bulk" id="ck-bulk"></div><div class="card-meta" id="ck-count">—</div></div>
         <div class="card-body no-pad"><table class="tbl" id="t-checklist"></table></div>
       </div>
     </section>
@@ -1306,13 +1379,19 @@ function renderExecutions(){
 
 // ─── Checklist Config ─
 function renderChecklist(){
+  const bulk = document.getElementById('ck-bulk');
+  if(bulk) bulk.innerHTML = isAdmin()
+    ? `<button type="button" class="btn ghost sm" onclick="setAllPanelChecklistRequired(false)">Make all optional</button><button type="button" class="btn ghost sm" onclick="setAllPanelChecklistRequired(true)">Make all mandatory</button>`
+    : '';
   let h = '<thead><tr><th>Label</th><th>Type</th><th>Unit</th><th>Required</th><th>Options</th><th></th></tr></thead><tbody>';
   STATE.panelChecklistFields.forEach((f,i)=>{
     h += `<tr>
       <td style="font-weight:500">${f.label}</td>
       <td><span class="mono" style="font-size:11px;color:var(--blue)">${f.type}</span></td>
       <td class="mono" style="font-size:11px;color:var(--text-2)">${f.unit||'—'}</td>
-      <td>${f.required?'<span style="color:var(--red);font-weight:600">YES</span>':'<span style="color:var(--text-3)">no</span>'}</td>
+      <td>${isAdmin()
+        ? `<button type="button" class="req-toggle ${f.required?'on':''}" role="switch" aria-checked="${f.required?'true':'false'}" onclick="togglePanelChecklistRequired(${i})" title="Tap to make this parameter ${f.required?'optional':'mandatory'}"><span class="knob"></span>${f.required?'Mandatory':'Optional'}</button>`
+        : (f.required?'<span style="color:var(--red);font-weight:600">YES</span>':'<span style="color:var(--text-3)">no</span>')}</td>
       <td class="mono" style="font-size:11px;color:var(--text-2)">${(f.options||[]).join(', ')||'—'}</td>
       <td><button class="btn ghost sm" onclick="deleteChecklistField(${i})" style="color:var(--red)">× Remove</button></td>
     </tr>`;
@@ -1344,6 +1423,26 @@ function deleteChecklistField(idx){
   STATE.panelChecklistFields.splice(idx,1);
   saveToFirebase();
   renderChecklist();
+}
+
+/* Phase 3.8 — admin switches a checklist parameter between mandatory and optional */
+function togglePanelChecklistRequired(idx){
+  if(!requireAdmin('Change mandatory parameters')) return;
+  const f = STATE.panelChecklistFields[idx];
+  if(!f) return;
+  f.required = !f.required;
+  saveToFirebase();
+  renderChecklist();
+  toast(f.required ? 'Now mandatory' : 'Now optional',
+        f.label + (f.required ? ' — marked and must be filled in Mark Done' : ' — unmarked and can be left blank in Mark Done'), 'good');
+}
+function setAllPanelChecklistRequired(flag){
+  if(!requireAdmin('Change mandatory parameters')) return;
+  if(!confirm(flag ? 'Make every panel checklist parameter mandatory?' : 'Make every panel checklist parameter optional?')) return;
+  STATE.panelChecklistFields.forEach(f=>{ f.required = !!flag; });
+  saveToFirebase();
+  renderChecklist();
+  toast(flag ? 'All parameters mandatory' : 'All parameters optional', STATE.panelChecklistFields.length + ' parameters updated', 'good');
 }
 
 // ─── Modals ────────────
@@ -1917,6 +2016,502 @@ function maybeShowPanelPopups(){
   }
 }
 setTimeout(maybeShowPanelPopups, 1800);
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   ScanKit — shared attachment engine (Phase 3.9)
+   One engine for every attachment in the app: Daily-row checklist scans,
+   the Mark Done check-sheet block, statutory test reports and Factory
+   Passport documents.
+   Storage (inside the existing itc_pm collection — no rules change):
+       itc_pm/scanidx_<module>_<shard>   index: items.{fileId} = meta
+       itc_pm/scandata_<fileId>_<part>   file data, ≤ 700 K base64 chars
+   API: ScanKit.mount(el,{module,shard,key,...}) · count() · list()
+        onChange(fn) · deleteAllFor(module,shard,key)
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if(window.ScanKit) return;
+
+  const CHUNK = 700000;               // base64 chars per Firestore document (limit ≈ 1 MiB)
+  const MAX_BYTES = 4 * 1024 * 1024;  // per file, after compression
+  const IMG_MAX_SIDE = 1600;          // px, long side of stored photos
+  const IMG_QUALITY = 0.62;           // JPEG quality for stored photos
+
+  const S = { idx:{}, subs:{}, listeners:[], mounts:[], busy:false };
+
+  const fs    = ()=>window.__pmScanFs;
+  const fbx   = ()=>window.__pmFirebase;
+  const user  = ()=>window.__pmCurrentUser || null;
+  const ready = ()=>!!(fs() && fbx() && fbx().db && user());
+  const admin = ()=>window.__pmRole === 'admin';
+  const esc   = s=>String(s == null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sid     = (mod, shard)=>`${mod}_${shard}`;
+  const idxDoc  = (mod, shard)=>`scanidx_${mod}_${shard}`;
+  const dataDoc = (id, k)=>`scandata_${id}_${k}`;
+
+  function note(t, m, k){ try{ if(typeof window.toast === 'function') window.toast(t, m, k); }catch(e){} }
+  function fmtBytes(n){ n = +n || 0; if(n < 1024) return n + ' B'; if(n < 1048576) return Math.round(n/1024) + ' KB'; return (n/1048576).toFixed(1) + ' MB'; }
+  function fmtWhen(iso){ const d = new Date(iso); if(isNaN(d)) return ''; const z = n=>String(n).padStart(2,'0'); return `${z(d.getDate())}-${z(d.getMonth()+1)}-${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; }
+  function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function baseName(n){ return String(n || 'scan').replace(/\.[^.]+$/, '') || 'scan'; }
+  function friendly(e){
+    const code = (e && e.code) || '';
+    if(code === 'permission-denied') return new Error('the server refused the request (permission denied). Sign out, sign in again and retry.');
+    if(code === 'resource-exhausted') return new Error('the free daily Firebase quota is used up. Try again tomorrow.');
+    if(code === 'unavailable') return new Error('no connection to the server. Check mobile data or Wi-Fi and retry.');
+    return e instanceof Error ? e : new Error(String(e));
+  }
+
+  /* ─── Index subscriptions ─── */
+  function ensure(mod, shard){
+    if(!mod || !shard) return;
+    const id = sid(mod, shard);
+    if(S.subs[id] || !ready()) return;
+    const f = fs(), db = fbx().db;
+    S.subs[id] = 'pending';
+    try{
+      S.subs[id] = f.onSnapshot(f.doc(db, 'itc_pm', idxDoc(mod, shard)), snap=>{
+        S.idx[id] = (snap.exists() && snap.data().items) || {};
+        changed();
+      }, err=>{
+        console.warn('[ScanKit] could not read index', id, err);
+        S.subs[id] = 'error';
+        if(S.idx[id] === undefined) S.idx[id] = {};
+        changed();
+      });
+    }catch(e){ console.warn('[ScanKit] subscribe failed', e); S.subs[id] = null; }
+  }
+  function list(mod, shard, key){
+    const m = S.idx[sid(mod, shard)];
+    if(m === undefined) return undefined;
+    return Object.keys(m).filter(id=>m[id] && m[id].pm === key)
+      .map(id=>Object.assign({ id }, m[id]))
+      .sort((a, b)=>String(a.at).localeCompare(String(b.at)));
+  }
+  function count(mod, shard, key){ ensure(mod, shard); const l = list(mod, shard, key); return l === undefined ? undefined : l.length; }
+  function metaOf(m, id){ const x = (S.idx[sid(m.mod, m.shard)] || {})[id]; return x ? Object.assign({ id }, x) : null; }
+  function changed(){
+    S.mounts = S.mounts.filter(m=>m.el.isConnected);
+    S.mounts.forEach(render);
+    S.listeners.forEach(fn=>{ try{ fn(); }catch(e){ console.warn('[ScanKit] listener failed', e); } });
+  }
+  function kick(){ S.mounts.forEach(m=>ensure(m.mod, m.shard)); changed(); }
+  document.addEventListener('pm-firebase-ready', kick);
+  document.addEventListener('pm-scanfs-ready', kick);
+
+  /* ─── Mounted attachment panel ─── */
+  const q = (m, name)=>m.el.querySelector(`[data-sx="${name}"]`);
+  function status(m, msg, kind){
+    if(!m.el.isConnected) return false;
+    const e = q(m, 'status'); if(!e) return false;
+    e.className = 'sx-status ' + (kind || 'info');
+    e.textContent = msg || '';
+    return true;
+  }
+  function mount(el, o){
+    o = o || {};
+    const m = { el, mod: o.module, shard: o.shard, key: o.key,
+      accept: o.accept || 'image/*,application/pdf',
+      pickLabel: o.pickLabel || 'Upload photo or PDF',
+      emptyText: o.emptyText || 'No scans yet. Take a photo of the filled checklist or upload a PDF.',
+      itemWord: o.itemWord || 'Scan', showUsage: !!o.showUsage, viewId: null, url: null };
+    el.classList.add('sx-kit');
+    el.innerHTML = `
+      <div class="sx-upload">
+        <label class="sx-btn sx-primary">📷 Take photo<input class="sx-file" data-sx="cam" type="file" accept="image/*" capture="environment"></label>
+        <label class="sx-btn">📁 ${esc(m.pickLabel)}<input class="sx-file" data-sx="pick" type="file" accept="${esc(m.accept)}" multiple></label>
+      </div>
+      ${o.hint ? `<div class="sx-hint">${esc(o.hint)}</div>` : ''}
+      <div class="sx-status info" data-sx="status" role="status" aria-live="polite"></div>
+      <div class="sx-list" data-sx="list"></div>
+      <div class="sx-view" data-sx="view"></div>
+      ${m.showUsage ? '<div class="sx-usage" data-sx="usage"></div>' : ''}`;
+    el.querySelectorAll('input.sx-file').forEach(inp=>inp.addEventListener('change', ()=>onFiles(m, inp)));
+    el.addEventListener('click', ev=>{
+      const b = ev.target.closest('[data-sx-act]');
+      if(!b || !el.contains(b)) return;
+      ev.preventDefault(); ev.stopPropagation();
+      const act = b.getAttribute('data-sx-act'), id = b.getAttribute('data-id');
+      if(act === 'view') view(m, id); else if(act === 'save') save(m, id);
+      else if(act === 'del') del(m, id); else if(act === 'hide') hide(m);
+    });
+    S.mounts.push(m);
+    ensure(m.mod, m.shard);
+    render(m);
+    if(S.busy) status(m, 'An upload is still running in the background…', 'info');
+    return m;
+  }
+  function itemHTML(m, x, i){
+    const me = user();
+    const canDel = admin() || (me && x.uid === me.uid);
+    const icon = (x.kind === 'pdf' || /pdf/i.test(x.type || '')) ? '📄' : (x.kind === 'image' || /^image\//.test(x.type || '')) ? '🖼' : '📎';
+    return `<div class="sx-item">
+      <div class="sx-ico" aria-hidden="true">${icon}</div>
+      <div class="sx-meta">
+        <div class="sx-name">${esc(m.itemWord)} ${i + 1} · ${esc(x.name || 'file')}</div>
+        <div class="sx-sub">${esc(x.by || 'unknown')} · ${fmtWhen(x.at)} · ${fmtBytes(x.size)}</div>
+      </div>
+      <div class="sx-acts">
+        <button type="button" class="sx-btn sm" data-sx-act="view" data-id="${esc(x.id)}">View</button>
+        <button type="button" class="sx-btn sm" data-sx-act="save" data-id="${esc(x.id)}">Save to phone</button>
+        ${canDel ? `<button type="button" class="sx-btn sm danger" data-sx-act="del" data-id="${esc(x.id)}">Delete</button>` : ''}
+      </div>
+    </div>`;
+  }
+  function render(m){
+    const listEl = q(m, 'list'); if(!listEl) return;
+    const items = list(m.mod, m.shard, m.key);
+    if(!ready()) listEl.innerHTML = '<div class="sx-empty">Connecting to the server…</div>';
+    else if(items === undefined) listEl.innerHTML = '<div class="sx-empty">Loading attachments…</div>';
+    else if(!items.length) listEl.innerHTML = `<div class="sx-empty">${esc(m.emptyText)}</div>`;
+    else listEl.innerHTML = items.map((x, i)=>itemHTML(m, x, i)).join('');
+    const usage = q(m, 'usage');
+    if(usage){
+      const all = Object.values(S.idx[sid(m.mod, m.shard)] || {});
+      const stored = all.reduce((s, x)=>s + (+x.stored || Math.round((+x.size || 0) * 1.34)), 0);
+      usage.textContent = S.idx[sid(m.mod, m.shard)] ? `${m.shard}: ${all.length} file${all.length === 1 ? '' : 's'} · ${fmtBytes(stored)} stored` : '';
+    }
+    const up = m.el.querySelector('.sx-upload');
+    if(up) up.classList.toggle('busy', S.busy);
+  }
+
+  /* ─── Upload ─── */
+  function readB64(file){
+    return new Promise((resolve, reject)=>{
+      const r = new FileReader();
+      r.onload = ()=>{ const s = String(r.result || ''); resolve(s.slice(s.indexOf(',') + 1)); };
+      r.onerror = ()=>reject(new Error('the file could not be read'));
+      r.readAsDataURL(file);
+    });
+  }
+  function compressImage(file){
+    return new Promise((resolve, reject)=>{
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = ()=>{
+        try{
+          const w0 = img.naturalWidth, h0 = img.naturalHeight;
+          if(!w0 || !h0) throw new Error('empty image');
+          const scale = Math.min(1, IMG_MAX_SIDE / Math.max(w0, h0));
+          const w = Math.max(1, Math.round(w0 * scale)), h = Math.max(1, Math.round(h0 * scale));
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = c.toDataURL('image/jpeg', IMG_QUALITY);
+          const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+          resolve({ b64, bytes: Math.round(b64.length * 0.75) });
+        }catch(e){ reject(e); }
+        finally{ URL.revokeObjectURL(url); }
+      };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('this image format cannot be opened by the browser')); };
+      img.src = url;
+    });
+  }
+  async function prepare(file){
+    const type = String(file.type || '').toLowerCase();
+    const isPdf = type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+    const isImg = type.indexOf('image/') === 0;
+    if(isImg && !/heic|heif/.test(type)){
+      try{
+        const out = await compressImage(file);
+        if(out.bytes <= MAX_BYTES && (out.bytes < file.size || file.size > MAX_BYTES)){
+          return { b64: out.b64, mime: 'image/jpeg', kind: 'image', name: baseName(file.name) + '.jpg' };
+        }
+      }catch(e){ console.warn('[ScanKit] compression skipped:', e && e.message ? e.message : e); }
+    }
+    if(file.size > MAX_BYTES){
+      throw new Error(`${fmtBytes(file.size)} is over the 4 MB limit. ${isPdf ? 'Compress the PDF or photograph the pages instead.' : 'Use a smaller file.'}`);
+    }
+    const b64 = await readB64(file);
+    return { b64, mime: type || (isPdf ? 'application/pdf' : 'application/octet-stream'),
+             kind: isPdf ? 'pdf' : (isImg ? 'image' : 'file'), name: file.name || 'file' };
+  }
+  async function upload(p, m, onPct){
+    const f = fs(), db = fbx().db, me = user();
+    const id = newId();
+    const parts = Math.max(1, Math.ceil(p.b64.length / CHUNK));
+    const written = [];
+    try{
+      for(let k = 0; k < parts; k++){
+        await f.setDoc(f.doc(db, 'itc_pm', dataDoc(id, k)),
+          { d: p.b64.slice(k * CHUNK, (k + 1) * CHUNK), k, n: parts, scan: id, pm: m.key, module: m.mod });
+        written.push(dataDoc(id, k));
+        if(onPct) onPct(Math.round((k + 1) / parts * 100));
+      }
+      const at = new Date().toISOString();
+      const meta = { pm: m.key, name: String(p.name).slice(0, 120), type: p.mime, kind: p.kind,
+                     size: Math.round(p.b64.length * 0.75), stored: p.b64.length, parts,
+                     by: me.email || me.uid, uid: me.uid, at };
+      await f.setDoc(f.doc(db, 'itc_pm', idxDoc(m.mod, m.shard)),
+        { items: { [id]: meta }, module: m.mod, shard: m.shard, updatedAt: at }, { merge: true });
+    }catch(e){
+      for(const d of written){ try{ await f.deleteDoc(f.doc(db, 'itc_pm', d)); }catch(_){ /* best effort */ } }
+      throw friendly(e);
+    }
+  }
+  function renderAll(){ S.mounts = S.mounts.filter(x=>x.el.isConnected); S.mounts.forEach(render); }
+  async function onFiles(m, input){
+    const files = Array.from((input && input.files) || []);
+    if(input) input.value = '';
+    if(!files.length) return;
+    if(!ready()){ status(m, 'Still connecting to the server. Wait a few seconds and try again.', 'err'); return; }
+    if(S.busy){ status(m, 'An upload is already running. Wait for it to finish.', 'warn'); return; }
+    S.busy = true; renderAll();
+    let ok = 0; const failed = [];
+    for(let i = 0; i < files.length; i++){
+      const file = files[i];
+      const tag = files.length > 1 ? ` ${i + 1} of ${files.length}` : '';
+      try{
+        status(m, `Preparing file${tag}…`, 'info');
+        const p = await prepare(file);
+        await upload(p, m, pct=>status(m, `Uploading file${tag} — ${pct}%. Keep this screen open.`, 'info'));
+        ok++;
+      }catch(e){
+        console.error('[ScanKit] upload failed', e);
+        failed.push(`${file.name || 'file'}: ${e && e.message ? e.message : e}`);
+      }
+    }
+    S.busy = false; renderAll();
+    const word = m.itemWord.toLowerCase();
+    const msg = failed.length
+      ? `${ok} uploaded, ${failed.length} failed. ${failed.join(' · ')}`
+      : `${ok} ${word}${ok === 1 ? '' : 's'} uploaded.`;
+    if(!status(m, msg, failed.length ? 'err' : 'ok')) note(failed.length ? 'Upload incomplete' : 'Uploaded', msg, failed.length ? 'warn' : undefined);
+  }
+
+  /* ─── View / save / delete ─── */
+  async function loadData(m, id){
+    const meta = metaOf(m, id);
+    if(!meta) throw new Error('file not found — it may have been deleted');
+    if(!ready()) throw new Error('not connected to the server yet');
+    const f = fs(), db = fbx().db, parts = meta.parts || 1;
+    const snaps = await Promise.all(Array.from({ length: parts }, (_, k)=>f.getDoc(f.doc(db, 'itc_pm', dataDoc(id, k)))));
+    const b64 = snaps.map((s, k)=>{
+      if(!s.exists()) throw new Error(`part ${k + 1} of ${parts} is missing`);
+      return (s.data() || {}).d || '';
+    }).join('');
+    return { meta, b64 };
+  }
+  function b64ToBlob(b64, type){
+    const bin = atob(b64); const n = bin.length; const arr = new Uint8Array(n);
+    for(let i = 0; i < n; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: type || 'application/octet-stream' });
+  }
+  function downloadName(x){
+    const safe = s=>String(s || '').replace(/[^\w.-]+/g, '_');
+    let name = safe(x.name) || 'file';
+    if(!/\.[a-z0-9]{2,4}$/i.test(name)) name += /pdf/i.test(x.type || '') ? '.pdf' : /jpe?g/i.test(x.type || '') ? '.jpg' : /png/i.test(x.type || '') ? '.png' : '';
+    return `${safe(x.pm)}_${name}`;
+  }
+  function hide(m){
+    const v = q(m, 'view'); if(v) v.innerHTML = '';
+    if(m.url){ URL.revokeObjectURL(m.url); m.url = null; }
+    m.viewId = null;
+  }
+  async function view(m, id){
+    const box = q(m, 'view'); if(!box) return;
+    box.innerHTML = '<div class="sx-empty">Loading…</div>';
+    try{
+      const { meta, b64 } = await loadData(m, id);
+      if(!m.el.isConnected) return;
+      if(m.url){ URL.revokeObjectURL(m.url); m.url = null; }
+      m.url = URL.createObjectURL(b64ToBlob(b64, meta.type));
+      m.viewId = id;
+      const isImg = String(meta.type || '').indexOf('image/') === 0;
+      const isPdf = /pdf/i.test(meta.type || '');
+      const head = `<div class="sx-view-head"><span>${esc(meta.name)}</span><button type="button" class="sx-btn sm" data-sx-act="hide">Hide</button></div>`;
+      box.innerHTML = head + (isImg
+        ? `<a href="${m.url}" target="_blank" rel="noopener" title="Open full size"><img src="${m.url}" alt="${esc(meta.name)}"></a><div class="sx-hint">Tap the image to open it full size.</div>`
+        : `<div class="sx-empty">${isPdf ? "PDF files open in your phone's viewer." : 'This file type opens in its own app.'}<div class="sx-row"><a class="sx-btn sx-primary" href="${m.url}" target="_blank" rel="noopener">${isPdf ? 'Open PDF' : 'Open file'}</a></div></div>`);
+      if(box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }catch(e){
+      if(m.el.isConnected) box.innerHTML = `<div class="sx-empty sx-bad">Could not open this file: ${esc(friendly(e).message)}</div>`;
+    }
+  }
+  async function save(m, id){
+    try{
+      status(m, 'Preparing download…', 'info');
+      const { meta, b64 } = await loadData(m, id);
+      const url = URL.createObjectURL(b64ToBlob(b64, meta.type));
+      const a = document.createElement('a');
+      a.href = url; a.download = downloadName(meta); a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 60000);
+      status(m, 'Download started — check your Downloads folder.', 'ok');
+    }catch(e){ status(m, 'Could not download this file: ' + friendly(e).message, 'err'); }
+  }
+  async function del(m, id){
+    const x = metaOf(m, id); if(!x) return;
+    const me = user();
+    if(!(admin() || (me && x.uid === me.uid))){ status(m, 'Only an admin or the person who uploaded this file can delete it.', 'err'); return; }
+    if(!ready()){ status(m, 'Still connecting to the server. Try again in a few seconds.', 'err'); return; }
+    if(!confirm(`Delete "${x.name}"? This cannot be undone.`)) return;
+    const f = fs(), db = fbx().db;
+    try{
+      await f.setDoc(f.doc(db, 'itc_pm', idxDoc(m.mod, m.shard)), { items: { [id]: f.deleteField() }, updatedAt: new Date().toISOString() }, { merge: true });
+      let orphan = 0;
+      for(let k = 0; k < (x.parts || 1); k++){
+        try{ await f.deleteDoc(f.doc(db, 'itc_pm', dataDoc(id, k))); }catch(e){ orphan++; }
+      }
+      if(m.viewId === id) hide(m);
+      status(m, orphan ? 'File removed from the list, but part of it could not be cleared from storage.' : 'File deleted.', orphan ? 'warn' : 'ok');
+    }catch(e){ status(m, 'Delete failed: ' + friendly(e).message, 'err'); }
+  }
+  // Remove every attachment of one record (used when an admin deletes the record itself)
+  async function deleteAllFor(mod, shard, key){
+    if(!ready()) throw new Error('not connected to the server yet');
+    const f = fs(), db = fbx().db;
+    let items = list(mod, shard, key);
+    if(items === undefined){
+      const snap = await f.getDoc(f.doc(db, 'itc_pm', idxDoc(mod, shard)));
+      const all = (snap.exists() && snap.data().items) || {};
+      items = Object.keys(all).filter(id=>all[id] && all[id].pm === key).map(id=>Object.assign({ id }, all[id]));
+    }
+    if(!items.length) return 0;
+    const patch = {}; items.forEach(x=>{ patch[x.id] = f.deleteField(); });
+    await f.setDoc(f.doc(db, 'itc_pm', idxDoc(mod, shard)), { items: patch, updatedAt: new Date().toISOString() }, { merge: true });
+    for(const x of items) for(let k = 0; k < (x.parts || 1); k++){ try{ await f.deleteDoc(f.doc(db, 'itc_pm', dataDoc(x.id, k))); }catch(e){} }
+    return items.length;
+  }
+
+  window.ScanKit = { mount, count, list, ensure, deleteAllFor, fmtBytes,
+                     onChange(fn){ if(typeof fn === 'function') S.listeners.push(fn); } };
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CHECKLIST SCAN ATTACHMENTS — Motor / Panel add-on (Phase 3.8 + 3.9)
+   • "📎 Add scan" button on every Daily PM row (both logins).
+   • Phase 3.9: check-sheet scan / photo block inside the Mark Done popup.
+   Uses the shared ScanKit engine above. Neither renderDaily() nor the
+   Mark Done functions are edited — rows and the popup are decorated after
+   they render (MutationObserver).
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  const CFG = {
+    module: 'panel',
+    listId: 'd-list', rowSel: '.daily-row', dateSel: '.dr-date',
+    idRe: /openShiftDate\((\d+)\)/,
+    markDone: { detectSel: '#md-ad', btnSel: '[onclick^="submitDone("]', idRe: /submitDone\((\d+)\)/ },
+    hostId: 'm-host', footClass: 'modal-foot', closeBtnClass: 'btn ghost', toastOk: 'good',
+    find(raw){ const id = parseInt(raw, 10); return (STATE.panels || []).find(p=>p.id === id) || null; },
+    keyOf(raw){ const p = CFG.find(raw); const fy = p && fyOfIso(p.pm_date); return (p && fy) ? `P${String(p.id).padStart(4, '0')}-${fy}` : null; },
+    fyOf(raw){ const p = CFG.find(raw); return p ? fyOfIso(p.pm_date) : null; },
+    infoOf(raw){
+      const p = CFG.find(raw); if(!p) return null;
+      const ex = STATE.panelExecutions && STATE.panelExecutions[p.id];
+      return { title: p.panel,
+               meta: `${unitShort(p.area)} · Yearly PM · Planned ${dateFmt(isoToDate(p.pm_date))}` +
+                     (ex && ex.actualDate ? ` · Done ${dateFmt(isoToDate(ex.actualDate))}` : '') };
+    },
+    headHTML(){
+      return `<div class="modal-head"><div><div class="modal-eyebrow">▍ Checklist scans · Panel PM</div><div class="modal-title">Attach filled checklist</div></div><button class="modal-close" onclick="closeModal()">✕</button></div>`;
+    },
+    infoHTML(i, key){
+      return `<div class="info-strip"><div class="ttl">${esc(i.title)}</div><div class="meta">${esc(i.meta)} · ${esc(key)}</div></div>`;
+    }
+  };
+  const HINT = 'Add each checklist page as its own scan. Photos are compressed to about 200 KB; PDFs can be up to 4 MB.';
+  const esc = s=>String(s == null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function fyOfIso(iso){
+    const d = new Date(String(iso) + 'T00:00:00'); if(isNaN(d)) return null;
+    const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1;
+    return `FY${y}-${String((y + 1) % 100).padStart(2, '0')}`;   // FY2026-27 — same style as the live motor PM IDs
+  }
+
+  /* ─── Daily rows ─── */
+  function rawIdOf(row){
+    const el = row.querySelector(CFG.dateSel);
+    const m = el && (el.getAttribute('onclick') || '').match(CFG.idRe);
+    return m ? m[1] : null;
+  }
+  function decorateRow(row){
+    try{
+      const raw = rawIdOf(row); if(raw == null) return;
+      const key = CFG.keyOf(raw), fy = CFG.fyOf(raw);
+      if(!key || !fy) return;
+      const cell = row.children[1]; if(!cell) return;
+      let chip = cell.querySelector('.sx-chip');
+      if(!chip){
+        chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'sx-chip';
+        chip.addEventListener('click', ev=>{ ev.stopPropagation(); openScans(chip.dataset.raw); });
+        cell.appendChild(chip);
+      }
+      chip.dataset.raw = raw;
+      const n = ScanKit.count(CFG.module, fy, key);
+      chip.classList.toggle('has', n > 0);
+      chip.textContent = n === undefined ? '📎 Scans' : n ? `📎 ${n} scan${n > 1 ? 's' : ''}` : '📎 Add scan';
+      const tip = n ? 'View or add checklist scans' : 'Attach a photo or PDF of the filled checklist';
+      chip.title = tip; chip.setAttribute('aria-label', tip);
+    }catch(e){ console.warn('[scans] row decorate failed', e); }
+  }
+  function decorateAll(){
+    const list = document.getElementById(CFG.listId); if(!list) return;
+    list.querySelectorAll(CFG.rowSel).forEach(decorateRow);
+  }
+
+  /* ─── Stand-alone scan window (from the Daily row button) ─── */
+  function openScans(raw){
+    const key = CFG.keyOf(raw), fy = CFG.fyOf(raw), info = CFG.infoOf(raw);
+    if(!key || !fy || !info){ toast('Scan not available', 'This PM could not be found. Refresh the page and try again.', 'warn'); return; }
+    openModal(`
+      ${CFG.headHTML()}
+      <div class="modal-body">
+        ${CFG.infoHTML(info, key)}
+        <div class="sx-mount"></div>
+      </div>
+      <div class="${CFG.footClass}">
+        <button type="button" class="${CFG.closeBtnClass}" onclick="closeModal()">Close</button>
+      </div>`);
+    const host = document.getElementById(CFG.hostId);
+    const el = host && host.querySelector('.sx-mount');
+    if(el) ScanKit.mount(el, { module: CFG.module, shard: fy, key, hint: HINT, showUsage: true });
+  }
+
+  /* ─── Phase 3.9: check-sheet block inside the Mark Done popup ─── */
+  function embedMarkDone(){
+    try{
+      const host = document.getElementById(CFG.hostId); if(!host) return;
+      if(!host.querySelector(CFG.markDone.detectSel) || host.querySelector('.sx-embed')) return;
+      const btn = host.querySelector(CFG.markDone.btnSel);
+      const m = btn && (btn.getAttribute('onclick') || '').match(CFG.markDone.idRe);
+      if(!m) return;
+      const raw = m[1], key = CFG.keyOf(raw), fy = CFG.fyOf(raw);
+      const body = host.querySelector('.modal-body');
+      if(!key || !fy || !body) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'sx-embed';
+      wrap.innerHTML = `<div class="sx-embed-title">📎 Check sheet scan / photo</div>
+        <div class="sx-embed-sub">Attach the filled paper check sheet. Files save straight away — even if you cancel this form.</div>
+        <div class="sx-mount"></div>`;
+      body.appendChild(wrap);
+      ScanKit.mount(wrap.querySelector('.sx-mount'), { module: CFG.module, shard: fy, key, hint: HINT });
+    }catch(e){ console.warn('[scans] Mark Done block failed', e); }
+  }
+
+  window.scanxOpen = openScans;
+  function start(){
+    const list = document.getElementById(CFG.listId);
+    if(list){ new MutationObserver(decorateAll).observe(list, { childList: true }); decorateAll(); }
+    else console.warn('[scans] daily list #' + CFG.listId + ' not found — row buttons inactive');
+    const host = document.getElementById(CFG.hostId);
+    if(host){ new MutationObserver(embedMarkDone).observe(host, { childList: true }); embedMarkDone(); }
+    ScanKit.onChange(decorateAll);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
+<script type="module">
+/* Checklist scan attachments — Firestore helpers for the add-on (Phase 3.8).
+   Same SDK URL as the main module, so it shares the same Firestore instance. */
+import { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+window.__pmScanFs = { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot };
+document.dispatchEvent(new CustomEvent('pm-scanfs-ready'));
 </script>
 </body>
 </html>

@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITC Haridwar — Asset Integrity & Statutory Compliance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+window.__pmFirebase = { db, auth, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, onSnapshot };
+window.__pmScanFs  = { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot };
+window.__pmFirebaseReady = false;
+window.__pmRole = 'user';
+onAuthStateChanged(auth, async (user)=>{
+  if(!user){ if(window.parent === window) window.location.href = './index.html'; return; }
+  window.__pmCurrentUser = user;
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      const snap = await getDoc(doc(db, 'admins', user.uid));
+      window.__pmRole = snap.exists() ? 'admin' : 'user';
+      break;
+    }catch(e){
+      console.warn('[role] admin check failed:', e.code || e.message);
+      window.__pmRole = 'user';
+      await new Promise(r=>setTimeout(r, 800));
+    }
+  }
+  window.__pmFirebaseReady = true;
+  document.dispatchEvent(new CustomEvent('pm-firebase-ready'));
+  document.dispatchEvent(new CustomEvent('pm-scanfs-ready'));
+});
+</script>
+<style>
+:root{
+  --bg-0:#0c0c0e; --bg-1:#111114; --bg-2:#18181d; --bg-3:#222227;
+  --line:#26262d; --line-2:#34343d;
+  --text:#ededee; --text-2:#a1a1a8; --text-3:#72727b;
+  --green:#22c55e; --green-soft:rgba(34,197,94,.12);
+  --amber:#f59e0b; --amber-soft:rgba(245,158,11,.12);
+  --red:#ef4444;   --red-soft:rgba(239,68,68,.12);
+  --blue:#60a5fa;  --blue-soft:rgba(96,165,250,.12);
+  --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased}
+html,body{background:var(--bg-0);color:var(--text);
+  font-family:'Segoe UI Variable Display','Segoe UI Variable','Segoe UI','Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:13.5px;line-height:1.5;letter-spacing:-.003em}
+button,input,select,textarea{font-family:inherit}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:'tnum'}
+/* header + tabs */
+.app-head{position:sticky;top:0;z-index:50;background:rgba(12,12,14,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.app-head-in{max-width:1100px;margin:0 auto;padding:14px 16px 0}
+.title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.mod-title{font-size:19px;font-weight:650;letter-spacing:-.015em;line-height:1.25}
+.mod-title::before{content:'';display:inline-block;width:4px;height:15px;background:var(--accent);border-radius:1px;margin-right:9px;vertical-align:-1px}
+.mod-sub{font-size:11.5px;color:var(--text-2);margin-top:3px}
+.role{flex:none;font:700 10px/1 var(--mono);letter-spacing:.1em;padding:6px 8px;border-radius:3px;border:1px solid var(--line-2);color:var(--text-2)}
+.role.admin{color:var(--green);border-color:rgba(34,197,94,.45);background:var(--green-soft)}
+.role.user{color:var(--blue);border-color:rgba(96,165,250,.45);background:var(--blue-soft)}
+.seg{display:flex;gap:2px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{flex:none;background:none;border:0;border-bottom:2px solid transparent;color:var(--text-2);padding:10px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.seg button:hover{color:var(--text)}
+.seg button.on{color:var(--text);border-bottom-color:var(--accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.wrap{max-width:1100px;margin:0 auto;padding:16px 16px 60px}
+/* KPI tiles */
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+@media (min-width:760px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--bg-1);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+.kpi .l{font-size:11.5px;color:var(--text-2)}
+.kpi .v{font-size:27px;font-weight:650;line-height:1.1;margin-top:5px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .m{font-size:10.5px;color:var(--text-3);margin-top:3px}
+.kpi.good .v{color:var(--green)} .kpi.bad .v{color:var(--red)} .kpi.warn .v{color:var(--amber)}
+/* cards */
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:6px;margin-bottom:14px}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--line)}
+.card-t{font-weight:650;font-size:14px}
+.card-m{font-size:11.5px;color:var(--text-2);margin-top:1px;max-width:640px}
+.card-b{padding:12px 14px}
+.sec-t{font-size:12.5px;font-weight:650;margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--line)}
+.rep-box{border:1px solid var(--accent);border-radius:10px;padding:12px;margin:12px 0;background:rgba(255,255,255,.025)}
+.rep-box .rep-t{font-size:12.5px;font-weight:700;color:var(--accent);margin-bottom:8px;letter-spacing:.3px}
+.btn.att-btn{padding:4px 9px;font-size:11px}
+.li .s.rep{color:var(--text-2)}
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;padding:8px 14px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);color:#0c0c0e;font-size:12.5px;font-weight:650;cursor:pointer;white-space:nowrap;text-decoration:none}
+.btn:hover{filter:brightness(1.08)}
+.btn:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--line-2)}
+.btn.ghost:hover{border-color:var(--text-2)}
+.btn.danger{background:transparent;color:var(--red);border-color:rgba(239,68,68,.5)}
+.btn.sm{min-height:32px;padding:5px 11px;font-size:11.5px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+/* forms */
+.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+@media (min-width:760px){.filters{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.filters .wide{grid-column:1/-1}
+.fld{margin-bottom:11px;min-width:0}
+.fld > label{display:block;font-size:11.5px;color:var(--text-2);font-weight:600;margin-bottom:4px}
+.fld > label.req::after{content:' *';color:var(--red)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:420px){.row2{grid-template-columns:1fr}}
+input,select,textarea{width:100%;min-height:38px;background:var(--bg-2);border:1px solid var(--line-2);color:var(--text);border-radius:5px;padding:8px 10px;font-size:13px}
+textarea{resize:vertical;min-height:60px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+.hint{font-size:11px;color:var(--text-3);margin-top:4px;line-height:1.45}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line-2);border-radius:5px;font-size:12.5px;color:var(--text);cursor:pointer}
+.checks input{width:auto;min-height:0}
+/* pills */
+.pill{display:inline-block;font:700 10px/1 var(--mono);letter-spacing:.04em;padding:4px 7px;border-radius:3px;border:1px solid var(--line-2);color:var(--text-2);white-space:nowrap;vertical-align:1px}
+.pill.ok{color:var(--green);border-color:rgba(34,197,94,.4);background:var(--green-soft)}
+.pill.due{color:var(--amber);border-color:rgba(245,158,11,.4);background:var(--amber-soft)}
+.pill.over,.pill.notok{color:var(--red);border-color:rgba(239,68,68,.45);background:var(--red-soft)}
+.pill.none{color:var(--text-3)}
+.pill.acc{color:var(--accent);border-color:var(--accent)}
+/* list rows */
+.list{display:flex;flex-direction:column}
+.li{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 12px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.li:last-child{border-bottom:0}
+.li.click{cursor:pointer}
+.li.click:hover{background:var(--bg-2)}
+.li .main{flex:1 1 230px;min-width:0}
+.li .t{font-weight:600;font-size:13.5px;word-break:break-word}
+.li .s{font-size:11.5px;color:var(--text-2);margin-top:2px;word-break:break-word}
+.li .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.empty{padding:26px 16px;text-align:center;color:var(--text-2);font-size:12.5px;line-height:1.6}
+.more{padding:10px 14px;font-size:11.5px;color:var(--text-3);text-align:center}
+.banner{padding:10px 12px;border-radius:5px;font-size:12.5px;margin-bottom:12px;border:1px solid}
+.banner.ok{color:var(--green);border-color:rgba(34,197,94,.4);background:var(--green-soft)}
+.banner.info{color:var(--text-2);border-color:var(--line-2);background:var(--bg-2)}
+.banner.bad{color:#fca5a5;border-color:rgba(239,68,68,.55);background:var(--red-soft)}
+.banner.bad b{color:#fecaca}
+.hdr-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0 2px}
+.hdr-acts .btn{min-height:40px}
+.build{font:600 9.5px/1 var(--mono);color:var(--text-3);letter-spacing:.06em;margin-left:auto}
+#aic-status:empty,#aic-errors:empty{display:none}
+#aic-status,#aic-errors{max-width:1100px;margin:10px auto 0;padding:0 16px}
+.diag{width:100%;border-collapse:collapse;font-size:12.5px}
+.diag td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.diag td:first-child{color:var(--text-2);width:42%}
+.diag .ok{color:var(--green);font-weight:700}.diag .no{color:var(--red);font-weight:700}.diag .wait{color:var(--text-3)}
+.rep-flash{animation:repflash 1.6s ease-out 1}
+@keyframes repflash{0%{box-shadow:0 0 0 4px rgba(245,158,11,.55)}100%{box-shadow:0 0 0 0 rgba(245,158,11,0)}}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.facts .k{font-size:10.5px;color:var(--text-3)}
+.facts .v{font-size:13px;font-weight:600;word-break:break-word}
+.facts .full{grid-column:1/-1}
+.pre{white-space:pre-wrap}
+/* modal + toast */
+#modal-bd{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:2000;display:none}
+#modal-bd.show{display:block}
+#modal-host{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:94vw;max-width:640px;max-height:92vh;display:none;flex-direction:column;background:var(--bg-1);border:1px solid var(--line-2);border-radius:8px;z-index:2001;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+#modal-host.show{display:flex}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--bg-2);border-radius:8px 8px 0 0}
+.modal-title{font-weight:650;font-size:15.5px;line-height:1.3}
+.modal-sub{font-size:11.5px;color:var(--text-2);margin-top:2px}
+.modal-close{flex:none;background:none;border:0;color:var(--text-2);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+.modal-body{padding:14px 16px;overflow-y:auto;flex:1}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line)}
+#toast-wrap{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2100;display:flex;flex-direction:column;gap:8px;width:min(92vw,420px);pointer-events:none}
+.toast{background:var(--bg-2);border:1px solid var(--line-2);border-left:3px solid var(--green);border-radius:5px;padding:10px 12px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.5);transition:opacity .25s}
+.toast b{display:block;font-size:12.5px}
+.toast.warn{border-left-color:var(--amber)} .toast.error{border-left-color:var(--red)}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+:root{--accent:#eab308}
+.mx{border-collapse:separate;border-spacing:4px 5px;width:100%}
+.mx th{font-size:11.5px;color:var(--text);font-weight:650;text-align:center;padding:0 0 2px;white-space:nowrap}
+.mx-ph{font:600 9.5px/1.2 var(--mono);color:var(--text-3);letter-spacing:.06em}
+.mx .mx-a{text-align:left;padding-right:6px;min-width:118px;vertical-align:middle}
+.mx-an{font-size:12px;font-weight:600;line-height:1.25}
+.mx-af{font-size:10px;color:var(--text-3);margin-top:1px}
+.cell{width:100%;min-width:54px;height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-radius:5px;border:1px solid var(--line-2);background:var(--bg-2);color:var(--text-2);font-family:var(--mono);cursor:pointer;padding:0 2px}
+.cell b{font-size:12.5px;font-weight:700}
+.cell small{font-size:8.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap}
+.cell.ok{background:var(--green-soft);color:var(--green);border-color:rgba(34,197,94,.4)}
+.cell.due{background:var(--amber-soft);color:var(--amber);border-color:rgba(245,158,11,.45)}
+.cell.over{background:var(--red-soft);color:var(--red);border-color:rgba(239,68,68,.5)}
+.cell.flag{background:var(--red-soft);color:var(--red);border-color:rgba(239,68,68,.65)}
+.cell.na{border-style:dashed;opacity:.45;cursor:default;background:transparent}
+.cell.sel{outline:2px solid var(--accent);outline-offset:1px}
+.cell:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.rc-date{font-size:12px;color:var(--text)}
+.att{font-size:11.5px;color:var(--text-2);font-family:var(--mono);white-space:nowrap}
+.noatt{font-size:10.5px;color:var(--amber);font-family:var(--mono);white-space:nowrap}
+
+/* ═══ Phase 3.8 add-on styles — checklist scans + mandatory toggle ═══
+   Uses each module's own colour variables, with fallbacks, so it blends in. */
+.sx-chip{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 10px;min-height:26px;
+  border:1px dashed var(--border-bright, var(--line-2, #3a3f55));border-radius:13px;background:transparent;
+  color:var(--text-dim, var(--text-2, #9aa3b5));font-family:inherit;font-size:10.5px;font-weight:600;
+  letter-spacing:.02em;line-height:1;cursor:pointer;white-space:nowrap;
+  transition:border-color .15s,color .15s,background .15s}
+.sx-chip:hover{border-color:var(--accent);color:var(--accent)}
+.sx-chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sx-chip.has{border-style:solid;border-color:var(--accent-4, var(--green, #22c55e));
+  color:var(--accent-4, var(--green, #22c55e));background:rgba(34,197,94,.08)}
+
+.sx-upload{display:flex;gap:10px;flex-wrap:wrap;margin:2px 0 8px}
+.sx-upload.busy{opacity:.45;pointer-events:none}
+.sx-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;min-height:40px;border-radius:5px;border:1px solid var(--border-bright, var(--line-2, #3a3f55));
+  background:transparent;color:var(--text, #e8ecf3);font-family:inherit;font-size:12px;font-weight:600;
+  cursor:pointer;text-decoration:none;transition:border-color .15s,background .15s}
+.sx-btn:hover{border-color:var(--accent)}
+.sx-btn:focus-within,.sx-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sx-btn.sx-primary{background:var(--accent);border-color:var(--accent);color:#0a0e1a}
+.sx-btn.sm{padding:6px 11px;min-height:32px;font-size:11px}
+.sx-btn.danger{color:var(--accent-3, var(--red, #ef4444));border-color:var(--accent-3, var(--red, #ef4444))}
+.sx-file{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.sx-hint{font-size:11px;color:var(--text-muted, var(--text-3, #6b7488));line-height:1.5;margin:0 0 10px}
+.sx-status{font-size:12px;line-height:1.45;margin:0 0 10px}
+.sx-status:empty{display:none}
+.sx-status.info{color:var(--text-dim, var(--text-2, #9aa3b5))}
+.sx-status.ok{color:var(--accent-4, var(--green, #22c55e))}
+.sx-status.warn{color:var(--accent-2, var(--amber, #f59e0b))}
+.sx-status.err{color:var(--accent-3, var(--red, #ef4444))}
+.sx-list{display:flex;flex-direction:column;gap:8px}
+.sx-item{display:grid;grid-template-columns:26px 1fr;gap:4px 10px;padding:10px 12px;
+  background:var(--bg-panel-2, var(--bg-2, #161e35));border:1px solid var(--border, var(--line, #1f2a44));border-radius:6px}
+.sx-ico{font-size:18px;line-height:1.3}
+.sx-name{font-size:12.5px;font-weight:600;color:var(--text, #e8ecf3);word-break:break-word}
+.sx-sub{font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488));margin-top:3px;word-break:break-word}
+.sx-acts{grid-column:2;display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.sx-empty{padding:16px;text-align:center;font-size:12px;line-height:1.5;color:var(--text-muted, var(--text-3, #6b7488));
+  border:1px dashed var(--border-bright, var(--line-2, #3a3f55));border-radius:6px}
+.sx-empty.sx-bad{color:var(--accent-3, var(--red, #ef4444))}
+.sx-row{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.sx-view{margin-top:12px}
+.sx-view:empty{margin-top:0}
+.sx-view img{display:block;width:100%;height:auto;border-radius:6px;background:#fff;
+  border:1px solid var(--border, var(--line, #1f2a44))}
+.sx-view-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;
+  font-size:11.5px;color:var(--text-dim, var(--text-2, #9aa3b5));word-break:break-word}
+.sx-usage{margin-right:auto;align-self:center;font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488))}
+
+/* Mandatory / optional switch in Checklist Config (admin) */
+.req-toggle{display:inline-flex;align-items:center;gap:7px;padding:4px 11px 4px 5px;min-height:28px;
+  border-radius:14px;border:1px solid var(--border-bright, var(--line-2, #3a3f55));background:transparent;
+  color:var(--text-dim, var(--text-2, #9aa3b5));font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+.req-toggle .knob{width:16px;height:16px;border-radius:50%;background:var(--border-bright, var(--line-2, #3a3f55));
+  transition:background .15s}
+.req-toggle.on{border-color:var(--accent-3, var(--red, #ef4444));color:var(--accent-3, var(--red, #ef4444));
+  background:rgba(239,68,68,.08)}
+.req-toggle.on .knob{background:var(--accent-3, var(--red, #ef4444))}
+.req-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.req-bulk{display:flex;gap:8px;flex-wrap:wrap}
+@media (prefers-reduced-motion: reduce){ .sx-chip,.sx-btn,.req-toggle,.req-toggle .knob{transition:none} }
+
+/* Phase 3.9 — shared ScanKit panel + Mark Done check-sheet block */
+.sx-kit{display:block}
+.sx-usage{display:block;margin:10px 0 0;font-size:10.5px;color:var(--text-muted, var(--text-3, #6b7488))}
+.sx-usage:empty{display:none}
+.sx-embed{margin-top:18px;padding-top:14px;border-top:1px solid var(--border, var(--line, #26262d))}
+.sx-embed-title{font-size:13px;font-weight:700;color:var(--text, #e8ecf3);margin-bottom:2px}
+.sx-embed-sub{font-size:11px;line-height:1.5;color:var(--text-muted, var(--text-3, #6b7488));margin-bottom:10px}
+
+</style>
+</head>
+<body>
+<script>
+/* 3.10b — phones have no console: show any script error on screen, and warn if
+   the page never finishes loading (old cached file or a file cut short on GitHub). */
+window.__aicBuild = '3.10b · 27-09-2026';
+(function(){
+  function show(msg){
+    var box = document.getElementById('aic-errors'); if(!box) return setTimeout(function(){ show(msg); }, 300);
+    if(box.childElementCount >= 3) return;
+    var d = document.createElement('div'); d.className = 'banner bad';
+    d.innerHTML = '<b>Page error:</b> ' + String(msg).replace(/[<>&]/g, '') + '<br>Tap <b>🩺 Check connection</b> and send a screenshot if this keeps happening.';
+    box.appendChild(d);
+  }
+  window.__aicShowError = show;
+  window.addEventListener('error', function(e){ show((e && e.message) || 'script error'); });
+  window.addEventListener('unhandledrejection', function(e){ var r = e && e.reason; show((r && (r.code ? r.code + ' — ' : '') + (r.message || r)) || 'request failed'); });
+  setTimeout(function(){
+    if(window.__aicBooted) return;
+    show('This page did not finish loading. Most likely the file on GitHub is cut short or an old copy is cached. Re-upload asset-integrity.html (GitHub must show about 1,479 lines ending with &lt;/html&gt;), then clear the browser cache.');
+  }, 12000);
+})();
+</script>
+<div id="toast-wrap" aria-live="polite"></div>
+<div id="modal-bd" onclick="closeModal()"></div>
+<div id="modal-host" role="dialog" aria-modal="true"></div>
+<header class="app-head"><div class="app-head-in">
+  <div class="title-row">
+    <div><div class="mod-title">Asset Integrity &amp; Statutory Compliance</div>
+      <div class="mod-sub">Annual · half-yearly · quarterly testing, inspection and maintenance records — Ph-1 (Foods · PCPB · COT) and Ph-2 (PPB)</div></div>
+    <span class="role" id="role-pill">…</span>
+  </div>
+  <div class="hdr-acts">
+    <button type="button" class="btn" id="hdr-report" onclick="aicAddReport()">📄 Add test report (PDF / photo)</button>
+    <button type="button" class="btn sm ghost" onclick="aicDiagnostics()">🩺 Check connection</button>
+    <span class="build" id="aic-build"></span>
+  </div>
+  <nav class="seg" aria-label="Sections">
+    <button type="button" data-v="overview" class="on">Overview</button>
+    <button type="button" data-v="records">Records</button>
+    <button type="button" data-v="setup">Activities &amp; equipment</button>
+  </nav>
+</div></header>
+<div id="aic-errors"></div>
+<div id="aic-status"></div>
+<main class="wrap" id="view"></main>
+<script>
+/* ═══ Shared helpers — Phase 3.9 modules (Statutory register, Factory Passport) ═══ */
+const UNITS = [
+  { id: 'P1-FOODS', phase: 'Ph-1', name: 'Foods' },
+  { id: 'P1-PCPB',  phase: 'Ph-1', name: 'PCPB'  },
+  { id: 'P1-COT',   phase: 'Ph-1', name: 'COT'   },
+  { id: 'P2-PPB',   phase: 'Ph-2', name: 'PPB'   },
+];
+function unitById(id){ return UNITS.find(u=>u.id === id) || null; }
+function unitLabel(id){ const u = unitById(id); return u ? `${u.phase} · ${u.name}` : (id || '—'); }
+function unitOptions(sel, allLabel){
+  return (allLabel ? `<option value="">${esc(allLabel)}</option>` : '') +
+    UNITS.map(u=>`<option value="${u.id}" ${u.id === sel ? 'selected' : ''}>${esc(u.phase + ' · ' + u.name)}</option>`).join('');
+}
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(title, msg, kind){
+  const w = document.getElementById('toast-wrap'); if(!w) return;
+  const e = document.createElement('div');
+  e.className = 'toast' + (kind === 'warn' ? ' warn' : kind === 'error' ? ' error' : '');
+  e.innerHTML = `<b>${esc(title)}</b>${msg ? `<div>${esc(msg)}</div>` : ''}`;
+  w.appendChild(e);
+  setTimeout(()=>{ e.style.opacity = '0'; setTimeout(()=>e.remove(), 260); }, 4500);
+}
+function openModal(html){
+  const h = document.getElementById('modal-host');
+  h.innerHTML = html; h.classList.add('show');
+  document.getElementById('modal-bd').classList.add('show');
+  const b = h.querySelector('.modal-body'); if(b) b.scrollTop = 0;
+}
+function closeModal(){
+  const hook = window.__onModalClose; window.__onModalClose = null;
+  if(hook && hook() === false){ window.__onModalClose = hook; return; }   // hook asked to keep the form open
+  document.getElementById('modal-host').classList.remove('show');
+  document.getElementById('modal-bd').classList.remove('show');
+}
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeModal(); });
+function isAdmin(){ return window.__pmRole === 'admin'; }
+function me(){ const u = window.__pmCurrentUser; return u ? { uid: u.uid, email: u.email || u.uid } : null; }
+function requireAdmin(what){ if(isAdmin()) return true; toast('Admin only', `"${what}" needs admin rights.`, 'warn'); return false; }
+function requireReady(){ if(window.__pmFirebase && window.__pmCurrentUser) return true; toast('Not connected yet', 'Still connecting to the server — try again in a few seconds.', 'warn'); return false; }
+function z2(n){ return String(n).padStart(2, '0'); }
+function todayIso(){ const d = new Date(); return `${d.getFullYear()}-${z2(d.getMonth() + 1)}-${z2(d.getDate())}`; }
+function isoToDate(s){ return new Date(String(s) + 'T00:00:00'); }
+function fmtDate(iso){ if(!iso) return '—'; const d = isoToDate(iso); if(isNaN(d)) return '—'; return `${z2(d.getDate())}-${z2(d.getMonth() + 1)}-${d.getFullYear()}`; }
+function fmtStamp(iso){ const d = new Date(iso); if(!iso || isNaN(d)) return '—'; return `${z2(d.getDate())}-${z2(d.getMonth() + 1)}-${d.getFullYear()} ${z2(d.getHours())}:${z2(d.getMinutes())}`; }
+function addMonthsIso(iso, n){
+  const d = isoToDate(iso); const day = d.getDate();
+  d.setMonth(d.getMonth() + (+n || 0));
+  if(d.getDate() < day) d.setDate(0);
+  return `${d.getFullYear()}-${z2(d.getMonth() + 1)}-${z2(d.getDate())}`;
+}
+function daysBetween(a, b){ return Math.round((isoToDate(b) - isoToDate(a)) / 86400000); }
+function fyOfIso(iso){ const d = isoToDate(iso); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `FY${y}-${z2((y + 1) % 100)}`; }
+function newId(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function fb(){ return window.__pmFirebase; }
+function docRef(id){ const f = fb(); return f.doc(f.db, 'itc_pm', id); }
+function setMerge(id, data){ return fb().setDoc(docRef(id), data, { merge: true }); }
+function updateFields(id, data){ return fb().updateDoc(docRef(id), data); }
+function delField(){ return fb().deleteField(); }
+function listen(id, cb){
+  return fb().onSnapshot(docRef(id), snap=>cb(snap.exists() ? snap.data() : null),
+    err=>{ console.warn('[listen]', id, err); cb(undefined, err); });
+}
+function friendlyErr(e){
+  const c = e && e.code;
+  if(c === 'permission-denied') return 'Permission denied — sign out and sign in again.';
+  if(c === 'unavailable') return 'No connection — check mobile data or Wi-Fi.';
+  if(c === 'not-found') return 'That record no longer exists — it may have been deleted.';
+  return (e && e.message) || String(e);
+}
+function downloadText(name, text, mime){
+  const blob = new Blob([text], { type: mime || 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
+}
+function csvCell(v){ const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function parseCSV(text){
+  const rows = []; let row = [], cur = '', i = 0, q = false;
+  text = String(text || '').replace(/^\ufeff/, '');
+  while(i < text.length){
+    const c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i + 1] === '"'){ cur += '"'; i += 2; continue; } q = false; i++; continue; }
+      cur += c; i++; continue;
+    }
+    if(c === '"'){ q = true; i++; continue; }
+    if(c === ','){ row.push(cur); cur = ''; i++; continue; }
+    if(c === '\r'){ i++; continue; }
+    if(c === '\n'){ row.push(cur); rows.push(row); row = []; cur = ''; i++; continue; }
+    cur += c; i++;
+  }
+  if(cur !== '' || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(c=>String(c).trim() !== ''));
+}
+function whenReady(fn){
+  if(window.__pmFirebaseReady) fn();
+  else document.addEventListener('pm-firebase-ready', ()=>fn(), { once: true });
+}
+function setRolePill(){
+  const e = document.getElementById('role-pill'); if(!e) return;
+  e.textContent = isAdmin() ? 'ADMIN' : 'USER';
+  e.className = 'role ' + (isAdmin() ? 'admin' : 'user');
+}
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   ScanKit — shared attachment engine (Phase 3.9)
+   One engine for every attachment in the app: Daily-row checklist scans,
+   the Mark Done check-sheet block, statutory test reports and Factory
+   Passport documents.
+   Storage (inside the existing itc_pm collection — no rules change):
+       itc_pm/scanidx_<module>_<shard>   index: items.{fileId} = meta
+       itc_pm/scandata_<fileId>_<part>   file data, ≤ 700 K base64 chars
+   API: ScanKit.mount(el,{module,shard,key,...}) · count() · list()
+        onChange(fn) · deleteAllFor(module,shard,key)
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if(window.ScanKit) return;
+
+  const CHUNK = 700000;               // base64 chars per Firestore document (limit ≈ 1 MiB)
+  const MAX_BYTES = 4 * 1024 * 1024;  // per file, after compression
+  const IMG_MAX_SIDE = 1600;          // px, long side of stored photos
+  const IMG_QUALITY = 0.62;           // JPEG quality for stored photos
+
+  const S = { idx:{}, subs:{}, listeners:[], mounts:[], busy:false };
+
+  const fs    = ()=>window.__pmScanFs;
+  const fbx   = ()=>window.__pmFirebase;
+  const user  = ()=>window.__pmCurrentUser || null;
+  const ready = ()=>!!(fs() && fbx() && fbx().db && user());
+  const admin = ()=>window.__pmRole === 'admin';
+  const esc   = s=>String(s == null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sid     = (mod, shard)=>`${mod}_${shard}`;
+  const idxDoc  = (mod, shard)=>`scanidx_${mod}_${shard}`;
+  const dataDoc = (id, k)=>`scandata_${id}_${k}`;
+
+  function note(t, m, k){ try{ if(typeof window.toast === 'function') window.toast(t, m, k); }catch(e){} }
+  function fmtBytes(n){ n = +n || 0; if(n < 1024) return n + ' B'; if(n < 1048576) return Math.round(n/1024) + ' KB'; return (n/1048576).toFixed(1) + ' MB'; }
+  function fmtWhen(iso){ const d = new Date(iso); if(isNaN(d)) return ''; const z = n=>String(n).padStart(2,'0'); return `${z(d.getDate())}-${z(d.getMonth()+1)}-${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; }
+  function newId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function baseName(n){ return String(n || 'scan').replace(/\.[^.]+$/, '') || 'scan'; }
+  function friendly(e){
+    const code = (e && e.code) || '';
+    if(code === 'permission-denied') return new Error('the server refused the request (permission denied). Sign out, sign in again and retry.');
+    if(code === 'resource-exhausted') return new Error('the free daily Firebase quota is used up. Try again tomorrow.');
+    if(code === 'unavailable') return new Error('no connection to the server. Check mobile data or Wi-Fi and retry.');
+    return e instanceof Error ? e : new Error(String(e));
+  }
+
+  /* ─── Index subscriptions ─── */
+  function ensure(mod, shard){
+    if(!mod || !shard) return;
+    const id = sid(mod, shard);
+    if(S.subs[id] || !ready()) return;
+    const f = fs(), db = fbx().db;
+    S.subs[id] = 'pending';
+    try{
+      S.subs[id] = f.onSnapshot(f.doc(db, 'itc_pm', idxDoc(mod, shard)), snap=>{
+        S.idx[id] = (snap.exists() && snap.data().items) || {};
+        changed();
+      }, err=>{
+        console.warn('[ScanKit] could not read index', id, err);
+        S.subs[id] = 'error';
+        if(S.idx[id] === undefined) S.idx[id] = {};
+        changed();
+      });
+    }catch(e){ console.warn('[ScanKit] subscribe failed', e); S.subs[id] = null; }
+  }
+  function list(mod, shard, key){
+    const m = S.idx[sid(mod, shard)];
+    if(m === undefined) return undefined;
+    return Object.keys(m).filter(id=>m[id] && m[id].pm === key)
+      .map(id=>Object.assign({ id }, m[id]))
+      .sort((a, b)=>String(a.at).localeCompare(String(b.at)));
+  }
+  function count(mod, shard, key){ ensure(mod, shard); const l = list(mod, shard, key); return l === undefined ? undefined : l.length; }
+  function metaOf(m, id){ const x = (S.idx[sid(m.mod, m.shard)] || {})[id]; return x ? Object.assign({ id }, x) : null; }
+  function changed(){
+    S.mounts = S.mounts.filter(m=>m.el.isConnected);
+    S.mounts.forEach(render);
+    S.listeners.forEach(fn=>{ try{ fn(); }catch(e){ console.warn('[ScanKit] listener failed', e); } });
+  }
+  function kick(){ S.mounts.forEach(m=>ensure(m.mod, m.shard)); changed(); }
+  document.addEventListener('pm-firebase-ready', kick);
+  document.addEventListener('pm-scanfs-ready', kick);
+
+  /* ─── Mounted attachment panel ─── */
+  const q = (m, name)=>m.el.querySelector(`[data-sx="${name}"]`);
+  function status(m, msg, kind){
+    if(!m.el.isConnected) return false;
+    const e = q(m, 'status'); if(!e) return false;
+    e.className = 'sx-status ' + (kind || 'info');
+    e.textContent = msg || '';
+    return true;
+  }
+  function mount(el, o){
+    o = o || {};
+    const m = { el, mod: o.module, shard: o.shard, key: o.key,
+      accept: o.accept || 'image/*,application/pdf',
+      pickLabel: o.pickLabel || 'Upload photo or PDF',
+      emptyText: o.emptyText || 'No scans yet. Take a photo of the filled checklist or upload a PDF.',
+      itemWord: o.itemWord || 'Scan', showUsage: !!o.showUsage, viewId: null, url: null };
+    el.classList.add('sx-kit');
+    el.innerHTML = `
+      <div class="sx-upload">
+        <label class="sx-btn sx-primary">📷 Take photo<input class="sx-file" data-sx="cam" type="file" accept="image/*" capture="environment"></label>
+        <label class="sx-btn">📁 ${esc(m.pickLabel)}<input class="sx-file" data-sx="pick" type="file" accept="${esc(m.accept)}" multiple></label>
+      </div>
+      ${o.hint ? `<div class="sx-hint">${esc(o.hint)}</div>` : ''}
+      <div class="sx-status info" data-sx="status" role="status" aria-live="polite"></div>
+      <div class="sx-list" data-sx="list"></div>
+      <div class="sx-view" data-sx="view"></div>
+      ${m.showUsage ? '<div class="sx-usage" data-sx="usage"></div>' : ''}`;
+    el.querySelectorAll('input.sx-file').forEach(inp=>inp.addEventListener('change', ()=>onFiles(m, inp)));
+    el.addEventListener('click', ev=>{
+      const b = ev.target.closest('[data-sx-act]');
+      if(!b || !el.contains(b)) return;
+      ev.preventDefault(); ev.stopPropagation();
+      const act = b.getAttribute('data-sx-act'), id = b.getAttribute('data-id');
+      if(act === 'view') view(m, id); else if(act === 'save') save(m, id);
+      else if(act === 'del') del(m, id); else if(act === 'hide') hide(m);
+    });
+    S.mounts.push(m);
+    ensure(m.mod, m.shard);
+    render(m);
+    if(S.busy) status(m, 'An upload is still running in the background…', 'info');
+    return m;
+  }
+  function itemHTML(m, x, i){
+    const me = user();
+    const canDel = admin() || (me && x.uid === me.uid);
+    const icon = (x.kind === 'pdf' || /pdf/i.test(x.type || '')) ? '📄' : (x.kind === 'image' || /^image\//.test(x.type || '')) ? '🖼' : '📎';
+    return `<div class="sx-item">
+      <div class="sx-ico" aria-hidden="true">${icon}</div>
+      <div class="sx-meta">
+        <div class="sx-name">${esc(m.itemWord)} ${i + 1} · ${esc(x.name || 'file')}</div>
+        <div class="sx-sub">${esc(x.by || 'unknown')} · ${fmtWhen(x.at)} · ${fmtBytes(x.size)}</div>
+      </div>
+      <div class="sx-acts">
+        <button type="button" class="sx-btn sm" data-sx-act="view" data-id="${esc(x.id)}">View</button>
+        <button type="button" class="sx-btn sm" data-sx-act="save" data-id="${esc(x.id)}">Save to phone</button>
+        ${canDel ? `<button type="button" class="sx-btn sm danger" data-sx-act="del" data-id="${esc(x.id)}">Delete</button>` : ''}
+      </div>
+    </div>`;
+  }
+  function render(m){
+    const listEl = q(m, 'list'); if(!listEl) return;
+    const items = list(m.mod, m.shard, m.key);
+    if(!ready()) listEl.innerHTML = '<div class="sx-empty">Connecting to the server…</div>';
+    else if(items === undefined) listEl.innerHTML = '<div class="sx-empty">Loading attachments…</div>';
+    else if(!items.length) listEl.innerHTML = `<div class="sx-empty">${esc(m.emptyText)}</div>`;
+    else listEl.innerHTML = items.map((x, i)=>itemHTML(m, x, i)).join('');
+    const usage = q(m, 'usage');
+    if(usage){
+      const all = Object.values(S.idx[sid(m.mod, m.shard)] || {});
+      const stored = all.reduce((s, x)=>s + (+x.stored || Math.round((+x.size || 0) * 1.34)), 0);
+      usage.textContent = S.idx[sid(m.mod, m.shard)] ? `${m.shard}: ${all.length} file${all.length === 1 ? '' : 's'} · ${fmtBytes(stored)} stored` : '';
+    }
+    const up = m.el.querySelector('.sx-upload');
+    if(up) up.classList.toggle('busy', S.busy);
+  }
+
+  /* ─── Upload ─── */
+  function readB64(file){
+    return new Promise((resolve, reject)=>{
+      const r = new FileReader();
+      r.onload = ()=>{ const s = String(r.result || ''); resolve(s.slice(s.indexOf(',') + 1)); };
+      r.onerror = ()=>reject(new Error('the file could not be read'));
+      r.readAsDataURL(file);
+    });
+  }
+  function compressImage(file){
+    return new Promise((resolve, reject)=>{
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = ()=>{
+        try{
+          const w0 = img.naturalWidth, h0 = img.naturalHeight;
+          if(!w0 || !h0) throw new Error('empty image');
+          const scale = Math.min(1, IMG_MAX_SIDE / Math.max(w0, h0));
+          const w = Math.max(1, Math.round(w0 * scale)), h = Math.max(1, Math.round(h0 * scale));
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = c.toDataURL('image/jpeg', IMG_QUALITY);
+          const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+          resolve({ b64, bytes: Math.round(b64.length * 0.75) });
+        }catch(e){ reject(e); }
+        finally{ URL.revokeObjectURL(url); }
+      };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('this image format cannot be opened by the browser')); };
+      img.src = url;
+    });
+  }
+  async function prepare(file){
+    const type = String(file.type || '').toLowerCase();
+    const isPdf = type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+    const isImg = type.indexOf('image/') === 0;
+    if(isImg && !/heic|heif/.test(type)){
+      try{
+        const out = await compressImage(file);
+        if(out.bytes <= MAX_BYTES && (out.bytes < file.size || file.size > MAX_BYTES)){
+          return { b64: out.b64, mime: 'image/jpeg', kind: 'image', name: baseName(file.name) + '.jpg' };
+        }
+      }catch(e){ console.warn('[ScanKit] compression skipped:', e && e.message ? e.message : e); }
+    }
+    if(file.size > MAX_BYTES){
+      throw new Error(`${fmtBytes(file.size)} is over the 4 MB limit. ${isPdf ? 'Compress the PDF or photograph the pages instead.' : 'Use a smaller file.'}`);
+    }
+    const b64 = await readB64(file);
+    return { b64, mime: type || (isPdf ? 'application/pdf' : 'application/octet-stream'),
+             kind: isPdf ? 'pdf' : (isImg ? 'image' : 'file'), name: file.name || 'file' };
+  }
+  async function upload(p, m, onPct){
+    const f = fs(), db = fbx().db, me = user();
+    const id = newId();
+    const parts = Math.max(1, Math.ceil(p.b64.length / CHUNK));
+    const written = [];
+    try{
+      for(let k = 0; k < parts; k++){
+        await f.setDoc(f.doc(db, 'itc_pm', dataDoc(id, k)),
+          { d: p.b64.slice(k * CHUNK, (k + 1) * CHUNK), k, n: parts, scan: id, pm: m.key, module: m.mod });
+        written.push(dataDoc(id, k));
+        if(onPct) onPct(Math.round((k + 1) / parts * 100));
+      }
+      const at = new Date().toISOString();
+      const meta = { pm: m.key, name: String(p.name).slice(0, 120), type: p.mime, kind: p.kind,
+                     size: Math.round(p.b64.length * 0.75), stored: p.b64.length, parts,
+                     by: me.email || me.uid, uid: me.uid, at };
+      await f.setDoc(f.doc(db, 'itc_pm', idxDoc(m.mod, m.shard)),
+        { items: { [id]: meta }, module: m.mod, shard: m.shard, updatedAt: at }, { merge: true });
+    }catch(e){
+      for(const d of written){ try{ await f.deleteDoc(f.doc(db, 'itc_pm', d)); }catch(_){ /* best effort */ } }
+      throw friendly(e);
+    }
+  }
+  function renderAll(){ S.mounts = S.mounts.filter(x=>x.el.isConnected); S.mounts.forEach(render); }
+  async function onFiles(m, input){
+    const files = Array.from((input && input.files) || []);
+    if(input) input.value = '';
+    if(!files.length) return;
+    if(!ready()){ status(m, 'Still connecting to the server. Wait a few seconds and try again.', 'err'); return; }
+    if(S.busy){ status(m, 'An upload is already running. Wait for it to finish.', 'warn'); return; }
+    S.busy = true; renderAll();
+    let ok = 0; const failed = [];
+    for(let i = 0; i < files.length; i++){
+      const file = files[i];
+      const tag = files.length > 1 ? ` ${i + 1} of ${files.length}` : '';
+      try{
+        status(m, `Preparing file${tag}…`, 'info');
+        const p = await prepare(file);
+        await upload(p, m, pct=>status(m, `Uploading file${tag} — ${pct}%. Keep this screen open.`, 'info'));
+        ok++;
+      }catch(e){
+        console.error('[ScanKit] upload failed', e);
+        failed.push(`${file.name || 'file'}: ${e && e.message ? e.message : e}`);
+      }
+    }
+    S.busy = false; renderAll();
+    const word = m.itemWord.toLowerCase();
+    const msg = failed.length
+      ? `${ok} uploaded, ${failed.length} failed. ${failed.join(' · ')}`
+      : `${ok} ${word}${ok === 1 ? '' : 's'} uploaded.`;
+    if(!status(m, msg, failed.length ? 'err' : 'ok')) note(failed.length ? 'Upload incomplete' : 'Uploaded', msg, failed.length ? 'warn' : undefined);
+  }
+
+  /* ─── View / save / delete ─── */
+  async function loadData(m, id){
+    const meta = metaOf(m, id);
+    if(!meta) throw new Error('file not found — it may have been deleted');
+    if(!ready()) throw new Error('not connected to the server yet');
+    const f = fs(), db = fbx().db, parts = meta.parts || 1;
+    const snaps = await Promise.all(Array.from({ length: parts }, (_, k)=>f.getDoc(f.doc(db, 'itc_pm', dataDoc(id, k)))));
+    const b64 = snaps.map((s, k)=>{
+      if(!s.exists()) throw new Error(`part ${k + 1} of ${parts} is missing`);
+      return (s.data() || {}).d || '';
+    }).join('');
+    return { meta, b64 };
+  }
+  function b64ToBlob(b64, type){
+    const bin = atob(b64); const n = bin.length; const arr = new Uint8Array(n);
+    for(let i = 0; i < n; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: type || 'application/octet-stream' });
+  }
+  function downloadName(x){
+    const safe = s=>String(s || '').replace(/[^\w.-]+/g, '_');
+    let name = safe(x.name) || 'file';
+    if(!/\.[a-z0-9]{2,4}$/i.test(name)) name += /pdf/i.test(x.type || '') ? '.pdf' : /jpe?g/i.test(x.type || '') ? '.jpg' : /png/i.test(x.type || '') ? '.png' : '';
+    return `${safe(x.pm)}_${name}`;
+  }
+  function hide(m){
+    const v = q(m, 'view'); if(v) v.innerHTML = '';
+    if(m.url){ URL.revokeObjectURL(m.url); m.url = null; }
+    m.viewId = null;
+  }
+  async function view(m, id){
+    const box = q(m, 'view'); if(!box) return;
+    box.innerHTML = '<div class="sx-empty">Loading…</div>';
+    try{
+      const { meta, b64 } = await loadData(m, id);
+      if(!m.el.isConnected) return;
+      if(m.url){ URL.revokeObjectURL(m.url); m.url = null; }
+      m.url = URL.createObjectURL(b64ToBlob(b64, meta.type));
+      m.viewId = id;
+      const isImg = String(meta.type || '').indexOf('image/') === 0;
+      const isPdf = /pdf/i.test(meta.type || '');
+      const head = `<div class="sx-view-head"><span>${esc(meta.name)}</span><button type="button" class="sx-btn sm" data-sx-act="hide">Hide</button></div>`;
+      box.innerHTML = head + (isImg
+        ? `<a href="${m.url}" target="_blank" rel="noopener" title="Open full size"><img src="${m.url}" alt="${esc(meta.name)}"></a><div class="sx-hint">Tap the image to open it full size.</div>`
+        : `<div class="sx-empty">${isPdf ? "PDF files open in your phone's viewer." : 'This file type opens in its own app.'}<div class="sx-row"><a class="sx-btn sx-primary" href="${m.url}" target="_blank" rel="noopener">${isPdf ? 'Open PDF' : 'Open file'}</a></div></div>`);
+      if(box.scrollIntoView) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }catch(e){
+      if(m.el.isConnected) box.innerHTML = `<div class="sx-empty sx-bad">Could not open this file: ${esc(friendly(e).message)}</div>`;
+    }
+  }
+  async function save(m, id){
+    try{
+      status(m, 'Preparing download…', 'info');
+      const { meta, b64 } = await loadData(m, id);
+      const url = URL.createObjectURL(b64ToBlob(b64, meta.type));
+      const a = document.createElement('a');
+      a.href = url; a.download = downloadName(meta); a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 60000);
+      status(m, 'Download started — check your Downloads folder.', 'ok');
+    }catch(e){ status(m, 'Could not download this file: ' + friendly(e).message, 'err'); }
+  }
+  async function del(m, id){
+    const x = metaOf(m, id); if(!x) return;
+    const me = user();
+    if(!(admin() || (me && x.uid === me.uid))){ status(m, 'Only an admin or the person who uploaded this file can delete it.', 'err'); return; }
+    if(!ready()){ status(m, 'Still connecting to the server. Try again in a few seconds.', 'err'); return; }
+    if(!confirm(`Delete "${x.name}"? This cannot be undone.`)) return;
+    const f = fs(), db = fbx().db;
+    try{
+      await f.setDoc(f.doc(db, 'itc_pm', idxDoc(m.mod, m.shard)), { items: { [id]: f.deleteField() }, updatedAt: new Date().toISOString() }, { merge: true });
+      let orphan = 0;
+      for(let k = 0; k < (x.parts || 1); k++){
+        try{ await f.deleteDoc(f.doc(db, 'itc_pm', dataDoc(id, k))); }catch(e){ orphan++; }
+      }
+      if(m.viewId === id) hide(m);
+      status(m, orphan ? 'File removed from the list, but part of it could not be cleared from storage.' : 'File deleted.', orphan ? 'warn' : 'ok');
+    }catch(e){ status(m, 'Delete failed: ' + friendly(e).message, 'err'); }
+  }
+  // Remove every attachment of one record (used when an admin deletes the record itself)
+  async function deleteAllFor(mod, shard, key){
+    if(!ready()) throw new Error('not connected to the server yet');
+    const f = fs(), db = fbx().db;
+    let items = list(mod, shard, key);
+    if(items === undefined){
+      const snap = await f.getDoc(f.doc(db, 'itc_pm', idxDoc(mod, shard)));
+      const all = (snap.exists() && snap.data().items) || {};
+      items = Object.keys(all).filter(id=>all[id] && all[id].pm === key).map(id=>Object.assign({ id }, all[id]));
+    }
+    if(!items.length) return 0;
+    const patch = {}; items.forEach(x=>{ patch[x.id] = f.deleteField(); });
+    await f.setDoc(f.doc(db, 'itc_pm', idxDoc(mod, shard)), { items: patch, updatedAt: new Date().toISOString() }, { merge: true });
+    for(const x of items) for(let k = 0; k < (x.parts || 1); k++){ try{ await f.deleteDoc(f.doc(db, 'itc_pm', dataDoc(x.id, k))); }catch(e){} }
+    return items.length;
+  }
+
+  window.ScanKit = { mount, count, list, ensure, deleteAllFor, fmtBytes,
+                     onChange(fn){ if(typeof fn === 'function') S.listeners.push(fn); } };
+})();
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   ASSET INTEGRITY & STATUTORY COMPLIANCE — module logic (Phase 3.9)
+   Annual / half-yearly / quarterly testing, inspection and maintenance
+   records for Ph-1 (Foods · PCPB · COT) and Ph-2 (PPB).
+   Storage (inside the existing itc_pm collection — no rules change):
+     itc_pm/aic_master          activities, equipment, list of record years
+     itc_pm/aic_records_<FY>    records.{id} — one document per financial year
+     reports / photos           ScanKit module 'aic', shard = FY the record was created in
+   ═══════════════════════════════════════════════════════════════════════ */
+const MASTER_DOC = 'aic_master';
+const recDocId = fy=>'aic_records_' + fy;
+const FREQS = [ { m: 1, l: 'Monthly' }, { m: 3, l: 'Quarterly' }, { m: 6, l: 'Half-yearly' }, { m: 12, l: 'Annual' }, { m: 24, l: 'Every 2 years' } ];
+function freqLabel(m){ const f = FREQS.find(x=>x.m === +m); return f ? f.l : `Every ${m} months`; }
+const RESULTS = ['OK', 'Observation', 'Not OK'];
+const ALL_UNIT_IDS = UNITS.map(u=>u.id);
+const REPORT_ACCEPT = 'image/*,application/pdf,.xlsx,.xls,.docx,.doc,.csv';
+const DEFAULT_ACTIVITIES = {
+  act_trf:     { id: 'act_trf',     order: 1, name: 'Transformer testing',                months: 12, ref: 'IS 1866 (insulating oil)',        scope: 'IR / PI, winding resistance, turns ratio, oil BDV and DGA, protection and alarm checks' },
+  act_earth:   { id: 'act_earth',   order: 2, name: 'Earth pit testing',                  months: 6,  ref: 'IS 3043',                         scope: 'Earth resistance of every pit, continuity of earth conductors, pit and chamber condition (pre- and post-monsoon)' },
+  act_lux:     { id: 'act_lux',     order: 3, name: 'Lux level survey',                   months: 12, ref: 'Factories Act §17 · IS 3646',     scope: 'Illumination at work stations, walkways, stairs, panel rooms and emergency lighting' },
+  act_ladder:  { id: 'act_ladder',  order: 4, name: 'Fixed & portable ladder inspection', months: 3,  ref: 'IS 3696 (Part 2)',                scope: 'Rungs, stiles, feet, locks, cages and platforms; tag each ladder OK / Not OK' },
+  act_thermo:  { id: 'act_thermo',  order: 5, name: 'Thermography',                       months: 6,  ref: '',                                scope: 'IR scan of panels, busbars, cable terminations and breakers under load; record hot spots and ΔT' },
+  act_monsoon: { id: 'act_monsoon', order: 6, name: 'Pre-monsoon activities',             months: 12, ref: '',                                scope: 'Roof and drain cleaning, cable trench sealing, panel room leak check, lightning arrester and earthing check, sump pumps ready' },
+  act_relay:   { id: 'act_relay',   order: 7, name: 'Relay calibration & testing',        months: 12, ref: '',                                scope: 'Secondary injection, pick-up and timing, trip circuit healthiness, calibration certificate' },
+  act_acb:     { id: 'act_acb',     order: 8, name: 'ACB maintenance',                    months: 12, ref: '',                                scope: 'Cleaning, main contacts and arc chutes, mechanism lubrication, release and trip test, IR' },
+  act_vcb:     { id: 'act_vcb',     order: 9, name: 'VCB maintenance',                    months: 12, ref: '',                                scope: 'Vacuum integrity, contact wear, operating mechanism, IR / HV test, interlocks' },
+};
+Object.values(DEFAULT_ACTIVITIES).forEach(a=>{ a.units = ALL_UNIT_IDS.slice(); a.active = true; });
+
+const A = { master: undefined, recs: {}, subs: {}, seeding: false, view: 'overview',
+  ov: { unit: '', status: '', act: '', cu: '' },
+  rf: { unit: '', act: '', fy: '', result: '', q: '' },
+  sf: { act: '', unit: '' } };
+const ST_RANK = { over: 0, none: 1, due: 2, ok: 3 };
+const ST_TEXT = { over: 'Overdue', due: 'Due soon', none: 'No record', ok: 'OK' };
+const ST_CELL = { over: 'Overdue', due: 'Due', none: 'No record', ok: 'OK' };
+
+const byId = id=>document.getElementById(id);
+const val = id=>{ const e = byId(id); return e ? String(e.value || '').trim() : ''; };
+function acts(withRetired){
+  const m = (A.master && A.master.activities) || {};
+  return Object.values(m).filter(a=>a && a.id && (withRetired || a.active !== false))
+    .sort((x, y)=>(x.order || 99) - (y.order || 99) || String(x.name).localeCompare(y.name));
+}
+function eqs(withRetired){
+  const m = (A.master && A.master.equipment) || {};
+  return Object.values(m).filter(e=>e && e.id && (withRetired || e.active !== false))
+    .sort((x, y)=>String(x.name).localeCompare(y.name, undefined, { numeric: true }));
+}
+function actById(id){ return ((A.master && A.master.activities) || {})[id] || null; }
+function eqById(id){ return ((A.master && A.master.equipment) || {})[id] || null; }
+function actUnits(a){ return (a && a.units && a.units.length) ? a.units : ALL_UNIT_IDS; }
+function records(){ const out = []; Object.values(A.recs).forEach(m=>Object.values(m || {}).forEach(r=>{ if(r && r.id) out.push(r); })); return out; }
+function recById(id){ return records().find(r=>r.id === id) || null; }
+function nextDueOf(r){ const a = actById(r.actId); return r.nextDue || (a && r.date ? addMonthsIso(r.date, a.months) : ''); }
+function targetLabel(r){ if(!r.eqId) return 'Whole unit'; const e = eqById(r.eqId); return e ? e.name : '(removed equipment)'; }
+function resultPill(res){ return `<span class="pill ${res === 'OK' ? 'ok' : res === 'Not OK' ? 'notok' : 'due'}">${esc(res || '—')}</span>`; }
+function mHead(title, sub){
+  return `<div class="modal-head"><div><div class="modal-title">${esc(title)}</div>${sub ? `<div class="modal-sub">${esc(sub)}</div>` : ''}</div><button type="button" class="modal-close" onclick="closeModal()" aria-label="Close">×</button></div>`;
+}
+function localPut(fy, rec){ (A.recs[fy] = A.recs[fy] || {})[rec.id] = rec; }
+function localDel(fy, id){ if(A.recs[fy]) delete A.recs[fy][id]; }
+function formErr(id, msg){ const e = byId(id); if(e){ e.hidden = false; e.textContent = msg; e.scrollIntoView && e.scrollIntoView({ block: 'nearest' }); } else toast('Check the form', msg, 'warn'); }
+
+/* ─── Status of every tracked item (activity × unit × equipment) ─── */
+function buildItems(){
+  const T = todayIso(); const latest = {};
+  records().forEach(r=>{
+    const k = `${r.actId}|${r.unit}|${r.eqId || ''}`; const cur = latest[k];
+    if(!cur || r.date > cur.date || (r.date === cur.date && String(r.at) > String(cur.at))) latest[k] = r;
+  });
+  const out = [];
+  acts().forEach(a=>{
+    actUnits(a).forEach(u=>{
+      const list = eqs().filter(e=>e.actId === a.id && e.unit === u);
+      const targets = list.length ? list.map(e=>({ eqId: e.id, label: e.name, loc: e.location || '' })) : [{ eqId: '', label: 'Whole unit', loc: '' }];
+      targets.forEach(t=>{
+        const last = latest[`${a.id}|${u}|${t.eqId}`] || null;
+        const due = last ? nextDueOf(last) : '';
+        let st = 'none';
+        if(last){ const d = daysBetween(T, due); st = d < 0 ? 'over' : d <= 30 ? 'due' : 'ok'; }
+        out.push({ act: a, unit: u, eqId: t.eqId, label: t.label, loc: t.loc, last, due, st, notOk: !!(last && last.result === 'Not OK') });
+      });
+    });
+  });
+  return out;
+}
+
+/* ─── Views ─── */
+function setView(v){
+  A.view = v;
+  document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on', b.dataset.v === v));
+  renderView(); window.scrollTo(0, 0);
+}
+function renderView(){
+  const el = byId('view');
+  if(A.master === undefined){ el.innerHTML = '<div class="empty">Loading the register…</div>'; return; }
+  if(A.view === 'overview') renderOverview(); else if(A.view === 'records') renderRecords(); else renderSetup();
+}
+function refresh(){
+  if(A.master === undefined) return;
+  if(!byId('view-' + A.view)) return renderView();
+  if(A.view === 'overview') fillOverview(); else if(A.view === 'records') fillRecords(); else fillSetup();
+}
+
+/* Overview */
+function renderOverview(){
+  byId('view').innerHTML = `<div id="view-overview">
+    <div class="card"><div class="filters" style="border-bottom:0">
+      <div class="fld"><label for="ov-unit">Plant unit</label><select id="ov-unit">${unitOptions(A.ov.unit, 'All units')}</select></div>
+      <div class="fld"><label for="ov-status">Status</label><select id="ov-status">
+        <option value="">All statuses</option><option value="over">Overdue</option><option value="due">Due within 30 days</option>
+        <option value="none">No record yet</option><option value="ok">OK</option><option value="notok">Latest result Not OK</option></select></div>
+    </div></div>
+    <div class="kpis" id="ov-kpis"></div>
+    <div class="card"><div class="card-h"><div><div class="card-t">Compliance matrix</div>
+      <div class="card-m">Activity × plant unit. The number shows items done within frequency out of the total; the colour shows the worst item, and red “Not OK” means a latest test failed. Tap a cell to list its items.</div></div></div>
+      <div class="card-b" style="overflow-x:auto" id="ov-matrix"></div></div>
+    <div class="card" id="ov-list-card"><div class="card-h"><div><div class="card-t" id="ov-list-title">Action list</div><div class="card-m" id="ov-list-sub"></div></div>
+      <button type="button" class="btn sm" onclick="aicNewRecord()">＋ New record</button></div>
+      <div class="list" id="ov-list"></div></div>
+  </div>`;
+  byId('ov-status').value = A.ov.status;
+  byId('ov-unit').onchange = e=>{ A.ov.unit = e.target.value; A.ov.act = ''; A.ov.cu = ''; fillOverview(); };
+  byId('ov-status').onchange = e=>{ A.ov.status = e.target.value; fillOverview(); };
+  fillOverview();
+}
+function fillOverview(){
+  const all = buildItems();
+  const scoped = A.ov.unit ? all.filter(i=>i.unit === A.ov.unit) : all;
+  const n = scoped.length;
+  const good = scoped.filter(i=>i.st === 'ok' || i.st === 'due').length;
+  const over = scoped.filter(i=>i.st === 'over').length, due = scoped.filter(i=>i.st === 'due').length;
+  const none = scoped.filter(i=>i.st === 'none').length, bad = scoped.filter(i=>i.notOk).length;
+  const pct = n ? Math.round(good * 100 / n) : 0;
+  byId('ov-kpis').innerHTML = `
+    <div class="kpi ${pct >= 90 ? 'good' : pct >= 60 ? 'warn' : 'bad'}"><div class="l">Compliance</div><div class="v">${pct}%</div><div class="m">${good} of ${n} items within frequency</div></div>
+    <div class="kpi ${over ? 'bad' : ''}"><div class="l">Overdue</div><div class="v">${over}</div><div class="m">${none} with no record yet</div></div>
+    <div class="kpi ${due ? 'warn' : ''}"><div class="l">Due in 30 days</div><div class="v">${due}</div><div class="m">plan these next</div></div>
+    <div class="kpi ${bad ? 'bad' : ''}"><div class="l">Latest result Not OK</div><div class="v">${bad}</div><div class="m">open observations</div></div>`;
+
+  const us = A.ov.unit ? UNITS.filter(u=>u.id === A.ov.unit) : UNITS;
+  let h = `<table class="mx"><thead><tr><th class="mx-a"></th>${us.map(u=>`<th><div class="mx-ph">${esc(u.phase)}</div>${esc(u.name)}</th>`).join('')}</tr></thead><tbody>`;
+  acts().forEach(a=>{
+    h += `<tr><td class="mx-a"><div class="mx-an">${esc(a.name)}</div><div class="mx-af">${esc(freqLabel(a.months))}</div></td>`;
+    us.forEach(u=>{
+      if(!actUnits(a).includes(u.id)){ h += '<td><div class="cell na" title="Not applicable to this unit">–</div></td>'; return; }
+      const its = all.filter(i=>i.act.id === a.id && i.unit === u.id);
+      const worst = its.reduce((w, i)=>ST_RANK[i.st] < ST_RANK[w] ? i.st : w, 'ok');
+      const g = its.filter(i=>i.st === 'ok' || i.st === 'due').length;
+      const sel = (A.ov.act === a.id && A.ov.cu === u.id) ? ' sel' : '';
+      const flagged = its.some(i=>i.notOk);
+      h += `<td><button type="button" class="cell ${worst}${flagged ? ' flag' : ''}${sel}" onclick="aicCell('${a.id}','${u.id}')" aria-label="${esc(a.name)}, ${esc(unitLabel(u.id))}: ${g} of ${its.length} within frequency${flagged ? ', latest result Not OK' : ''}"><b>${g}/${its.length}</b><small>${flagged ? 'Not OK' : ST_CELL[worst]}</small></button></td>`;
+    });
+    h += '</tr>';
+  });
+  byId('ov-matrix').innerHTML = acts().length ? h + '</tbody></table>' : '<div class="empty">No activities yet. An admin can add them under Activities &amp; equipment.</div>';
+
+  let list = scoped;
+  if(A.ov.act) list = list.filter(i=>i.act.id === A.ov.act && (!A.ov.cu || i.unit === A.ov.cu));
+  if(A.ov.status) list = list.filter(i=>A.ov.status === 'notok' ? i.notOk : i.st === A.ov.status);
+  list.sort((x, y)=>ST_RANK[x.st] - ST_RANK[y.st] || String(x.due || '9999').localeCompare(String(y.due || '9999')) || (x.act.order || 99) - (y.act.order || 99));
+  const a = A.ov.act ? actById(A.ov.act) : null;
+  byId('ov-list-title').textContent = a ? `${a.name} — ${unitLabel(A.ov.cu)}` : 'Action list';
+  byId('ov-list-sub').innerHTML = a ? `${list.length} item${list.length === 1 ? '' : 's'} · <a href="#" onclick="aicCell('','');return false" style="color:var(--accent)">Show all</a>`
+    : `${list.length} item${list.length === 1 ? '' : 's'} · overdue first`;
+  byId('ov-list').innerHTML = list.length
+    ? list.slice(0, 150).map(itemRow).join('') + (list.length > 150 ? `<div class="more">Showing the first 150 of ${list.length}. Use the filters to narrow down.</div>` : '')
+    : '<div class="empty">Nothing matches these filters.</div>';
+}
+function itemRow(i){
+  return `<div class="li">
+    <div class="main">
+      <div class="t">${esc(i.act.name)} <span class="pill ${i.st}">${ST_TEXT[i.st]}</span>${i.notOk ? ' <span class="pill notok">Not OK</span>' : ''}</div>
+      <div class="s">${esc(unitLabel(i.unit))} · ${esc(i.label)}${i.loc ? ' · ' + esc(i.loc) : ''}</div>
+      <div class="s mono">Last ${i.last ? fmtDate(i.last.date) + ' · ' + esc(i.last.result) : '—'} · Next due ${i.due ? fmtDate(i.due) : '—'}</div>
+    </div>
+    <div class="acts">
+      ${i.last ? `<button type="button" class="btn sm ghost" onclick="aicHistory('${i.act.id}','${i.unit}','${i.eqId}')">History</button>` : ''}
+      <button type="button" class="btn sm" onclick="aicNewRecord('${i.act.id}','${i.unit}','${i.eqId}')">＋ Record</button>
+    </div>
+  </div>`;
+}
+function aicCell(actId, unit){
+  if(A.ov.act === actId && A.ov.cu === unit){ actId = ''; unit = ''; }
+  A.ov.act = actId; A.ov.cu = unit;
+  fillOverview();
+  if(actId){ const c = byId('ov-list-card'); if(c && c.scrollIntoView) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+}
+
+/* Records */
+function fyOptions(){
+  const s = new Set(Object.keys((A.master && A.master.fyDocs) || {}).concat(Object.keys(A.recs)));
+  s.add(fyOfIso(todayIso()));
+  return [...s].filter(Boolean).sort().reverse();
+}
+function renderRecords(){
+  byId('view').innerHTML = `<div id="view-records"><div class="card">
+    <div class="card-h"><div><div class="card-t">Records</div><div class="card-m" id="rc-sub"></div></div>
+      <button type="button" class="btn sm" onclick="aicNewRecord()">＋ New record</button></div>
+    <div class="filters">
+      <div class="fld"><label for="rc-unit">Plant unit</label><select id="rc-unit">${unitOptions(A.rf.unit, 'All units')}</select></div>
+      <div class="fld"><label for="rc-act">Activity</label><select id="rc-act"><option value="">All activities</option>${acts(true).map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></div>
+      <div class="fld"><label for="rc-fy">Financial year</label><select id="rc-fy"><option value="">All years</option>${fyOptions().map(f=>`<option value="${f}">${f}</option>`).join('')}</select></div>
+      <div class="fld"><label for="rc-result">Result</label><select id="rc-result"><option value="">All results</option>${RESULTS.map(r=>`<option>${r}</option>`).join('')}</select></div>
+      <div class="fld wide"><label for="rc-q">Search</label><input id="rc-q" type="search" placeholder="Equipment, agency, report no., description, readings…" value="${esc(A.rf.q)}"></div>
+    </div>
+    <div class="list" id="rc-list"></div></div></div>`;
+  byId('rc-act').value = A.rf.act; byId('rc-fy').value = A.rf.fy; byId('rc-result').value = A.rf.result;
+  byId('rc-unit').onchange = e=>{ A.rf.unit = e.target.value; fillRecords(); };
+  byId('rc-act').onchange = e=>{ A.rf.act = e.target.value; fillRecords(); };
+  byId('rc-fy').onchange = e=>{ A.rf.fy = e.target.value; fillRecords(); };
+  byId('rc-result').onchange = e=>{ A.rf.result = e.target.value; fillRecords(); };
+  byId('rc-q').oninput = e=>{ A.rf.q = e.target.value; fillRecords(); };
+  fillRecords();
+}
+function attText(r){
+  const n = ScanKit.count('aic', r.att, r.id);
+  return n === undefined ? '' : n ? `📎 ${n}` : `<button type="button" class="btn sm att-btn" onclick="event.stopPropagation();aicOpenRecord('${r.id}',false,true)">＋ Upload report</button>`;
+}
+function fillRecords(){
+  const q = A.rf.q.trim().toLowerCase();
+  let list = records();
+  if(A.rf.unit) list = list.filter(r=>r.unit === A.rf.unit);
+  if(A.rf.act) list = list.filter(r=>r.actId === A.rf.act);
+  if(A.rf.fy) list = list.filter(r=>fyOfIso(r.date) === A.rf.fy);
+  if(A.rf.result) list = list.filter(r=>r.result === A.rf.result);
+  if(q) list = list.filter(r=>{ const a = actById(r.actId);
+    return [a && a.name, unitLabel(r.unit), targetLabel(r), r.doneBy, r.readings, r.remarks, r.by, r.reportNo, r.reportDesc].join(' ').toLowerCase().includes(q); });
+  list.sort((x, y)=>String(y.date).localeCompare(String(x.date)) || String(y.at).localeCompare(String(x.at)));
+  byId('rc-sub').textContent = `${list.length} record${list.length === 1 ? '' : 's'} · newest first`;
+  byId('rc-list').innerHTML = list.length ? list.slice(0, 300).map(r=>{
+    const a = actById(r.actId);
+    return `<div class="li click" onclick="aicOpenRecord('${r.id}')">
+      <div class="main">
+        <div class="t">${esc(a ? a.name : 'Activity')} ${resultPill(r.result)}</div>
+        <div class="s">${esc(unitLabel(r.unit))} · ${esc(targetLabel(r))}${r.doneBy ? ' · ' + esc(r.doneBy) : ''}</div>
+        ${(r.reportNo || r.reportDesc) ? `<div class="s rep">📄 ${r.reportNo ? esc(r.reportNo) + (r.reportDesc ? ' · ' : '') : ''}${esc((r.reportDesc || '').slice(0, 110))}${(r.reportDesc || '').length > 110 ? '…' : ''}</div>` : ''}
+      </div>
+      <div class="acts"><span class="mono rc-date">${fmtDate(r.date)}</span><span class="att" data-att="${r.id}">${attText(r)}</span></div>
+    </div>`;
+  }).join('') + (list.length > 300 ? `<div class="more">Showing the newest 300 of ${list.length}.</div>` : '')
+    : `<div class="empty">${records().length ? 'No records match these filters.' : 'No records yet. Tap “＋ New record” after each test or inspection.'}</div>`;
+}
+function updateAttBadges(){
+  document.querySelectorAll('#rc-list [data-att]').forEach(el=>{ const r = recById(el.getAttribute('data-att')); if(r) el.innerHTML = attText(r); });
+}
+
+/* Setup — activities & equipment (the modification panel) */
+function renderSetup(){
+  byId('view').innerHTML = `<div id="view-setup">
+    <div class="card"><div class="card-h"><div><div class="card-t">Activities</div>
+      <div class="card-m">Frequency sets the next-due date. Only admins can add, edit or retire activities.</div></div>
+      ${isAdmin() ? '<button type="button" class="btn sm" onclick="aicActivityForm()">＋ Add activity</button>' : ''}</div>
+      <div class="list" id="st-acts"></div></div>
+    <div class="card"><div class="card-h"><div><div class="card-t">Equipment</div>
+      <div class="card-m">List transformers, earth pits, breakers, ladders and so on for each unit. If an activity has no equipment listed for a unit, it is tracked for the whole unit.</div></div>
+      <button type="button" class="btn sm" onclick="aicEquipmentForm()">＋ Add equipment</button></div>
+      <div class="filters">
+        <div class="fld"><label for="sf-act">Activity</label><select id="sf-act"><option value="">All activities</option>${acts().map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></div>
+        <div class="fld"><label for="sf-unit">Plant unit</label><select id="sf-unit">${unitOptions(A.sf.unit, 'All units')}</select></div>
+      </div>
+      <div class="list" id="st-eqs"></div></div>
+  </div>`;
+  byId('sf-act').value = A.sf.act;
+  byId('sf-act').onchange = e=>{ A.sf.act = e.target.value; fillSetup(); };
+  byId('sf-unit').onchange = e=>{ A.sf.unit = e.target.value; fillSetup(); };
+  fillSetup();
+}
+function fillSetup(){
+  const adm = isAdmin();
+  const live = acts(), retired = acts(true).filter(a=>a.active === false);
+  byId('st-acts').innerHTML = (live.map(a=>`<div class="li">
+      <div class="main"><div class="t">${esc(a.name)} <span class="pill acc">${esc(freqLabel(a.months))}</span></div>
+        <div class="s">${actUnits(a).map(id=>esc((unitById(id) || { name: id }).name)).join(' · ')}${a.ref ? ' · ' + esc(a.ref) : ''}</div>
+        ${a.scope ? `<div class="s">${esc(a.scope)}</div>` : ''}</div>
+      ${adm ? `<div class="acts"><button type="button" class="btn sm ghost" onclick="aicActivityForm('${a.id}')">Edit</button><button type="button" class="btn sm danger" onclick="aicRetireActivity('${a.id}',true)">Retire</button></div>` : ''}
+    </div>`).join('') || '<div class="empty">No activities.</div>') +
+    (retired.length ? `<div class="more">Retired: ${retired.map(a=>`${esc(a.name)}${adm ? ` <a href="#" style="color:var(--accent)" onclick="aicRetireActivity('${a.id}',false);return false">Restore</a>` : ''}`).join(' · ')}</div>` : '');
+
+  let list = eqs();
+  if(A.sf.act) list = list.filter(e=>e.actId === A.sf.act);
+  if(A.sf.unit) list = list.filter(e=>e.unit === A.sf.unit);
+  const removed = eqs(true).filter(e=>e.active === false && (!A.sf.act || e.actId === A.sf.act) && (!A.sf.unit || e.unit === A.sf.unit));
+  byId('st-eqs').innerHTML = (list.map(e=>{ const a = actById(e.actId);
+    return `<div class="li"><div class="main"><div class="t">${esc(e.name)}</div>
+      <div class="s">${esc(a ? a.name : 'Activity')} · ${esc(unitLabel(e.unit))}${e.location ? ' · ' + esc(e.location) : ''}</div>
+      ${e.notes ? `<div class="s">${esc(e.notes)}</div>` : ''}</div>
+      <div class="acts"><button type="button" class="btn sm ghost" onclick="aicEquipmentForm('${e.id}')">Edit</button>
+      ${adm ? `<button type="button" class="btn sm danger" onclick="aicRemoveEquipment('${e.id}',true)">Remove</button>` : ''}</div></div>`; }).join('')
+    || '<div class="empty">No equipment listed here yet — these activities are tracked for the whole unit.</div>') +
+    (removed.length ? `<div class="more">Removed: ${removed.map(e=>`${esc(e.name)}${adm ? ` <a href="#" style="color:var(--accent)" onclick="aicRemoveEquipment('${e.id}',false);return false">Restore</a>` : ''}`).join(' · ')}</div>` : '');
+}
+
+/* ─── Records: create / view / edit / delete ─── */
+function aicNewRecord(actId, unit, eqId){ aicRecordForm(null, { actId: actId || '', unit: unit || '', eqId: eqId || '' }); }
+function aicRecordForm(rec, preset){
+  if(!requireReady()) return;
+  const list = acts();
+  if(!list.length){ toast('No activities', 'An admin needs to add activities first.', 'warn'); return; }
+  const r = rec || { actId: preset.actId || A.ov.act || list[0].id, unit: preset.unit || A.ov.cu || A.ov.unit || '', eqId: preset.eqId || '',
+                     date: todayIso(), result: 'OK', doneBy: '', readings: '', remarks: '', nextDue: '', reportNo: '', reportDesc: '' };
+  // 3.10: the record id + file shard are fixed when the form opens, so the report
+  // can be uploaded BEFORE saving. If the form is cancelled, uploads are discarded.
+  const draft = rec ? { id: rec.id, att: rec.att || fyOfIso(rec.date) } : { id: newId('r'), att: fyOfIso(todayIso()) };
+  A.draft = rec ? null : draft;
+  openModal(`${mHead(rec ? 'Edit record' : 'New record', 'Date-wise test, inspection or maintenance record')}
+    <div class="modal-body">
+      <div class="banner info" id="rf-err" hidden></div>
+      <div class="fld"><label class="req" for="rf-act">Activity</label><select id="rf-act">${list.map(a=>`<option value="${a.id}">${esc(a.name)} — ${esc(freqLabel(a.months))}</option>`).join('')}</select></div>
+      <div class="row2">
+        <div class="fld"><label class="req" for="rf-unit">Plant unit</label><select id="rf-unit"></select></div>
+        <div class="fld"><label for="rf-eq">Equipment</label><select id="rf-eq"></select></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label class="req" for="rf-date">Date done</label><input type="date" id="rf-date" max="${todayIso()}" value="${esc(r.date)}"></div>
+        <div class="fld"><label class="req" for="rf-result">Result</label><select id="rf-result">${RESULTS.map(x=>`<option ${x === r.result ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      </div>
+      <div class="rep-box" id="rf-report">
+        <div class="rep-t">📄 Test report / certificate</div>
+        <div class="fld"><label for="rf-repno">Report / certificate no.</label><input id="rf-repno" value="${esc(r.reportNo || '')}" placeholder="e.g. TR/2026/114 · Cert. EP-0925"></div>
+        <div class="fld"><label for="rf-repdesc">Report description</label><textarea id="rf-repdesc" rows="3" placeholder="What the report covers and what it found — e.g. Annual oil BDV, IR/PI and ratio test on TR-1 by XYZ agency; all values within limits; oil filtration advised next year.">${esc(r.reportDesc || '')}</textarea></div>
+        <div id="rf-att"></div>
+      </div>
+      <div class="fld"><label for="rf-by">Done by / agency</label><input id="rf-by" value="${esc(r.doneBy)}" placeholder="e.g. In-house electrical team, testing agency name"></div>
+      <div class="fld"><label for="rf-read">Key readings</label><textarea id="rf-read" rows="3" placeholder="e.g. EP-07: 1.8 Ω · Oil BDV 62 kV · Hot spot ΔT 18 °C">${esc(r.readings)}</textarea></div>
+      <div class="fld"><label for="rf-rem">Remarks / action taken</label><textarea id="rf-rem" rows="2">${esc(r.remarks)}</textarea></div>
+      <div class="fld"><label for="rf-next">Next due</label><input type="date" id="rf-next"><div class="hint" id="rf-next-hint"></div></div>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn" id="rf-save" onclick="aicSaveRecord(${rec ? `'${rec.id}'` : ''})">${rec ? 'Save changes' : 'Save record'}</button></div>`);
+  const actSel = byId('rf-act'), unitSel = byId('rf-unit'), eqSel = byId('rf-eq'), dateIn = byId('rf-date'), nextIn = byId('rf-next');
+  let touched = !!(rec && rec.nextDue);
+  const calc = ()=>{ const a = actById(actSel.value); return (a && dateIn.value) ? addMonthsIso(dateIn.value, a.months) : ''; };
+  function fillUnits(sel){
+    const a = actById(actSel.value); const cur = sel !== undefined ? sel : unitSel.value;
+    unitSel.innerHTML = '<option value="">Select unit…</option>' + actUnits(a).map(id=>`<option value="${id}">${esc(unitLabel(id))}</option>`).join('');
+    unitSel.value = actUnits(a).includes(cur) ? cur : '';
+  }
+  function fillEq(sel){
+    const cur = sel !== undefined ? sel : eqSel.value;
+    const opts = eqs().filter(e=>e.actId === actSel.value && e.unit === unitSel.value);
+    eqSel.innerHTML = '<option value="">Whole unit / general</option>' + opts.map(e=>`<option value="${e.id}">${esc(e.name)}${e.location ? ' · ' + esc(e.location) : ''}</option>`).join('');
+    eqSel.value = opts.some(e=>e.id === cur) ? cur : '';
+  }
+  function syncNext(){
+    if(!touched) nextIn.value = calc();
+    const a = actById(actSel.value);
+    byId('rf-next-hint').textContent = a ? `Worked out as date done + ${freqLabel(a.months).toLowerCase()} (${fmtDate(calc())}). Change it only if the report says otherwise.` : '';
+  }
+  actSel.value = r.actId;
+  fillUnits(r.unit); fillEq(r.eqId);
+  nextIn.value = rec && rec.nextDue ? rec.nextDue : calc();
+  syncNext();
+  actSel.onchange = ()=>{ fillUnits(); fillEq(); syncNext(); };
+  unitSel.onchange = ()=>fillEq();
+  dateIn.onchange = syncNext;
+  nextIn.oninput = ()=>{ touched = !!nextIn.value && nextIn.value !== calc(); };
+  ScanKit.mount(byId('rf-att'), { module: 'aic', shard: draft.att, key: draft.id, accept: REPORT_ACCEPT,
+    pickLabel: 'Upload report (PDF / photo / Excel / Word)', itemWord: 'File',
+    emptyText: rec ? 'No report attached yet.' : 'Attach the signed test report (PDF) or take photos of it. It is saved with this record.',
+    hint: 'Photos are compressed automatically; PDFs and other files up to 4 MB each.' });
+  if(!rec){
+    window.__onModalClose = ()=>{
+      const n = ScanKit.count('aic', draft.att, draft.id) || 0;
+      if(!n){ A.draft = null; return true; }
+      if(!confirm(`This record is not saved yet.\n\nDiscard the ${n} uploaded file${n > 1 ? 's' : ''}?\nOK = discard · Cancel = keep editing`)) return false;
+      A.draft = null;
+      ScanKit.deleteAllFor('aic', draft.att, draft.id).catch(e=>console.warn('[aic] discard uploads', e));
+      return true;
+    };
+  }
+}
+async function aicSaveRecord(editId){
+  if(!requireReady()) return;
+  const actId = val('rf-act'), unit = val('rf-unit'), eqId = val('rf-eq'), date = val('rf-date'), result = val('rf-result');
+  if(!actId || !unit || !date || !result) return formErr('rf-err', 'Fill in activity, plant unit, date done and result.');
+  if(date > todayIso()) return formErr('rf-err', 'Date done cannot be in the future.');
+  const a = actById(actId); const calc = addMonthsIso(date, a.months); const nx = val('rf-next');
+  if(nx && nx < date) return formErr('rf-err', 'Next due cannot be before the date done.');
+  const u = me(); const now = new Date().toISOString();
+  const body = { actId, unit, eqId, date, result, doneBy: val('rf-by'), readings: val('rf-read'), remarks: val('rf-rem'), nextDue: (nx && nx !== calc) ? nx : '',
+                 reportNo: val('rf-repno'), reportDesc: val('rf-repdesc') };
+  const btn = byId('rf-save'); if(btn) btn.disabled = true;
+  try{
+    if(!editId){
+      const d = A.draft || { id: newId('r'), att: fyOfIso(date) };
+      const id = d.id; const fy = fyOfIso(date);
+      const rec = Object.assign({ id, att: d.att, by: u.email, uid: u.uid, at: now }, body);
+      await setMerge(recDocId(fy), { records: { [id]: rec }, fy });
+      A.draft = null; window.__onModalClose = null;       // saved — uploads belong to the record now
+      setMerge(MASTER_DOC, { fyDocs: { [fy]: true } }).catch(e=>console.warn('[aic] fy list', e));
+      localPut(fy, rec); subRecs(fy);
+      refresh();
+      aicOpenRecord(id, true);
+      const nf = ScanKit.count('aic', d.att, id) || 0;
+      toast('Record saved', `${a.name} · ${unitLabel(unit)} · ${fmtDate(date)}${nf ? ` · ${nf} report file${nf > 1 ? 's' : ''}` : ''}`);
+    } else {
+      const old = recById(editId); if(!old) throw new Error('record not found — it may have been deleted');
+      const oldFy = fyOfIso(old.date), newFy = fyOfIso(date);
+      const rec = Object.assign({}, old, body, { editedBy: u.email, editedAt: now });
+      if(oldFy === newFy){
+        await updateFields(recDocId(oldFy), { ['records.' + editId]: rec });
+      } else {
+        await setMerge(recDocId(newFy), { records: { [editId]: rec }, fy: newFy });
+        await updateFields(recDocId(oldFy), { ['records.' + editId]: delField() });
+        setMerge(MASTER_DOC, { fyDocs: { [newFy]: true } }).catch(e=>console.warn('[aic] fy list', e));
+        localDel(oldFy, editId); subRecs(newFy);
+      }
+      localPut(newFy, rec);
+      refresh();
+      aicOpenRecord(editId);
+      toast('Record updated', a.name);
+    }
+  }catch(e){ if(btn) btn.disabled = false; formErr('rf-err', 'Could not save: ' + friendlyErr(e)); }
+}
+function aicOpenRecord(id, justSaved, focusUpload){
+  const r = recById(id); if(!r){ toast('Record not found', 'It may have been deleted.', 'warn'); return; }
+  const a = actById(r.actId); const mine = me() && r.uid === me().uid;
+  const canEdit = isAdmin() || mine;
+  openModal(`${mHead(a ? a.name : 'Record', `${unitLabel(r.unit)} · ${targetLabel(r)}`)}
+    <div class="modal-body">
+      ${justSaved ? '<div class="banner ok">Record saved. You can add more report files or photos below.</div>' : ''}
+      <div class="rep-box">
+        <div class="rep-t">📄 Test report / certificate</div>
+        <div class="facts" style="margin-bottom:10px">
+          <div class="full"><div class="k">Report / certificate no.</div><div class="v mono">${esc(r.reportNo || '—')}</div></div>
+          <div class="full"><div class="k">Report description</div><div class="v pre" style="font-weight:500">${r.reportDesc ? esc(r.reportDesc) : '<span style="color:var(--text-3)">No description yet' + (canEdit ? ' — tap Edit to add one' : '') + '.</span>'}</div></div>
+        </div>
+        <div id="rec-att"></div>
+      </div>
+      <div class="facts">
+        <div><div class="k">Date done</div><div class="v mono">${fmtDate(r.date)}</div></div>
+        <div><div class="k">Result</div><div class="v">${resultPill(r.result)}</div></div>
+        <div><div class="k">Next due</div><div class="v mono">${fmtDate(nextDueOf(r))}${r.nextDue ? ' <span class="pill">set manually</span>' : ''}</div></div>
+        <div><div class="k">Done by / agency</div><div class="v">${esc(r.doneBy || '—')}</div></div>
+        ${r.readings ? `<div class="full"><div class="k">Key readings</div><div class="v pre">${esc(r.readings)}</div></div>` : ''}
+        ${r.remarks ? `<div class="full"><div class="k">Remarks / action taken</div><div class="v pre">${esc(r.remarks)}</div></div>` : ''}
+        ${a && a.ref ? `<div class="full"><div class="k">Reference</div><div class="v">${esc(a.ref)}</div></div>` : ''}
+        <div class="full"><div class="k">Logged</div><div class="v" style="font-weight:500">${esc(r.by || '—')} · ${fmtStamp(r.at)}${r.editedAt ? ` · edited by ${esc(r.editedBy || '')} ${fmtStamp(r.editedAt)}` : ''}</div></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${isAdmin() ? `<button type="button" class="btn danger" onclick="aicDeleteRecord('${r.id}')">Delete</button>` : ''}
+      ${canEdit ? `<button type="button" class="btn ghost" onclick="aicEditRecord('${r.id}')">Edit</button>` : ''}
+      <button type="button" class="btn" onclick="closeModal()">Done</button>
+    </div>`);
+  ScanKit.mount(byId('rec-att'), { module: 'aic', shard: r.att, key: r.id, accept: REPORT_ACCEPT,
+    pickLabel: 'Upload report (PDF, photo, Excel, Word)', itemWord: 'File',
+    emptyText: 'No report attached yet. Upload the test report or take photos of it.',
+    hint: 'Photos are compressed automatically; other files can be up to 4 MB each.' });
+  if(focusUpload){ const el = byId('rec-att'); if(el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); }
+}
+function aicEditRecord(id){
+  const r = recById(id); if(!r) return;
+  if(!(isAdmin() || (me() && r.uid === me().uid))){ toast('Not allowed', 'Only an admin or the person who logged this record can edit it.', 'warn'); return; }
+  aicRecordForm(r, {});
+}
+async function aicDeleteRecord(id){
+  if(!requireAdmin('Delete record')) return;
+  const r = recById(id); if(!r) return;
+  if(!confirm('Delete this record and its attached reports? This cannot be undone.')) return;
+  try{
+    const fy = fyOfIso(r.date);
+    await updateFields(recDocId(fy), { ['records.' + id]: delField() });
+    localDel(fy, id);
+    let n = 0; try{ n = await ScanKit.deleteAllFor('aic', r.att, id); }catch(e){ console.warn('[aic] attachment cleanup', e); }
+    closeModal(); refresh();
+    toast('Record deleted', n ? `${n} attached file${n > 1 ? 's' : ''} removed too` : '');
+  }catch(e){ toast('Delete failed', friendlyErr(e), 'error'); }
+}
+function aicHistory(actId, unit, eqId){
+  const a = actById(actId); if(!a) return;
+  const list = records().filter(r=>r.actId === actId && r.unit === unit && (r.eqId || '') === (eqId || ''))
+    .sort((x, y)=>String(y.date).localeCompare(String(x.date)));
+  openModal(`${mHead(a.name, `${unitLabel(unit)} · ${eqId ? (eqById(eqId) || { name: '(removed)' }).name : 'Whole unit'} · ${freqLabel(a.months)}`)}
+    <div class="modal-body" style="padding:0"><div class="list">${list.map(r=>`<div class="li click" onclick="aicOpenRecord('${r.id}')">
+      <div class="main"><div class="t mono">${fmtDate(r.date)} ${resultPill(r.result)}</div><div class="s">${esc(r.doneBy || '—')}${r.readings ? ' · ' + esc(r.readings.slice(0, 80)) : ''}</div></div>
+      <div class="acts"><span class="att">${attText(r)}</span></div></div>`).join('') || '<div class="empty">No records yet.</div>'}</div></div>
+    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Close</button>
+      <button type="button" class="btn" onclick="aicNewRecord('${actId}','${unit}','${eqId || ''}')">＋ New record</button></div>`);
+}
+
+/* ─── Activities (admin) ─── */
+function aicActivityForm(id){
+  if(!requireAdmin(id ? 'Edit activity' : 'Add activity')) return;
+  const a = id ? actById(id) : { name: '', months: 12, units: ALL_UNIT_IDS.slice(), ref: '', scope: '' };
+  if(!a) return;
+  openModal(`${mHead(id ? 'Edit activity' : 'Add activity', 'Frequency sets the next-due date for every record of this activity')}
+    <div class="modal-body">
+      <div class="banner info" id="af-err" hidden></div>
+      <div class="fld"><label class="req" for="af-name">Activity name</label><input id="af-name" value="${esc(a.name)}" placeholder="e.g. Battery bank discharge test"></div>
+      <div class="fld"><label class="req" for="af-months">Frequency</label><select id="af-months">${FREQS.map(f=>`<option value="${f.m}" ${+a.months === f.m ? 'selected' : ''}>${f.l}</option>`).join('')}</select>
+        <div class="hint">Changing the frequency recalculates next-due dates for records without a manual next-due date.</div></div>
+      <div class="fld"><label class="req">Applies to</label><div class="checks">${UNITS.map(u=>`<label><input type="checkbox" class="af-unit" value="${u.id}" ${actUnits(a).includes(u.id) ? 'checked' : ''}> ${esc(u.phase + ' · ' + u.name)}</label>`).join('')}</div></div>
+      <div class="fld"><label for="af-ref">Reference / standard</label><input id="af-ref" value="${esc(a.ref || '')}" placeholder="e.g. IS 3043, CEA Regulations, OEM manual"></div>
+      <div class="fld"><label for="af-scope">Scope / checkpoints</label><textarea id="af-scope" rows="3">${esc(a.scope || '')}</textarea></div>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn" id="af-save" onclick="aicSaveActivity(${id ? `'${id}'` : ''})">Save activity</button></div>`);
+}
+async function aicSaveActivity(id){
+  if(!requireAdmin('Save activity') || !requireReady()) return;
+  const name = val('af-name'), months = +val('af-months');
+  const units = [...document.querySelectorAll('.af-unit:checked')].map(c=>c.value);
+  if(!name) return formErr('af-err', 'Enter the activity name.');
+  if(!units.length) return formErr('af-err', 'Tick at least one plant unit.');
+  const dup = acts(true).find(x=>x.id !== id && String(x.name).toLowerCase() === name.toLowerCase());
+  if(dup) return formErr('af-err', `An activity called "${dup.name}" already exists${dup.active === false ? ' (retired — restore it instead)' : ''}.`);
+  const u = me(); const now = new Date().toISOString();
+  const base = id ? actById(id) : { id: newId('act_'), order: 50 + acts(true).length, active: true, by: u.email, at: now };
+  const obj = Object.assign({}, base, { name, months, units, ref: val('af-ref'), scope: val('af-scope'), editedBy: u.email, editedAt: now });
+  const btn = byId('af-save'); if(btn) btn.disabled = true;
+  try{
+    if(id) await updateFields(MASTER_DOC, { ['activities.' + id]: obj });
+    else await setMerge(MASTER_DOC, { activities: { [obj.id]: obj } });
+    A.master.activities[obj.id] = obj;
+    closeModal(); refresh(); toast(id ? 'Activity updated' : 'Activity added', `${name} · ${freqLabel(months)}`);
+  }catch(e){ if(btn) btn.disabled = false; formErr('af-err', 'Could not save: ' + friendlyErr(e)); }
+}
+async function aicRetireActivity(id, retire){
+  if(!requireAdmin(retire ? 'Retire activity' : 'Restore activity') || !requireReady()) return;
+  const a = actById(id); if(!a) return;
+  if(retire && !confirm(`Retire "${a.name}"? It disappears from the matrix and forms. Existing records are kept, and you can restore it later.`)) return;
+  try{
+    await updateFields(MASTER_DOC, { ['activities.' + id + '.active']: !retire });
+    a.active = !retire; refresh();
+    toast(retire ? 'Activity retired' : 'Activity restored', a.name);
+  }catch(e){ toast('Could not update', friendlyErr(e), 'error'); }
+}
+
+/* ─── Equipment (add / edit: everyone · remove: admin) ─── */
+function aicEquipmentForm(id, preset){
+  if(!requireReady()) return;
+  const list = acts(); if(!list.length){ toast('No activities', 'An admin needs to add activities first.', 'warn'); return; }
+  const e = id ? eqById(id) : { actId: (preset && preset.act) || A.sf.act || list[0].id, unit: (preset && preset.unit) || A.sf.unit || '', name: '', location: '', notes: '' };
+  if(!e) return;
+  openModal(`${mHead(id ? 'Edit equipment' : 'Add equipment', 'Equipment tracked individually under an activity')}
+    <div class="modal-body">
+      <div class="banner info" id="ef-err" hidden></div>
+      <div class="fld"><label class="req" for="ef-act">Activity</label><select id="ef-act">${list.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></div>
+      <div class="fld"><label class="req" for="ef-unit">Plant unit</label><select id="ef-unit"></select></div>
+      ${id ? `<div class="fld"><label class="req" for="ef-name">Name / ID</label><input id="ef-name" value="${esc(e.name)}"></div>`
+           : `<div class="fld"><label class="req" for="ef-names">Name / ID — one per line</label><textarea id="ef-names" rows="5" placeholder="EP-01\nEP-02\nEP-03"></textarea><div class="hint">Add many at once, e.g. every earth pit or ladder in the unit.</div></div>`}
+      <div class="fld"><label for="ef-loc">Location</label><input id="ef-loc" value="${esc(e.location || '')}" placeholder="e.g. HT substation, DG yard"></div>
+      <div class="fld"><label for="ef-notes">Notes</label><input id="ef-notes" value="${esc(e.notes || '')}" placeholder="e.g. rating, make, tag details"></div>
+    </div>
+    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+      <button type="button" class="btn" id="ef-save" onclick="aicSaveEquipment(${id ? `'${id}'` : ''})">Save</button></div>`);
+  const actSel = byId('ef-act'), unitSel = byId('ef-unit');
+  function fillUnits(sel){
+    const a = actById(actSel.value); const cur = sel !== undefined ? sel : unitSel.value;
+    unitSel.innerHTML = '<option value="">Select unit…</option>' + actUnits(a).map(uid=>`<option value="${uid}">${esc(unitLabel(uid))}</option>`).join('');
+    unitSel.value = actUnits(a).includes(cur) ? cur : '';
+  }
+  actSel.value = e.actId; fillUnits(e.unit);
+  actSel.onchange = ()=>fillUnits();
+}
+async function aicSaveEquipment(id){
+  if(!requireReady()) return;
+  const actId = val('ef-act'), unit = val('ef-unit');
+  if(!actId || !unit) return formErr('ef-err', 'Choose the activity and plant unit.');
+  const u = me(); const now = new Date().toISOString();
+  const location = val('ef-loc'), notes = val('ef-notes');
+  const btn = byId('ef-save');
+  try{
+    if(id){
+      const name = val('ef-name'); if(!name) return formErr('ef-err', 'Enter the name / ID.');
+      const obj = Object.assign({}, eqById(id), { actId, unit, name, location, notes, editedBy: u.email, editedAt: now });
+      if(btn) btn.disabled = true;
+      await updateFields(MASTER_DOC, { ['equipment.' + id]: obj });
+      A.master.equipment[id] = obj;
+      closeModal(); refresh(); toast('Equipment updated', name);
+    } else {
+      const existing = new Set(eqs().filter(e=>e.actId === actId && e.unit === unit).map(e=>e.name.toLowerCase()));
+      const seen = new Set(); let skipped = 0;
+      const names = val('ef-names').split('\n').map(s=>s.trim()).filter(Boolean).filter(n=>{
+        const k = n.toLowerCase(); if(existing.has(k) || seen.has(k)){ skipped++; return false; } seen.add(k); return true; });
+      if(!names.length) return formErr('ef-err', skipped ? 'All of these are already listed for this activity and unit.' : 'Enter at least one name / ID.');
+      const patch = {};
+      names.forEach(n=>{ const eid = newId('eq_'); patch[eid] = { id: eid, actId, unit, name: n, location, notes, active: true, by: u.email, uid: u.uid, at: now }; });
+      if(btn) btn.disabled = true;
+      await setMerge(MASTER_DOC, { equipment: patch });
+      A.master.equipment = Object.assign({}, A.master.equipment, patch);
+      closeModal(); refresh();
+      toast(`${names.length} equipment added`, `${actById(actId).name} · ${unitLabel(unit)}${skipped ? ` · ${skipped} duplicate${skipped > 1 ? 's' : ''} skipped` : ''}`);
+    }
+  }catch(e){ if(btn) btn.disabled = false; formErr('ef-err', 'Could not save: ' + friendlyErr(e)); }
+}
+async function aicRemoveEquipment(id, remove){
+  if(!requireAdmin(remove ? 'Remove equipment' : 'Restore equipment') || !requireReady()) return;
+  const e = eqById(id); if(!e) return;
+  if(remove && !confirm(`Remove "${e.name}" from tracking? Its past records are kept, and you can restore it later.`)) return;
+  try{
+    await updateFields(MASTER_DOC, { ['equipment.' + id + '.active']: !remove });
+    e.active = !remove; refresh();
+    toast(remove ? 'Equipment removed' : 'Equipment restored', e.name);
+  }catch(err){ toast('Could not update', friendlyErr(err), 'error'); }
+}
+
+/* ─── Start ─── */
+function subRecs(fy){
+  if(!fy || A.subs[fy]) return;
+  A.subs[fy] = listen(recDocId(fy), (data, err)=>{
+    if(err) return;
+    A.recs[fy] = (data && data.records) || {};
+    refresh();
+  });
+}
+async function seedDefaults(){
+  if(A.seeding) return; A.seeding = true;
+  try{ await setMerge(MASTER_DOC, { activities: DEFAULT_ACTIVITIES, fyDocs: {}, createdAt: new Date().toISOString() }); }
+  catch(e){
+    console.warn('[aic] could not create the default activities', e); A.seeding = false;
+    aicStatus(`<b>Could not create the register:</b> ${esc(friendlyErr(e))} ${fixHint(e)}`);
+  }
+}
+// 3.10b — visible status strip (errors used to go to the console only)
+function aicStatus(html){ const el = byId('aic-status'); if(el) el.innerHTML = html ? `<div class="banner bad">${html}</div>` : ''; }
+function fixHint(e){
+  const c = e && e.code;
+  if(c === 'permission-denied') return '<br>Fix: Firebase Console → Firestore Database → <b>Rules</b> → the <b>itc_pm</b> block must say <code>allow read, write: if request.auth != null;</code> → Publish. Then sign out and in again.';
+  if(c === 'unavailable' || c === 'deadline-exceeded') return '<br>Fix: check mobile data / Wi-Fi and reopen the tab.';
+  if(c === 'unauthenticated') return '<br>Fix: sign out and sign in again.';
+  return '<br>Tap <b>🩺 Check connection</b> and send me a screenshot.';
+}
+function aicAddReport(){
+  aicNewRecord();
+  setTimeout(()=>{ const b = byId('rf-report'); if(b){ b.scrollIntoView({ block: 'center' }); b.classList.add('rep-flash'); } }, 60);
+}
+async function aicDiagnostics(){
+  const rows = [];
+  const put = (k, v, cls)=>{ rows.push([k, v, cls]); draw(); };
+  function draw(){
+    const t = byId('diag-t'); if(!t) return;
+    t.innerHTML = rows.map(r=>`<tr><td>${esc(r[0])}</td><td class="${r[2] || ''}">${r[1]}</td></tr>`).join('');
+  }
+  openModal(`${mHead('Connection check', 'Take a screenshot of this and send it if something fails')}
+    <div class="modal-body"><table class="diag"><tbody id="diag-t"></tbody></table></div>
+    <div class="modal-foot"><button type="button" class="btn" onclick="closeModal()">Close</button></div>`);
+  const withTimeout = (p, ms)=>Promise.race([p, new Promise((_, rej)=>setTimeout(()=>rej(Object.assign(new Error('no answer from the server in ' + (ms/1000) + ' s'), { code: 'timeout' })), ms))]);
+  const errTxt = e=>`✗ ${esc((e && e.code) ? e.code + ' — ' : '')}${esc((e && e.message) || String(e))}`;
+  put('Page version', esc(window.__aicBuild || 'unknown (old file)'), window.__aicBuild ? 'ok' : 'no');
+  put('Opened', window.parent === window ? 'directly' : 'inside the app tab', '');
+  put('Internet', navigator.onLine ? '✓ online' : '✗ offline', navigator.onLine ? 'ok' : 'no');
+  const f = fb();
+  put('Firebase library', f ? '✓ loaded' : '✗ not loaded — firebase-config.js or the Google scripts could not load', f ? 'ok' : 'no');
+  if(!f) return;
+  const u = window.__pmCurrentUser;
+  put('Signed in', u ? '✓ ' + esc(u.email || u.uid) : '✗ not signed in — open the app and log in', u ? 'ok' : 'no');
+  if(!u) return;
+  put('Role', isAdmin() ? 'ADMIN' : 'USER', '');
+  try{
+    const s = await withTimeout(f.getDoc(docRef(MASTER_DOC)), 10000);
+    const n = s.exists() ? Object.keys((s.data() || {}).activities || {}).length : 0;
+    put('Read register (itc_pm/aic_master)', s.exists() ? `✓ ${n} activities` : '✗ register not created yet', s.exists() ? 'ok' : 'no');
+  }catch(e){ put('Read register (itc_pm/aic_master)', errTxt(e) + fixHint(e), 'no'); }
+  const tid = 'aic_selftest_' + u.uid;
+  try{
+    await withTimeout(f.setDoc(docRef(tid), { at: new Date().toISOString(), by: u.email || u.uid }), 10000);
+    put('Save test', '✓ write allowed', 'ok');
+    try{ await withTimeout(f.deleteDoc(docRef(tid)), 10000); }catch(_){}
+  }catch(e){ put('Save test', errTxt(e) + fixHint(e), 'no'); }
+  const fy = fyOfIso(todayIso());
+  try{
+    await withTimeout(f.getDoc(docRef('scanidx_aic_' + fy)), 10000);
+    put('Report file store', '✓ reachable', 'ok');
+  }catch(e){ put('Report file store', errTxt(e), 'no'); }
+  put('Records loaded', `${records().length} records · ${acts().length} activities`, '');
+}
+function start(){
+  setRolePill();
+  clearTimeout(A.connTimer);
+  A.loadTimer = setTimeout(()=>{ if(A.master === undefined) aicStatus('<b>Still waiting for the server…</b> The register has not loaded after 15 s.' + fixHint({ code: 'unavailable' })); }, 15000);
+  listen(MASTER_DOC, (data, err)=>{
+    if(err){ aicStatus(`<b>Could not load the register:</b> ${esc(friendlyErr(err))} ${fixHint(err)}`);
+             byId('view').innerHTML = `<div class="empty">Could not load the register: ${esc(friendlyErr(err))}</div>`; return; }
+    clearTimeout(A.loadTimer); if(!A.seeding) aicStatus('');
+    if(data === null){ A.master = { activities: {}, equipment: {}, fyDocs: {} }; seedDefaults(); }
+    else A.master = { activities: data.activities || {}, equipment: data.equipment || {}, fyDocs: data.fyDocs || {} };
+    const cur = fyOfIso(todayIso()); const y = +cur.slice(2, 6);
+    [cur, `FY${y - 1}-${z2(y % 100)}`].concat(Object.keys(A.master.fyDocs)).forEach(subRecs);
+    refresh();
+  });
+  ScanKit.onChange(()=>{ if(A.view === 'records') updateAttBadges(); });
+}
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click', ()=>setView(b.dataset.v)));
+renderView();
+byId('aic-build').textContent = 'v' + window.__aicBuild;
+A.connTimer = setTimeout(()=>{ if(!window.__pmFirebaseReady) aicStatus('<b>Not connected yet.</b> Sign-in / Firebase has not answered after 15 s.' + fixHint({})); }, 15000);
+whenReady(start);
+window.__aicBooted = true;
+</script>
+</body>
+</html>
