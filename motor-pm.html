@@ -425,7 +425,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
 <script>
 /* Phase 3.11 — phones have no console: show script errors on screen and warn if the
    page never finishes loading (old cached copy, or file cut short on GitHub). */
-window.__motorBuild = '3.11f · 27-09-2026';
+window.__motorBuild = '3.11g · 27-09-2026';
 window.__motorErrors = [];
 (function(){
   function show(msg){
@@ -441,7 +441,7 @@ window.__motorErrors = [];
   window.addEventListener('unhandledrejection', function(e){ var r = e && e.reason; show((r && (r.code ? r.code + ' — ' : '') + (r.message || r)) || 'request failed'); });
   setTimeout(function(){
     if(window.__motorBooted) return;
-    show('This page did not finish loading. The motor-pm.html on GitHub is probably cut short or an old copy is cached. Re-upload it with Add file → Upload files (GitHub must show 5166 lines ending with &lt;/html&gt;) and clear the browser cache.');
+    show('This page did not finish loading. The motor-pm.html on GitHub is probably cut short or an old copy is cached. Re-upload it with Add file → Upload files (GitHub must show 5180 lines ending with &lt;/html&gt;) and clear the browser cache.');
   }, 15000);
 })();
 </script>
@@ -449,7 +449,7 @@ window.__motorErrors = [];
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">ITC <span>HARIDWAR</span></div>
-      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.11f · 27-09-2026</span></div>
+      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.11g · 27-09-2026</span></div>
     </div>
     <nav class="nav" id="nav">
       <div class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</div>
@@ -4543,12 +4543,22 @@ document.querySelectorAll('.nav-item').forEach(el=>{
    Both close with × button or click outside. Both have sessionStorage + localStorage to prevent re-showing. */
 function maybeShowDailyPopup(force){
   try{
-    const todayKey = 'pm_daily_popup_' + isoDate(TODAY);
-    if(!force && localStorage.getItem(todayKey)) return; // already shown today
-    if(!cachedRows || !cachedRows.length) return;
+    // 3.11g: shown on EVERY open of Motor PM, unless "Hide for today" was tapped today
+    const todayKey = 'pm_daily_hide_' + isoDate(TODAY);
+    let hidden = false; try{ hidden = !!localStorage.getItem(todayKey); }catch(_){}
+    if(!force && hidden) return;
+    const allRows = cachedRowsAll || cachedRows || [];
+    if(!allRows.length) return;
     const todayStr = isoDate(TODAY);
-    const todayItems = (cachedRowsAll || cachedRows).filter(r => r.date === todayStr && !r.actualDate);
-    if(todayItems.length === 0){ if(force) toast("Today's plan", 'No motor PM planned today (' + dateFmt(TODAY) + ').'); return; } // nothing planned today
+    let todayItems = allRows.filter(r => r.date === todayStr && !r.actualDate);
+    const doneToday = allRows.filter(r => r.actualDate === todayStr).length;
+    let heading = "📅 Today's Plan", subDate = TODAY, emptyNote = '';
+    if(todayItems.length === 0){
+      // nothing (left) today → show the next PM day instead of staying silent
+      const next = allRows.filter(r => !r.actualDate && r.date > todayStr).map(r=>r.date).sort()[0];
+      emptyNote = `<div style="padding:10px 12px;margin-bottom:10px;border:1px solid var(--border);border-radius:4px;font-size:12px;color:var(--text-dim)">${doneToday ? `✓ All ${doneToday} PM${doneToday===1?'':'s'} planned for today are done.` : `No motor PM planned today (${dateFmt(TODAY)}${(typeof rollOff==='function' && rollOff(STATE).has(rpDn(todayStr))) ? ' · holiday / buffer day' : ''}).`}${next ? ' Next PM day below.' : ''}</div>`;
+      if(next){ todayItems = allRows.filter(r => r.date === next && !r.actualDate); heading = '📅 Next PM Day'; subDate = isoToDate(next); }
+    }
 
     const list = todayItems.slice(0, 30).map(r=>{
       const m = STATE.motors.find(mm=>mm.sr===r.sr) || {motor:'?', area:'?', cat:'?'};
@@ -4565,22 +4575,23 @@ function maybeShowDailyPopup(force){
     const content = `
       <div class="modal-head">
         <div>
-          <div class="modal-title">📅 Today's Plan</div>
-          <div class="modal-subtitle">${dateFmt(TODAY)} · ${todayItems.length} motor${todayItems.length===1?'':'s'} scheduled</div>
+          <div class="modal-title">${heading}</div>
+          <div class="modal-subtitle">${dateFmt(subDate)} · ${todayItems.length} motor${todayItems.length===1?'':'s'} scheduled${todayItems.length ? ' · ' + (todayItems[0].area || '') : ''}</div>
         </div>
         <button class="modal-close" onclick="closeModal()">×</button>
       </div>
       <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+        ${emptyNote}
         <div style="display:grid;gap:6px">${list}</div>
         ${todayItems.length > 30 ? `<div style="text-align:center;padding:10px;font-size:11px;color:var(--text-muted)">+${todayItems.length-30} more · open Daily View to see all</div>` : ''}
       </div>
       <div class="modal-footer">
+        <button class="btn secondary" onclick="try{localStorage.setItem('${todayKey}','1')}catch(e){} closeModal(); toast('Hidden for today','Tap “Today” in the top bar to see it again.')">Hide for today</button>
         <button class="btn secondary" onclick="closeModal()">Dismiss</button>
         <button class="btn" onclick="closeModal(); document.querySelector('[data-page=daily]').click()">Open Daily View →</button>
       </div>
     `;
     openModal(content);
-    localStorage.setItem(todayKey, '1');
   }catch(e){ console.warn('Daily popup failed:', e); }
 }
 
@@ -4633,37 +4644,40 @@ function maybeShowWeeklyPopup(force){
       </div>
     `;
     openModal(content);
-    localStorage.setItem(weekKey, '1');
+    try{ localStorage.setItem(weekKey, '1'); }catch(_){}
   }catch(e){ console.warn('Weekly popup failed:', e); }
 }
 
 // Show popups on first visit per session, prefer weekly > daily (only show one at a time)
 let _popupsShown = false;
 function maybeShowPopups(){
-  if(_popupsShown) return;
-  // 3.11d: wait until the plan is loaded, and never cover a window the user already opened
-  if(!(cachedRowsAll || cachedRows) || !(cachedRowsAll || cachedRows).length) return;
-  if(document.querySelector('#modal-host.show')) return;
+  if(_popupsShown) return true;
+  // 3.11g: wait until the plan is loaded; never cover a window the user already opened (retry instead)
+  if(!(cachedRowsAll || cachedRows) || !(cachedRowsAll || cachedRows).length) return false;
+  if(document.querySelector('#modal-host.show')) return false;
   _popupsShown = true;
-  // Try weekly first (more important). If skipped, try daily.
+  // First open of the week → Weekly Summary. Every other open → Today's Plan.
   const sow = startOfWeek(TODAY);
   const weekKey = 'pm_weekly_popup_' + isoDate(sow);
-  if(!localStorage.getItem(weekKey)){
-    maybeShowWeeklyPopup();
-  } else {
-    maybeShowDailyPopup();
-  }
+  let seen = false; try{ seen = !!localStorage.getItem(weekKey); }catch(_){}
+  if(!seen) maybeShowWeeklyPopup();
+  if(!document.querySelector('#modal-host.show')) maybeShowDailyPopup();   // weekly had nothing → today's plan
+  return true;
+}
+// Try until the popup has been shown (max ~40 s after opening)
+function schedulePopups(delay, tries){
+  setTimeout(()=>{ if(!maybeShowPopups() && tries > 0) schedulePopups(2000, tries - 1); }, delay);
 }
 
 /* Initial */
 renderAll();
 // 3.11d: show the daily / weekly popup once the LIVE plan is loaded from the cloud
 // (not the built-in default data); if there is no connection at all (offline / preview), after 10 s.
-document.addEventListener('pm-state-ready', ()=>{ window.__pmStateReady = true; setTimeout(maybeShowPopups, 400); }, {once:true});
+document.addEventListener('pm-state-ready', ()=>{ window.__pmStateReady = true; schedulePopups(400, 15); }, {once:true});
 setTimeout(function popupFallback(){
-  if(window.__pmStateReady) return;                                  // live data arrived → shown by the event
-  if(window.__pmFirebaseReady){ setTimeout(popupFallback, 3000); return; }   // connected, still loading → keep waiting
-  maybeShowPopups();                                                // no connection at all → use the copy on this phone
+  if(window.__pmStateReady || _popupsShown) return;                  // live data arrived → shown by the event
+  if(window.__pmFirebaseReady && (popupFallback.n = (popupFallback.n || 0) + 1) < 4){ setTimeout(popupFallback, 3000); return; } // still loading → wait up to ~19 s
+  schedulePopups(0, 10);                                            // no connection / very slow → use the copy on this phone
 }, 10000);
 </script>
 
