@@ -2670,7 +2670,8 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
     set('dn-k-done', base.length); set('dn-k-on', on); set('dn-k-late', late); set('dn-k-pct', (on + late) ? Math.round(on * 100 / (on + late)) + '%' : '—');
     const list = (F.show ? base.filter(x => x.v && x.v.k === F.show) : base).sort((a, b) => (b.e.actualDate || '').localeCompare(a.e.actualDate || '') || (b.e.submittedAt || '').localeCompare(a.e.submittedAt || ''));
     set('e-count', `${list.length} of ${all.length} executions`);
-    const adm = isAdmin();
+    const adm = true;                                           // 3.12c: Edit / Undo column for everyone (users inside their 3-day window)
+    const canE = pid => typeof panelCanEdit === 'function' ? panelCanEdit(pid) : isAdmin();
     let h = '<thead><tr><th>Unit</th><th>Panel</th><th>Result</th><th class="num">Actual</th><th class="num">Planned</th><th>📎</th><th class="num">MTTR</th><th>By</th>' + (adm ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
     if(!list.length){
       h += `<tr><td colspan="${adm ? 9 : 8}" style="text-align:center;padding:40px;color:var(--text-3)">${all.length ? 'No execution matches these filters' : 'No executions yet'}</td></tr>`;
@@ -2685,14 +2686,14 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
         }
         h += `<tr data-pid="${p.id}" title="Tap for the checklist and check-sheet files">
           <td class="unit-name">${hl(unitShort(p.area), words)}</td>
-          <td>${hl(p.panel, words)}${snip}</td>
+          <td>${hl(p.panel, words)}${e.editedAt ? '<span class="ed-tag">EDITED</span>' : ''}${snip}</td>
           <td><span class="dn-pill ${v.k}">${v.t}</span>${v.k === 'late' ? `<span class="dn-late">+${v.days} d</span>` : ''}</td>
           <td class="num">${dateFmt(isoToDate(e.actualDate))}</td>
           <td class="num">${dateFmt(isoToDate(p.pm_date))}</td>
           <td>${n ? `<span class="dn-file">📎 ${n}</span>` : '<span style="color:var(--text-3)">—</span>'}</td>
           <td class="num">${e.mttrMin || '—'}<span style="color:var(--text-3);font-size:10px"> m</span></td>
           <td class="mono" style="font-size:11px">${hl((e.submittedBy || '').split('@')[0], words)}</td>` +
-          (adm ? `<td><button class="btn ghost sm" onclick="event.stopPropagation();markUndo(${p.id})">↶ Undo</button></td>` : '') + '</tr>';
+          (adm ? `<td style="white-space:nowrap">${canE(p.id) ? `<button class="btn ghost sm" onclick="event.stopPropagation();panelEditOpen(${p.id})">✎ Edit</button> <button class="btn ghost sm" onclick="event.stopPropagation();markUndo(${p.id})">↶ Undo</button>` : '<span style="color:var(--text-3)" title="Edit window closed — ask an admin">🔒</span>'}</td>` : '') + '</tr>';
       });
     }
     h += '</tbody>';
@@ -2719,11 +2720,14 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
         </div>
         ${e ? `<div class="dn-sec">Checklist filled</div>${cl.length ? `<table class="dn-cl">${cl.map(c => `<tr><td>${esc(c.l)}</td><td>${esc(c.v)}${c.u ? ' <span>' + esc(c.u) + '</span>' : ''}</td></tr>`).join('')}</table>`
              : '<div class="dn-none">No checklist values were saved with this PM (for example, it was imported).</div>'}` : ''}
+        ${e && e.edits && e.edits.length ? `<div class="dn-sec">Edit history</div><div class="ed-hist">${e.edits.slice().reverse().map(x => `<div><b>${esc(String(x.by).split('@')[0])}</b> · ${esc(dt(x.at))}<br>${esc(x.what)}</div>`).join('')}</div>` : ''}
+        ${done && typeof panelCanEdit === 'function' && !panelCanEdit(p.id) ? `<div class="dn-txt" style="margin-top:10px">🔒 Edit window closed on ${esc(panelEditWindowEnd(p.id))} — ask an admin to change this record.</div>` : ''}
         ${rs.length ? `<div class="dn-sec">Date changes</div>${rs.map(x => `<div class="dn-txt">${x.fromDate ? dateFmt(isoToDate(String(x.fromDate).slice(0, 10))) : '—'} → ${x.toDate ? dateFmt(isoToDate(String(x.toDate).slice(0, 10))) : '—'} · ${esc([x.reason, x.note].filter(Boolean).join(' — ') || 'no reason')}</div>`).join('')}` : ''}
         <div class="dn-sec">📎 Check sheet — scans &amp; photos</div>
         <div class="dn-files"></div>
       </div>
       <div class="modal-foot">
+        ${done && typeof panelCanEdit === 'function' && panelCanEdit(p.id) ? `<button class="btn ghost" onclick="markUndo(${p.id})">↶ Undo</button><button class="btn ghost" onclick="panelEditOpen(${p.id})">✎ Edit</button>` : ''}
         ${!done ? `<button class="btn ghost" onclick="openShiftDate(${p.id})">Change date</button><button class="btn" onclick="markDone(${p.id})">✓ Mark Done</button>` : ''}
         <button class="btn${!done ? ' ghost' : ''}" onclick="closeModal()">Close</button>
       </div>`);
@@ -2738,6 +2742,182 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
   window.panelLogFilter = function(o){ ensureUi(); Object.assign(F, o || {}); ['show', 'unit', 'month'].forEach(k => { const el = $('dn-' + k); if(el) el.value = F[k]; }); const q = $('dn-q'); if(q) q.value = F.q; renderExecutionsX(); };
   if(window.ScanKit) ScanKit.onChange(() => { const pg = $('page-executions'); if(pg && pg.classList.contains('active')) renderExecutionsX(); });
   try{ renderExecutionsX(); }catch(err){ console.warn('[exec log]', err); }
+})();
+</script>
+<style id="ed-style">
+/* Phase 3.12c · Edit / Undo a Mark Done */
+.ed-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.ed-note{margin:10px 0;padding:9px 12px;border-radius:2px;border:1px solid var(--line-2);border-left:3px solid var(--accent);background:var(--bg-2);font-size:12px;color:var(--text-2);line-height:1.45}
+.ed-note b{color:var(--text)}
+.ed-hist{font-size:12px;color:var(--text-2);line-height:1.5}
+.ed-hist div+div{margin-top:4px;padding-top:4px;border-top:1px dashed var(--line)}
+.ed-tag{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--amber);border:1px solid rgba(245,158,11,.45);border-radius:2px;padding:1px 5px;margin-left:6px}
+details.ed-audit{margin-top:14px;background:var(--bg-1);border:1px solid var(--line);border-radius:4px;padding:12px 14px}
+details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--text)}
+.ed-audit-list{margin-top:10px;font-size:12px;color:var(--text-2)}
+.ed-audit-list .r{padding:7px 0;border-top:1px solid var(--line)}
+.ed-audit-list .r b{color:var(--text)}
+.ed-audit-list .u{color:var(--red);font-weight:600} .ed-audit-list .e{color:var(--accent);font-weight:600}
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   Phase 3.12c · EDIT / UNDO A MARK DONE — Panel PM
+   • Daily View + Execution Log + panel PM record: ✎ Edit and ↶ Undo.
+   • USER  : while the done date is within 3 days of today (±3 days); a
+             corrected done date must be within the last 3 days.
+   • ADMIN : always — any past date, every field.
+   • Edit opens the module's own Mark Done form, filled with what was saved
+     (date, start/stop, done by, every checklist field incl. Permit No); the
+     check-sheet photo / PDF block stays in the form.
+   • Every change is stamped on the record and written to itc_pm/pm_audit.
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const WINDOW = 3;
+  const todayIso = () => isoDate(new Date());
+  const dayDiff = (a, b) => Math.round((isoToDate(a) - isoToDate(b)) / 86400000);
+  const me = () => { const u = window.__pmCurrentUser; return u ? (u.email || u.uid) : 'unknown'; };
+  const pad = n => String(n).padStart(2, '0');
+  const fmtDT = iso => { const d = new Date(iso); return (!iso || isNaN(d)) ? '—' : `${dateFmt(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  function toInput(iso){ const d = new Date(iso); if(!iso || isNaN(d)) return ''; return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+  const ex = pid => (STATE.panelExecutions || {})[pid];
+  function canEdit(pid){ const e = ex(pid); if(!e || !e.actualDate) return false; return isAdmin() || Math.abs(dayDiff(todayIso(), e.actualDate)) <= WINDOW; }
+  function lastDay(e){ const d = isoToDate(e.actualDate); d.setDate(d.getDate() + WINDOW); return dateFmt(d); }
+  function denyMsg(pid){ const e = ex(pid);
+    toast('Edit window closed', e ? `Users can edit or undo a Mark Done for ${WINDOW} days (until ${lastDay(e)}). Ask an admin to change it.` : 'This panel PM is not marked done.', 'warn'); }
+  function audit(action, pid, before, changes){
+    try{
+      const fb = window.__pmFirebase; if(!fb || !fb.setDoc || !window.__pmCurrentUser) return;
+      const p = (STATE.panels || []).find(x => x.id === pid) || {};
+      const at = new Date().toISOString(); const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const item = { module: 'panel', key: `${pid} · ${p.panel || ''}`, action, by: me(), role: isAdmin() ? 'admin' : 'user', at, changes: changes || [],
+        before: before ? { actualDate: before.actualDate || '', by: before.submittedBy || '', mttrMin: before.mttrMin == null ? null : before.mttrMin, checklist: before.checklist || {} } : null };
+      fb.setDoc(fb.doc(fb.db, 'itc_pm', 'pm_audit'), { items: { [id]: item }, updatedAt: at }, { merge: true }).catch(err => console.warn('[audit]', err));
+    }catch(err){ console.warn('[audit]', err); }
+  }
+
+  /* ─── Undo (users inside the window, admin always) ─── */
+  function markUndoX(pid){
+    pid = +pid; const e = ex(pid); if(!e){ toast('Not done', '', 'warn'); return; }
+    if(!requireOps('undo')) return;
+    if(!canEdit(pid)){ denyMsg(pid); return; }
+    const p = (STATE.panels || []).find(x => x.id === pid) || {};
+    if(!confirm(`Undo Mark Done for ${p.panel || 'this panel'}?\n\nThe PM goes back to pending. Any check-sheet photos stay attached to it.`)) return;
+    audit('undo', pid, e, ['Mark Done removed (was done ' + dateFmt(isoToDate(e.actualDate)) + ')']);
+    delete STATE.panelExecutions[pid];
+    saveToFirebase(); if(document.querySelector('#m-host.show')) closeModal(); renderAll();
+    toast('Undone', `${p.panel || pid} is pending again`, 'good');
+  }
+  markUndo = markUndoX; window.markUndo = markUndoX;
+
+  /* ─── Edit: the module's own Mark Done form, pre-filled ─── */
+  function panelEditOpen(pid){
+    pid = +pid; const e = ex(pid); if(!e){ toast('Not done yet', 'Use Mark Done first.', 'warn'); return; }
+    if(!requireOps('edit')) return;
+    if(!canEdit(pid)){ denyMsg(pid); return; }
+    markDone(pid);
+    setTimeout(() => prefill(pid, e), 0);
+  }
+  function prefill(pid, e){
+    const host = $('m-host'); if(!host || !host.classList.contains('show')) return;
+    const eb = host.querySelector('.modal-eyebrow'), t = host.querySelector('.modal-title');
+    if(eb) eb.textContent = `▍ Edit · done ${dateFmt(isoToDate(e.actualDate))} · saved by ${String(e.submittedBy || '—').split('@')[0]}`;
+    if(t) t.textContent = '✎ Edit PM record';
+    const ad = $('md-ad');
+    if(ad){ ad.value = e.actualDate; const T = todayIso();
+      if(isAdmin()){ ad.removeAttribute('min'); ad.setAttribute('max', T); }
+      else { const lo = isoToDate(T); lo.setDate(lo.getDate() - WINDOW); ad.setAttribute('min', isoDate(lo)); ad.setAttribute('max', T); } }
+    const now = new Date(); const same = `${e.actualDate}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    if($('md-ps')) $('md-ps').value = e.pmStart ? toInput(e.pmStart) : same;
+    if($('md-pp')) $('md-pp').value = e.pmStop ? toInput(e.pmStop) : same;
+    if($('md-by')) $('md-by').value = e.submittedBy || '';
+    const cl = e.checklist || {};
+    (STATE.panelChecklistFields || defaultPanelChecklist()).forEach(f => {
+      const el = $('cl-' + f.id); const v = cl[f.id]; if(!el || v === undefined || v === null) return;
+      if(el.tagName === 'SELECT' && v !== '' && ![...el.options].some(o => o.value === String(v))){ const o = document.createElement('option'); o.value = o.textContent = String(v); el.appendChild(o); }
+      el.value = String(v);
+    });
+    const gi = $('gps-ind'), gt = $('gps-txt');
+    if(gi){ gi.className = 'gps-strip ' + (e.gps && e.gps.captured ? 'ok' : 'pending'); if(gt) gt.textContent = e.gps && e.gps.captured ? 'Kept from the original Mark Done' : 'Not recorded at Mark Done'; }
+    const body = host.querySelector('.modal-body');
+    const note = document.createElement('div'); note.className = 'ed-note';
+    note.innerHTML = `${isAdmin() ? '<b>Admin:</b> every field can be changed, any past date.' : `<b>User edit window:</b> until ${lastDay(e)} · done date within the last ${WINDOW} days.`} Changes are stamped with your name and time.`;
+    const sx = body && body.querySelector('.sx-embed'); if(body){ if(sx) body.insertBefore(note, sx); else body.appendChild(note); }
+    const btn = host.querySelector('[onclick^="submitDone("]');
+    if(btn){ btn.setAttribute('onclick', `panelEditSave(${pid})`); btn.textContent = '💾 Save changes'; }
+  }
+  function panelEditSave(pid){
+    pid = +pid; const old = ex(pid); if(!old){ toast('Not found', 'This panel PM is no longer marked done.', 'warn'); closeModal(); return; }
+    if(!canEdit(pid)){ denyMsg(pid); return; }
+    const ad = ($('md-ad') || {}).value; const T = todayIso();
+    if(!ad){ toast('Missing', 'Date is required', 'warn'); return; }
+    if(ad > T){ toast('Future date', 'The done date cannot be in the future.', 'warn'); return; }
+    if(!isAdmin() && dayDiff(T, ad) > WINDOW){ toast('Date restricted', `Users can set a done date within the last ${WINDOW} days. Ask an admin for older dates.`, 'warn'); return; }
+    const fields = STATE.panelChecklistFields || defaultPanelChecklist(); const cl = {};
+    for(const f of fields){ const el = $('cl-' + f.id); if(!el) continue; const v = el.value.trim();
+      if(f.required && !v && !isAdmin()){ toast('Missing', 'Please fill: ' + f.label, 'warn'); el.focus(); return; } cl[f.id] = v; }
+    Object.keys(old.checklist || {}).forEach(k => { if(!(k in cl)) cl[k] = old.checklist[k]; });
+        const ps = ($('md-ps') || {}).value, pp = ($('md-pp') || {}).value;
+    let pmStart = '', pmStop = '', mttrMin = null;
+    if(ps && pp){ const a = new Date(ps), b = new Date(pp);
+      if(b < a){ toast('Check the times', 'Stop (' + dtFmtShort(b) + ') is earlier than Start (' + dtFmtShort(a) + '). Correct one of them — or make them the same to save without a duration.', 'warn'); return; }
+      if(b > a){ pmStart = a.toISOString(); pmStop = b.toISOString(); mttrMin = Math.round((b - a) / 60000); } }
+    const by = (($('md-by') || {}).value || '').trim() || old.submittedBy || '';
+    const upd = Object.assign({}, old, { actualDate: ad, pmStart, pmStop, mttrMin, checklist: cl, submittedBy: by });
+    const ch = [];
+    if(ad !== old.actualDate) ch.push(`Done date ${dateFmt(isoToDate(old.actualDate))} → ${dateFmt(isoToDate(ad))}`);
+    if((old.pmStart || '') !== pmStart || (old.pmStop || '') !== pmStop) ch.push(`PM time ${old.mttrMin == null ? '—' : old.mttrMin + ' min'} → ${mttrMin == null ? '—' : mttrMin + ' min'}`);
+    fields.forEach(f => { const a = String((old.checklist || {})[f.id] == null ? '' : old.checklist[f.id]), b = String(cl[f.id] == null ? '' : cl[f.id]); if(a !== b) ch.push(`${f.label}: ${a || '—'} → ${b || '—'}`); });
+    if((old.submittedBy || '') !== by) ch.push(`Done by → ${by}`);
+    if(!ch.length){ toast('No changes', 'Nothing was changed.'); closeModal(); return; }
+    const at = new Date().toISOString();
+    upd.editedBy = me(); upd.editedAt = at; upd.edits = (old.edits || []).concat([{ by: me(), at, what: ch.join('; ') }]).slice(-10);
+    STATE.panelExecutions[pid] = upd;
+    saveToFirebase(); closeModal(); renderAll();
+    audit('edit', pid, old, ch);
+    toast('PM record updated', ch.join(' · ').slice(0, 140), 'good');
+  }
+
+  /* ─── Daily View: ✎ Edit next to ↶ Undo (🔒 View outside the user window) ─── */
+  function decorate(){
+    const list = $('d-list'); if(!list) return;
+    list.querySelectorAll('button[onclick^="markUndo("]').forEach(b => {
+      if(b.closest('.ed-acts')) return;
+      const m = (b.getAttribute('onclick') || '').match(/markUndo\((\d+)\)/); if(!m) return;
+      const pid = +m[1]; const box = document.createElement('div'); box.className = 'ed-acts';
+      box.innerHTML = canEdit(pid)
+        ? `<button class="btn ghost sm" onclick="panelEditOpen(${pid})">✎ Edit</button><button class="btn ghost sm" onclick="markUndo(${pid})">↶ Undo</button>`
+        : `<button class="btn ghost sm" onclick="openPanelRecord(${pid})" title="Edit window closed — ask an admin">🔒 View</button>`;
+      b.replaceWith(box);
+    });
+  }
+  async function loadAudit(el){
+    el.innerHTML = 'Loading…';
+    try{
+      const fb = window.__pmFirebase; const s = await fb.getDoc(fb.doc(fb.db, 'itc_pm', 'pm_audit'));
+      const items = Object.values((s.exists() && s.data().items) || {}).filter(x => x && x.module === 'panel').sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 60);
+      el.innerHTML = items.length ? items.map(x => `<div class="r"><span class="${x.action === 'undo' ? 'u' : 'e'}">${x.action === 'undo' ? '↶ UNDO' : '✎ EDIT'}</span> · <b>${esc(x.key)}</b> · ${esc(String(x.by).split('@')[0])} (${esc(x.role)}) · ${esc(fmtDT(x.at))}<br>${esc((x.changes || []).join('; '))}</div>`).join('')
+        : 'No edits or undos yet.';
+    }catch(err){ el.textContent = 'Could not read the history: ' + (err.message || err); }
+  }
+  function ensureAudit(){
+    const page = $('page-executions'); if(!page) return;
+    let d = $('ed-audit');
+    if(!d){ d = document.createElement('details'); d.className = 'ed-audit'; d.id = 'ed-audit';
+      d.innerHTML = '<summary>🕘 Edit &amp; undo history (admin)</summary><div class="ed-audit-list"></div>';
+      d.addEventListener('toggle', () => { if(d.open) loadAudit(d.querySelector('.ed-audit-list')); }); page.appendChild(d); }
+    d.hidden = !isAdmin();
+  }
+  function start(){
+    const list = $('d-list'); if(list){ new MutationObserver(decorate).observe(list, { childList: true }); decorate(); }
+    const ra = window.renderAll; if(typeof ra === 'function') window.renderAll = function(){ const out = ra.apply(this, arguments); try{ ensureAudit(); }catch(err){} return out; };
+    ensureAudit();
+  }
+  window.panelEditOpen = panelEditOpen; window.panelEditSave = panelEditSave; window.panelCanEdit = canEdit;
+  window.panelEditWindowEnd = pid => { const e = ex(+pid); return e ? lastDay(e) : ''; };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 </script>
 </body>
