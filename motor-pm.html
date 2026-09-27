@@ -425,7 +425,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
 <script>
 /* Phase 3.11 — phones have no console: show script errors on screen and warn if the
    page never finishes loading (old cached copy, or file cut short on GitHub). */
-window.__motorBuild = '3.12c · 27-09-2026';
+window.__motorBuild = '3.12d · 27-09-2026';
 window.__motorErrors = [];
 (function(){
   function show(msg){
@@ -449,7 +449,7 @@ window.__motorErrors = [];
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">ITC <span>HARIDWAR</span></div>
-      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.12c · 27-09-2026</span></div>
+      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.12d · 27-09-2026</span></div>
     </div>
     <nav class="nav" id="nav">
       <div class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</div>
@@ -5241,6 +5241,8 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
 .dn-none,.dn-txt{font-size:12.5px;color:var(--text-dim);line-height:1.5;white-space:pre-wrap}
 .dn-txt+.dn-txt{margin-top:4px}
 @media (max-width:900px){ .dn-kpis{grid-template-columns:repeat(2,1fr)} .dn-row{grid-template-columns:84px 1fr auto;gap:10px;padding:11px 10px} }
+/* 3.12d · phones: done date + plan on line 1, name | result on line 2 (same in Motor and Panel) */
+@media (max-width:600px){ .dn-row{grid-template-columns:1fr auto;gap:4px 10px} .dn-d{grid-column:1/-1;display:flex;gap:10px;align-items:baseline} .dn-d span{margin-top:0} }
 </style>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
@@ -5449,14 +5451,22 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:700;color:var
 .ed-audit-list .r{padding:7px 0;border-top:1px solid var(--border)}
 .ed-audit-list .r b{color:var(--text)}
 .ed-audit-list .u{color:var(--accent-3);font-weight:700} .ed-audit-list .e{color:var(--accent);font-weight:700}
-/* phones: the Daily View row is 7 columns (~600 px) — wrap it so Mark Done / Edit / Undo are always on screen */
+/* 3.12d · phones: same Daily View row layout as Panel PM —
+   line 1: date | status · line 2: motor + 📎 scans · line 3: pills | Mark Done / Edit / Undo / View */
 @media (max-width:600px){
-  .daily-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px}
-  .daily-item>*{order:3}
-  .daily-item>:nth-child(1){order:1;flex:0 0 78px;font-size:11px}
-  .daily-item>:nth-child(2){order:2;flex:1 1 150px;min-width:0}
-  .daily-item>:last-child{order:4;margin-left:auto}
+  #page-daily .kpi-row{grid-template-columns:repeat(2,1fr) !important;gap:10px}
+  #page-daily .kpi{padding:12px 14px}
+  #page-daily .kpi-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #page-daily .kpi-value{font-size:32px}
+  #page-daily .daily-list{max-height:none;overflow:visible}
+  .daily-item{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px}
+  .daily-item>*{order:4}
+  .daily-item>:nth-child(1){order:1;font-size:12px}
+  .daily-item>:nth-child(6){order:2;margin-left:auto;text-align:right}
+  .daily-item>:nth-child(2){order:3;flex:1 1 100%;min-width:0}
+  .daily-item>:last-child{order:5;margin-left:auto}
   .daily-item .ed-acts{flex-direction:row}
+  .daily-item .daily-motor{font-size:13px}
 }
 </style>
 <script>
@@ -5601,6 +5611,7 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:700;color:var
   /* ─── Daily View: ✎ Edit + ↶ Undo on done rows (🔒 View outside the user window) ─── */
   function decorate(){
     const list = $('daily-list'); if(!list) return;
+    list.querySelectorAll('button.daily-mark:not(.undo)').forEach(b => { if(!/^✓/.test(b.textContent)) b.textContent = '✓ Mark Done'; });   // same label as Panel PM
     list.querySelectorAll('button.daily-mark.undo[onclick^="markUndo("]').forEach(b => {
       if(b.closest('.ed-acts')) return;
       const m = (b.getAttribute('onclick') || '').match(/markUndo\('([^']+)'\)/); if(!m) return;

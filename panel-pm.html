@@ -430,6 +430,7 @@ body.role-user .admin-only{display:none !important}
       <div class="nav-item" data-page="compliance"><span>Compliance</span><span class="nav-num" id="n-comp">—</span></div>
       <div class="nav-section">Operations</div>
       <div class="nav-item" data-page="daily"><span>Daily View</span><span class="nav-num" id="n-daily">—</span></div>
+      <div class="nav-item" data-page="done"><span>✓ Done PMs</span><span class="nav-num" id="n-done">—</span></div>
       <div class="nav-item" data-page="schedule"><span>Schedule</span><span class="nav-num">12mo</span></div>
       <div class="nav-item" data-page="executions"><span>Execution Log</span><span class="nav-num" id="n-exec">0</span></div>
       <div class="nav-section">Configuration</div>
@@ -540,6 +541,34 @@ body.role-user .admin-only{display:none !important}
         <div class="card-head"><div class="card-title">Scheduled Panels</div><div class="card-meta" id="d-count">0</div></div>
         <div class="card-body no-pad"><div class="daily-list" id="d-list"></div></div>
       </div>
+    </section>
+
+    <!-- ─── DONE PMs (3.12d) — same as Motor PM: on time / late, PM record, check-sheet files ─── -->
+    <section class="page" id="page-done">
+      <div class="page-head">
+        <div class="page-eyebrow">▍ Module · 02b</div>
+        <h1 class="page-title">Done PMs</h1>
+        <p class="page-desc">Every done panel PM · on time = done within 7 days of the planned date · late = done after it became overdue · tap a PM for its checklist and check-sheet files.</p>
+      </div>
+      <div class="controls">
+        <div class="ctrl"><div class="ctrl-label">Show</div><select id="pd-show"><option value="">All done</option><option value="ontime">On time</option><option value="late">Done late (after overdue)</option></select></div>
+        <div class="ctrl"><div class="ctrl-label">Year</div><select id="pd-fy"><option value="">All years</option></select></div>
+        <div class="ctrl"><div class="ctrl-label">Month done</div><select id="pd-month"><option value="">All months</option></select></div>
+        <div class="ctrl"><div class="ctrl-label">Unit</div><select id="pd-unit"><option value="">All units</option></select></div>
+        <div class="ctrl dn-grow"><div class="ctrl-label">Search</div><input id="pd-q" type="search" placeholder="Panel, permit no., person, file…"></div>
+        <button class="btn ghost sm" onclick="panelDoneExport()">⤓ CSV</button>
+      </div>
+      <div class="dn-kpis">
+        <div class="dn-kpi"><div class="l">Done</div><div class="v" id="pd-k-done">—</div></div>
+        <div class="dn-kpi on"><div class="l">On time</div><div class="v" id="pd-k-on">—</div></div>
+        <div class="dn-kpi late"><div class="l">Done late</div><div class="v" id="pd-k-late">—</div></div>
+        <div class="dn-kpi pct"><div class="l">On-time %</div><div class="v" id="pd-k-pct">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Done PMs</div><div class="card-meta" id="pd-count">—</div></div>
+        <div class="card-body no-pad"><div class="dn-list" id="pd-list"></div></div>
+      </div>
+      <details class="ed-audit" id="pd-audit" hidden ontoggle="if(this.open && window.panelAuditLoad) panelAuditLoad(this.querySelector('.ed-audit-list'))"><summary>🕘 Edit &amp; undo history (admin)</summary><div class="ed-audit-list"></div></details>
     </section>
 
     <!-- ─── SCHEDULE ─── -->
@@ -2569,6 +2598,21 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
 .dn-cl td:last-child{color:var(--text);font-weight:600;word-break:break-word}
 .dn-cl td span{color:var(--text-3);font-weight:400}
 .dn-none,.dn-txt{font-size:12.5px;color:var(--text-2);line-height:1.5;white-space:pre-wrap}
+.dn-list{display:flex;flex-direction:column}
+.dn-row{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .12s}
+.dn-row:last-child{border-bottom:0}
+.dn-row:hover,.dn-row:focus-visible{background:var(--bg-2);outline:none}
+.dn-d b{display:block;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:12px;color:var(--text);font-weight:500}
+.dn-d span{display:block;font-size:10px;color:var(--text-3);margin-top:3px;font-family:'JetBrains Mono','IBM Plex Mono',monospace}
+.dn-t{font-size:13px;color:var(--text);font-weight:600;line-height:1.3}
+.dn-s{font-size:11px;color:var(--text-2);margin-top:2px}
+.dn-id{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10.5px;color:var(--accent)}
+.dn-r{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.dn-r .dn-late{margin-top:0}
+.dn-empty{padding:28px 14px;text-align:center;color:var(--text-3);font-size:12.5px}
+@media (max-width:900px){ .dn-row{grid-template-columns:84px 1fr auto;gap:10px;padding:11px 12px} }
+/* 3.12d · phones: done date + plan on line 1, name | result on line 2 (same in Motor and Panel) */
+@media (max-width:600px){ .dn-row{grid-template-columns:1fr auto;gap:4px 10px} .dn-d{grid-column:1/-1;display:flex;gap:10px;align-items:baseline} .dn-d span{margin-top:0} }
 @media (max-width:900px){ .dn-kpis{grid-template-columns:repeat(2,1fr)} .dn-kpi:nth-child(2){border-right:0} .dn-kpi:nth-child(-n+2){border-bottom:1px solid var(--line)} }
 </style>
 <script>
@@ -2735,12 +2779,86 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
     if(el && fy && key && window.ScanKit) ScanKit.mount(el, { module: 'panel', shard: fy, key, hint: HINT,
       emptyText: 'No check sheet attached to this PM yet. Take a photo of the filled sheet or upload the PDF.' });
   }
+  /* ─── 3.12d · Done PMs page — same as Motor PM's ─── */
+  const PF = { show: '', fy: '', month: '', unit: '', q: '' };
+  const LIMIT = 300;
+  function pdFiltered(){
+    const all = items();
+    const fys = [...new Set(all.map(x => fyOf(x.p.pm_date)).filter(Boolean))].sort().reverse();
+    PF.fy = fillSelect($('pd-fy'), [['', 'All years']].concat(fys.map(f => [f, f])), PF.fy);
+    const months = [...new Set(all.filter(x => !PF.fy || fyOf(x.p.pm_date) === PF.fy).map(x => x.e.actualDate.slice(0, 7)))].sort().reverse();
+    PF.month = fillSelect($('pd-month'), [['', 'All months']].concat(months.map(m => [m, MON[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4)])), PF.month);
+    const units = [...new Set(all.map(x => x.p.area))].sort();
+    PF.unit = fillSelect($('pd-unit'), [['', 'All units']].concat(units.map(u => [u, unitShort(u)])), PF.unit);
+    const words = PF.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    let base = all.filter(x => (!PF.fy || fyOf(x.p.pm_date) === PF.fy) && (!PF.month || x.e.actualDate.startsWith(PF.month)) && (!PF.unit || x.p.area === PF.unit));
+    if(words.length) base = base.filter(x => matches(hay(x), words));
+    return { all, base, words };
+  }
+  function pdRow(x, words){
+    const p = x.p, e = x.e, fl = files(p), n = fl ? fl.length : 0, v = x.v || { k: 'unk', t: 'DONE' };
+    let snip = '';
+    if(words.length){
+      const cand = checklistOf(e).map(c => [c.l, c.v + (c.u ? ' ' + c.u : '')]).concat((fl || []).map(f => ['File', f.name]));
+      const hit = cand.find(([l, val]) => words.some(w => (l + ' ' + val).toLowerCase().includes(w) || (sq(w).length >= 3 && sq((l + ' ' + val).toLowerCase()).includes(sq(w)))));
+      if(hit) snip = `<div class="dn-snip">${esc(hit[0])}: ${hl(hit[1], words)}</div>`;
+    }
+    return `<div class="dn-row" role="button" tabindex="0" data-pid="${p.id}" onclick="openPanelRecord(${p.id})">
+      <div class="dn-d"><b>${dateFmt(isoToDate(e.actualDate))}</b><span>plan ${dateFmt(isoToDate(p.pm_date))}</span></div>
+      <div><div class="dn-t">${hl(p.panel, words)}${e.editedAt ? '<span class="ed-tag">EDITED</span>' : ''}</div><div class="dn-s">${hl(unitShort(p.area), words)} · <span class="dn-id">ID ${String(p.id).padStart(3, '0')}</span></div>${snip}</div>
+      <div class="dn-r"><span class="dn-pill ${v.k}">${v.t}</span>${v.k === 'late' ? `<span class="dn-late">+${v.days} d</span>` : ''}${n ? `<span class="dn-file">📎 ${n}</span>` : ''}</div>
+    </div>`;
+  }
+  function renderPanelDone(){
+    const host = $('pd-list'); if(!host) return;
+    const au = $('pd-audit'); if(au) au.hidden = !isAdmin();
+    const { all, base, words } = pdFiltered();
+    const on = base.filter(x => x.v && x.v.k === 'ontime').length, late = base.filter(x => x.v && x.v.k === 'late').length;
+    const set = (id, v) => { const el = $(id); if(el) el.textContent = v; };
+    set('pd-k-done', base.length); set('pd-k-on', on); set('pd-k-late', late); set('pd-k-pct', (on + late) ? Math.round(on * 100 / (on + late)) + '%' : '—');
+    const list = (PF.show ? base.filter(x => x.v && x.v.k === PF.show) : base).slice()
+      .sort((a, b) => (b.e.actualDate || '').localeCompare(a.e.actualDate || '') || (b.e.submittedAt || '').localeCompare(a.e.submittedAt || ''));
+    set('pd-count', `${list.length} PM${list.length === 1 ? '' : 's'}`);
+    host.innerHTML = list.length ? list.slice(0, LIMIT).map(x => pdRow(x, words)).join('')
+        + (list.length > LIMIT ? `<div class="dn-empty">Showing the latest ${LIMIT} of ${list.length} — narrow down with the filters or the search box.</div>` : '')
+      : `<div class="dn-empty">${all.length ? 'No done PM matches these filters.' : 'No panel PM has been marked done yet.'}</div>`;
+  }
+  function pdExport(){
+    const { base } = pdFiltered(); const list = PF.show ? base.filter(x => x.v && x.v.k === PF.show) : base;
+    const defs = STATE.panelChecklistFields || (typeof defaultPanelChecklist === 'function' ? defaultPanelChecklist() : []);
+    const cell = v => { const s2 = String(v == null ? '' : v); return /[",\n\r]/.test(s2) ? '"' + s2.replace(/"/g, '""') + '"' : s2; };
+    const head = ['Panel ID', 'Panel', 'Unit', 'Planned', 'Done on', 'Result', 'Days vs plan', 'MTTR (min)', 'Done by', 'Files'].concat(defs.map(d => d.label + (d.unit ? ` (${d.unit})` : '')));
+    const lines = [head.map(cell).join(',')].concat(list.sort((a, b) => b.e.actualDate.localeCompare(a.e.actualDate)).map(x => {
+      const fl = files(x.p); const cl = x.e.checklist || {};
+      return [x.p.id, x.p.panel, unitShort(x.p.area), x.p.pm_date, x.e.actualDate, x.v ? x.v.t : 'DONE', x.v && x.v.days != null ? x.v.days : '', x.e.mttrMin == null ? '' : x.e.mttrMin,
+              x.e.submittedBy || '', fl ? fl.length : ''].concat(defs.map(d => cl[d.id] == null ? '' : cl[d.id])).map(cell).join(',');
+    }));
+    const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Panel_Done_PMs_${isoDate(new Date())}.csv`;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+    toast('Exported', `${list.length} done panel PMs with checklist values`, 'good');
+  }
+  function wireDone(){
+    [['pd-show', 'show'], ['pd-fy', 'fy'], ['pd-month', 'month'], ['pd-unit', 'unit']].forEach(([id, k]) => {
+      const el = $(id); if(el) el.addEventListener('change', () => { PF[k] = el.value; if(k === 'fy') PF.month = ''; renderPanelDone(); }); });
+    const q = $('pd-q'); let t = null; if(q) q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { PF.q = q.value; renderPanelDone(); }, 150); });
+    const list = $('pd-list'); if(list) list.addEventListener('keydown', ev => { const row = ev.target.closest && ev.target.closest('.dn-row'); if(row && (ev.key === 'Enter' || ev.key === ' ')){ ev.preventDefault(); openPanelRecord(+row.dataset.pid); } });
+    const ra = window.renderAll;
+    if(typeof ra === 'function') window.renderAll = function(){ const out = ra.apply(this, arguments);
+      try{ const n = $('n-done'); if(n) n.textContent = items().length; const pg = $('page-done'); if(pg && pg.classList.contains('active')) renderPanelDone(); }catch(err){ console.warn('[done pms]', err); } return out; };
+    try{ const n = $('n-done'); if(n) n.textContent = items().length; }catch(err){}
+  }
+  window.renderPanelDone = renderPanelDone; window.panelDoneExport = pdExport;
+  window.panelDoneFilter = function(o){ Object.assign(PF, o || {}); ['show', 'fy', 'month', 'unit'].forEach(k => { const el = $('pd-' + k); if(el) el.value = PF[k]; }); const q = $('pd-q'); if(q) q.value = PF.q; renderPanelDone(); };
+  wireDone();
+
   renderExecutions = renderExecutionsX;          // eslint-disable-line no-global-assign — richer log, same page
   window.renderExecutions = renderExecutionsX;
   window.openPanelRecord = openPanelRecord;
   window.panelVerdictOf = function(pid){ const p = (STATE.panels || []).find(x => x.id === pid); const e = (STATE.panelExecutions || {})[pid]; return p && e && e.actualDate ? verdict(p.pm_date, e.actualDate) : null; };
   window.panelLogFilter = function(o){ ensureUi(); Object.assign(F, o || {}); ['show', 'unit', 'month'].forEach(k => { const el = $('dn-' + k); if(el) el.value = F[k]; }); const q = $('dn-q'); if(q) q.value = F.q; renderExecutionsX(); };
-  if(window.ScanKit) ScanKit.onChange(() => { const pg = $('page-executions'); if(pg && pg.classList.contains('active')) renderExecutionsX(); });
+  if(window.ScanKit) ScanKit.onChange(() => { const pg = $('page-executions'); if(pg && pg.classList.contains('active')) renderExecutionsX();
+    const pd = $('page-done'); if(pd && pd.classList.contains('active')) renderPanelDone(); });
   try{ renderExecutionsX(); }catch(err){ console.warn('[exec log]', err); }
 })();
 </script>
@@ -2758,6 +2876,25 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:600;color:var
 .ed-audit-list .r{padding:7px 0;border-top:1px solid var(--line)}
 .ed-audit-list .r b{color:var(--text)}
 .ed-audit-list .u{color:var(--red);font-weight:600} .ed-audit-list .e{color:var(--accent);font-weight:600}
+/* 3.12d · phones: same Daily View row layout as Motor PM —
+   line 1: date | status · line 2: panel + 📎 scans · line 3: YEARLY | Mark Done / Edit / Undo / View */
+/* 3.12d · phones: the menu strip showed numbers only — add a short label under each so every page (✓ Done PMs …) can be found */
+@media (max-width:900px){
+  .app{grid-template-columns:70px 1fr}
+  .nav-item{flex-direction:column;gap:3px;padding:9px 4px;text-align:center}
+  .nav-item span:not(.nav-num){display:block;font-size:9px;line-height:1.15;letter-spacing:.01em;white-space:normal;word-break:break-word}
+  .nav-item .nav-num{margin-left:0;font-size:10px}
+}
+@media (max-width:600px){
+  .daily-row > div:nth-child(3), .daily-row > div:nth-child(4){display:block}
+  .daily-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px}
+  .daily-row>*{order:4}
+  .daily-row>:nth-child(1){order:1}
+  .daily-row>:nth-child(4){order:2;margin-left:auto;text-align:right}
+  .daily-row>:nth-child(2){order:3;flex:1 1 100%;min-width:0}
+  .daily-row>:nth-child(5){order:5;margin-left:auto}
+  .daily-row .dr-date .day{display:inline;margin-left:6px}
+}
 </style>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
@@ -2915,6 +3052,7 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:600;color:var
     const ra = window.renderAll; if(typeof ra === 'function') window.renderAll = function(){ const out = ra.apply(this, arguments); try{ ensureAudit(); }catch(err){} return out; };
     ensureAudit();
   }
+  window.panelAuditLoad = loadAudit;
   window.panelEditOpen = panelEditOpen; window.panelEditSave = panelEditSave; window.panelCanEdit = canEdit;
   window.panelEditWindowEnd = pid => { const e = ex(+pid); return e ? lastDay(e) : ''; };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
