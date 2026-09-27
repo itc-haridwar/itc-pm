@@ -425,7 +425,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
 <script>
 /* Phase 3.11 — phones have no console: show script errors on screen and warn if the
    page never finishes loading (old cached copy, or file cut short on GitHub). */
-window.__motorBuild = '3.11g · 27-09-2026';
+window.__motorBuild = '3.12b · 27-09-2026';
 window.__motorErrors = [];
 (function(){
   function show(msg){
@@ -449,7 +449,7 @@ window.__motorErrors = [];
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">ITC <span>HARIDWAR</span></div>
-      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.11g · 27-09-2026</span></div>
+      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.12b · 27-09-2026</span></div>
     </div>
     <nav class="nav" id="nav">
       <div class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</div>
@@ -457,6 +457,7 @@ window.__motorErrors = [];
       <div class="nav-item" data-page="compliance"><span class="nav-icon">◷</span> Compliance</div>
       <div class="nav-item" data-page="areas"><span class="nav-icon">◈</span> Areas</div>
       <div class="nav-item" data-page="daily"><span class="nav-icon">▸</span> Daily View</div>
+      <div class="nav-item" data-page="done"><span class="nav-icon">✓</span> Done PMs</div>
       <div class="nav-item" data-page="reliability"><span class="nav-icon">⚡</span> Reliability</div>
       <div class="nav-item" data-page="motors"><span class="nav-icon">⚙</span> Motors</div>
       <div class="nav-item" data-page="owners"><span class="nav-icon">👥</span> Area Owners</div>
@@ -636,6 +637,24 @@ window.__motorErrors = [];
           <div class="kpi good"><div class="kpi-label">Done in Window</div><div class="kpi-value" id="d-done">—</div></div>
         </div>
         <div class="card"><div class="card-header"><div><div class="card-title">Action List</div><div class="card-subtitle">Click MARK DONE to log execution · sorted by date</div></div></div><div class="daily-list" id="daily-list"></div></div>
+      </section>
+
+      <!-- DONE PMs (3.12b) — on time / late, PM record, check-sheet files -->
+      <section class="page" id="page-done">
+        <div class="filters">
+          <div class="filter"><span class="filter-label">Show</span><select id="dn-show"><option value="">All done</option><option value="ontime">On time</option><option value="late">Done late (after overdue)</option></select></div>
+          <div class="filter"><span class="filter-label">Year</span><select id="dn-fy"><option value="">All years</option></select></div>
+          <div class="filter"><span class="filter-label">Month done</span><select id="dn-month"><option value="">All months</option></select></div>
+          <div class="filter"><span class="filter-label">Area</span><select id="dn-area"><option value="">All areas</option></select></div>
+          <div class="filter" style="flex:1;min-width:200px"><span class="filter-label">Search</span><input id="dn-q" type="search" placeholder="PM ID, motor, permit no., remark, file…"></div>
+        </div>
+        <div class="dn-kpis">
+          <div class="kpi"><div class="kpi-label">Done</div><div class="kpi-value" id="dn-k-done">—</div></div>
+          <div class="kpi good"><div class="kpi-label">On time</div><div class="kpi-value" id="dn-k-on">—</div></div>
+          <div class="kpi danger"><div class="kpi-label">Done late</div><div class="kpi-value" id="dn-k-late">—</div></div>
+          <div class="kpi pct"><div class="kpi-label">On-time %</div><div class="kpi-value" id="dn-k-pct">—</div></div>
+        </div>
+        <div class="card"><div class="card-header"><div><div class="card-title">Done PMs</div><div class="card-subtitle">On time = done within the planned week · Late = done after it became overdue · tap a PM for its checklist and check-sheet files</div></div><div style="display:flex;gap:8px;align-items:center"><span class="card-tag" id="dn-count">—</span><button class="btn secondary" style="padding:6px 10px;font-size:11px" onclick="donePmsExport()">⤓ CSV</button></div></div><div class="dn-list" id="dn-list"></div></div>
       </section>
 
       <!-- RELIABILITY -->
@@ -5174,6 +5193,237 @@ setTimeout(function popupFallback(){
 import { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 window.__pmScanFs = { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot };
 document.dispatchEvent(new CustomEvent('pm-scanfs-ready'));
+</script>
+<style id="dn-style">
+/* Phase 3.12b · Done PMs */
+.dn-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.dn-kpis .kpi{padding:14px 16px}
+.dn-kpis .kpi-value{font-size:36px}
+.dn-kpis .kpi.pct .kpi-value{color:var(--accent)}
+.dn-list{display:flex;flex-direction:column}
+.dn-row{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--border);cursor:pointer;transition:background .15s}
+.dn-row:first-child{border-top:0}
+.dn-row:hover,.dn-row:focus-visible{background:var(--bg-panel-2);outline:none}
+.dn-d b{display:block;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);font-weight:500}
+.dn-d span{display:block;font-size:10px;color:var(--text-muted);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.dn-t{font-size:13px;color:var(--text);font-weight:600;line-height:1.3}
+.dn-s{font-size:11px;color:var(--text-dim);margin-top:2px}
+.dn-id{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--accent)}
+.dn-snip{font-size:11px;color:var(--accent-2);margin-top:4px}
+.dn-r{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.dn-pill{font-size:9px;letter-spacing:1px;font-weight:700;padding:3px 7px;border-radius:3px;border:1px solid;white-space:nowrap}
+.dn-pill.ontime{color:var(--accent-4);border-color:rgba(124,242,139,.5);background:rgba(124,242,139,.08)}
+.dn-pill.late{color:var(--accent-3);border-color:rgba(255,59,107,.55);background:rgba(255,59,107,.1)}
+.dn-pill.unk{color:var(--text-dim);border-color:var(--border-bright)}
+.dn-late{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent-3)}
+.dn-file{font-size:10.5px;color:var(--accent);white-space:nowrap}
+.dn-empty{padding:28px 14px;text-align:center;color:var(--text-muted);font-size:12.5px}
+mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
+.dn-banner{margin:12px 0;padding:10px 12px;border-radius:6px;font-size:12.5px;line-height:1.45;border:1px solid var(--border-bright);color:var(--text-dim)}
+.dn-banner b{color:var(--text)}
+.dn-banner.ontime{border-color:rgba(124,242,139,.5);background:rgba(124,242,139,.07)}
+.dn-banner.ontime b{color:var(--accent-4)}
+.dn-banner.late{border-color:rgba(255,59,107,.55);background:rgba(255,59,107,.08)}
+.dn-banner.late b{color:var(--accent-3)}
+.dn-banner.open{border-color:rgba(255,176,0,.5);background:rgba(255,176,0,.07)}
+.dn-kv{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:10px 0 4px}
+.dn-kv .k{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);font-weight:700}
+.dn-kv .v{font-size:13px;color:var(--text);margin-top:2px;word-break:break-word}
+.dn-kv .full{grid-column:1/-1}
+.dn-sec{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin:16px 0 6px;font-weight:700}
+.dn-cl{width:100%;border-collapse:collapse;font-size:12.5px}
+.dn-cl td{padding:7px 8px;border-top:1px solid var(--border);vertical-align:top}
+.dn-cl tr:first-child td{border-top:0}
+.dn-cl td:first-child{color:var(--text-dim);width:48%}
+.dn-cl td:last-child{color:var(--text);font-weight:600;word-break:break-word}
+.dn-cl td span{color:var(--text-muted);font-weight:400}
+.dn-none,.dn-txt{font-size:12.5px;color:var(--text-dim);line-height:1.5;white-space:pre-wrap}
+.dn-txt+.dn-txt{margin-top:4px}
+@media (max-width:900px){ .dn-kpis{grid-template-columns:repeat(2,1fr)} .dn-row{grid-template-columns:84px 1fr auto;gap:10px;padding:11px 10px} }
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   Phase 3.12b · DONE PMs — on time / late, the full PM record and its
+   check-sheet files.
+   • Page "Done PMs": every executed PM · filter On time / Late, year, month,
+     area · a search box that also looks inside the filled checklist
+     (Permit No …), remarks and file names · KPIs with on-time %.
+   • Tap a PM → PM record: verdict, times, the filled checklist, remarks,
+     date changes and the check-sheet photos / PDFs (view · download · add).
+   • ON TIME = done within the planned week (Mon–Sun).
+     LATE    = done after the planned week ended — it was already OVERDUE
+               (same rule the module uses for the OVERDUE status).
+   Add-on only: no existing function is changed. renderAll is wrapped so the
+   page refreshes with live data.
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const attr = v => esc(JSON.stringify(v));
+  const HINT = 'Add each checklist page as its own scan. Photos are compressed to about 200 KB; PDFs can be up to 4 MB.';
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const F = { show: '', fy: '', month: '', area: '', q: '' };
+  const LIMIT = 300;
+
+  function weekEndIso(iso){ const d = isoToDate(iso); if(!d) return ''; const s = startOfWeek(d); s.setDate(s.getDate() + 6); return isoDate(s); }
+  function verdict(planned, actual){
+    if(!actual) return null;
+    if(!planned) return { k: 'unk', t: 'DONE', days: null, note: '' };
+    const days = Math.round((isoToDate(actual) - isoToDate(planned)) / 86400000);
+    const late = actual > weekEndIso(planned);
+    const note = days === 0 ? 'on the planned day' : days < 0 ? `${-days} day${days === -1 ? '' : 's'} before the planned date` : `${days} day${days === 1 ? '' : 's'} after the planned date`;
+    return { k: late ? 'late' : 'ontime', t: late ? 'LATE' : 'ON TIME', days, note };
+  }
+  const fyOfPm = pmId => { const m = String(pmId).match(/-(FY\d{2,4}-\d{2})$/); return m ? m[1] : ''; };
+  const srOfPm = pmId => +((String(pmId).match(/^M0*(\d+)-/) || [])[1] || 0);
+  function rowsById(){ const o = {}; ((typeof cachedRowsAll !== 'undefined' && cachedRowsAll) || cachedRows || []).forEach(r => { o[r.pmId] = r; }); return o; }
+  function checklistOf(e){
+    const defs = STATE.checklistFields || []; const cl = (e && e.checklist) || {}; const out = [];
+    const has = v => v !== undefined && v !== null && String(v).trim() !== '';
+    defs.forEach(d => { if(has(cl[d.id])) out.push({ l: d.label, v: String(cl[d.id]), u: d.unit || '' }); });
+    Object.keys(cl).forEach(k => { if(!defs.some(d => d.id === k) && has(cl[k])) out.push({ l: k, v: String(cl[k]), u: '' }); });
+    return out;
+  }
+  function files(pmId){ const fy = fyOfPm(pmId); if(!fy || !window.ScanKit) return undefined; ScanKit.ensure('motor', fy); return ScanKit.list('motor', fy, pmId); }
+  function doneItems(){
+    const byId = rowsById(); const motors = {}; (STATE.motors || []).forEach(m => { motors[m.sr] = m; });
+    return Object.keys(STATE.executions || {}).map(pmId => {
+      const e = STATE.executions[pmId]; if(!e || !e.actualDate) return null;
+      const r = byId[pmId]; const sr = r ? r.sr : srOfPm(pmId); const m = motors[sr] || {};
+      const planned = r ? r.date : '';
+      return { pmId, sr, motor: r ? r.motor : (m.motor || '(removed motor)'), area: r ? r.area : (m.area || '—'), cat: r ? r.cat : (m.cat || ''),
+               freq: r ? r.freq : '', planned, actual: e.actualDate, e, fy: fyOfPm(pmId), v: verdict(planned, e.actualDate) };
+    }).filter(Boolean);
+  }
+  function hay(x){
+    const fl = files(x.pmId) || [];
+    return [x.pmId, x.motor, x.area, x.freq, 'cat ' + x.cat, x.e.remarks, x.e.loggedBy, dateFmt(isoToDate(x.actual)), x.planned ? dateFmt(isoToDate(x.planned)) : '', x.v ? x.v.t : '']
+      .concat(checklistOf(x.e).map(c => c.l + ' ' + c.v)).concat(fl.map(f => f.name)).join(' · ').toLowerCase();
+  }
+  const sq = s => String(s).replace(/[^a-z0-9]/g, '');
+  function matches(h, words){ const hc = sq(h); return words.every(w => h.includes(w) || (sq(w).length >= 3 && hc.includes(sq(w)))); }
+  function hl(text, words){
+    text = String(text == null ? '' : text); if(!words.length) return esc(text);
+    const re = new RegExp('(' + words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).sort((a, b) => b.length - a.length).join('|') + ')', 'gi');
+    let out = '', last = 0, m; while((m = re.exec(text))){ if(!m[0]){ re.lastIndex++; continue; } out += esc(text.slice(last, m.index)) + '<mark class="dn-mk">' + esc(m[0]) + '</mark>'; last = m.index + m[0].length; }
+    return out + esc(text.slice(last));
+  }
+  const monthLabel = ym => MON[+ym.slice(5, 7) - 1] + ' ' + ym.slice(0, 4);
+  function fillSelect(el, opts, cur){
+    if(!el) return '';
+    el.innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('');
+    el.value = cur; if(el.value !== cur) el.value = ''; return el.value;
+  }
+  function filtered(){
+    const all = doneItems();
+    const fys = [...new Set(all.map(x => x.fy).filter(Boolean))].sort().reverse();
+    F.fy = fillSelect($('dn-fy'), [['', 'All years']].concat(fys.map(f => [f, f])), F.fy);
+    const months = [...new Set(all.filter(x => !F.fy || x.fy === F.fy).map(x => x.actual.slice(0, 7)))].sort().reverse();
+    F.month = fillSelect($('dn-month'), [['', 'All months']].concat(months.map(m => [m, monthLabel(m)])), F.month);
+    const areas = [...new Set(all.map(x => x.area))].sort();
+    F.area = fillSelect($('dn-area'), [['', 'All areas']].concat(areas.map(a => [a, a])), F.area);
+    let list = all.filter(x => (!F.fy || x.fy === F.fy) && (!F.month || x.actual.startsWith(F.month)) && (!F.area || x.area === F.area));
+    const words = F.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if(words.length) list = list.filter(x => matches(hay(x), words));
+    return { all, list, words };
+  }
+  function renderDonePms(){
+    const host = $('dn-list'); if(!host) return;
+    const { all, list: base, words } = filtered();
+    const on = base.filter(x => x.v && x.v.k === 'ontime').length, late = base.filter(x => x.v && x.v.k === 'late').length;
+    $('dn-k-done').textContent = fmt(base.length); $('dn-k-on').textContent = fmt(on); $('dn-k-late').textContent = fmt(late);
+    $('dn-k-pct').textContent = (on + late) ? Math.round(on * 100 / (on + late)) + '%' : '—';
+    let list = F.show ? base.filter(x => x.v && x.v.k === F.show) : base;
+    list = list.slice().sort((a, b) => b.actual.localeCompare(a.actual) || a.pmId.localeCompare(b.pmId));
+    $('dn-count').textContent = `${fmt(list.length)} PM${list.length === 1 ? '' : 's'}`;
+    if(!list.length){ host.innerHTML = `<div class="dn-empty">${all.length ? 'No done PM matches these filters.' : 'No PM has been marked done yet.'}</div>`; return; }
+    host.innerHTML = list.slice(0, LIMIT).map(x => rowHtml(x, words)).join('')
+      + (list.length > LIMIT ? `<div class="dn-empty">Showing the latest ${LIMIT} of ${fmt(list.length)} — narrow down with the filters or the search box.</div>` : '');
+  }
+  function rowHtml(x, words){
+    const fl = files(x.pmId); const n = fl ? fl.length : 0;
+    let snip = '';
+    if(words.length){
+      const cand = checklistOf(x.e).map(c => [c.l, c.v + (c.u ? ' ' + c.u : '')]).concat(x.e.remarks ? [['Remarks', x.e.remarks]] : []).concat((fl || []).map(f => ['File', f.name]));
+      const hit = cand.find(([l, v]) => words.some(w => (l + ' ' + v).toLowerCase().includes(w) || (sq(w).length >= 3 && sq((l + ' ' + v).toLowerCase()).includes(sq(w)))));
+      if(hit) snip = `<div class="dn-snip">${esc(hit[0])}: ${hl(hit[1], words)}</div>`;
+    }
+    const v = x.v || { k: 'unk', t: 'DONE' };
+    return `<div class="dn-row" role="button" tabindex="0" data-pm="${esc(x.pmId)}" onclick="openPmRecord(${attr(x.pmId)})">
+      <div class="dn-d"><b>${dateFmt(isoToDate(x.actual))}</b><span>plan ${x.planned ? dateFmt(isoToDate(x.planned)) : '—'}</span></div>
+      <div><div class="dn-t">${hl(x.motor, words)}</div><div class="dn-s">${hl(x.area, words)} · <span class="dn-id">${hl(x.pmId, words)}</span></div>${snip}</div>
+      <div class="dn-r"><span class="dn-pill ${v.k}">${v.t}</span>${v.k === 'late' ? `<span class="dn-late">+${v.days} d</span>` : ''}${n ? `<span class="dn-file">📎 ${n}</span>` : ''}</div>
+    </div>`;
+  }
+  function openPmRecord(pmId){
+    const r = rowsById()[pmId]; const e = (STATE.executions || {})[pmId] || null;
+    const sr = r ? r.sr : srOfPm(pmId); const m = (STATE.motors || []).find(x => x.sr === sr) || {};
+    const motor = r ? r.motor : (m.motor || '—'), area = r ? r.area : (m.area || '—');
+    const planned = r ? r.date : ''; const done = !!(e && e.actualDate); const v = done ? verdict(planned, e.actualDate) : null;
+    const cl = e ? checklistOf(e) : []; const fy = fyOfPm(pmId);
+    const rs = (STATE.reschedules || []).filter(x => x && x.pmId === pmId);
+    const kv = (label, val, full) => `<div${full ? ' class="full"' : ''}><div class="k">${label}</div><div class="v">${val}</div></div>`;
+    const dt = s => { if(!s) return '—'; const d = new Date(s); return isNaN(d) ? esc(s) : dateTimeFmt(d); };
+    const st = r ? getStatus(r) : (done ? 'DONE' : '—');
+    openModal(`
+      <div class="modal-head"><div><div class="modal-title">📋 PM record</div><div class="modal-subtitle">${esc(pmId)}</div></div><button class="modal-close" onclick="closeModal()">×</button></div>
+      <div class="modal-body">
+        <div class="motor-info-card"><div class="name">${esc(motor)}</div><div class="meta">${esc(area)} · Sr ${sr}${r ? ` · <span class="cat-pill cat-${esc(r.cat)}">${esc(r.cat)}</span> <span class="freq-pill freq-${esc(r.freq)}">${esc(r.freq)}</span>` : ''}</div></div>
+        ${done ? `<div class="dn-banner ${v.k}"><b>${v.k === 'late' ? '⚠ Done late' : v.k === 'ontime' ? '✓ Done on time' : '✓ Done'}</b> — ${dateFmt(isoToDate(e.actualDate))}${v.note ? ', ' + esc(v.note) : ''}${v.k === 'late' ? '. It was overdue when it was done (its planned week had passed).' : ''}</div>`
+               : `<div class="dn-banner open"><b>Not done yet</b> — planned ${planned ? dateFmt(isoToDate(planned)) : '—'} · ${esc(st)}</div>`}
+        <div class="dn-kv">
+          ${kv('Planned date', planned ? dateFmt(isoToDate(planned)) : '—')}
+          ${kv('Done on', done ? dateFmt(isoToDate(e.actualDate)) : '—')}
+          ${e ? kv('PM start', dt(e.pmStart)) + kv('PM stop', dt(e.pmStop)) + kv('Duration (MTTR)', e.mttrMin != null && e.mttrMin !== '' ? esc(e.mttrMin) + ' min' : '—')
+             + kv('Breakdown', e.bdHrs != null && e.bdHrs !== '' ? esc(e.bdHrs) + ' h' : '—') + kv('Done by', esc(e.loggedBy || '—')) + kv('Logged at', dt(e.loggedAt))
+             + (e.gps && e.gps.lat != null ? kv('GPS', `${(+e.gps.lat).toFixed(5)}, ${(+e.gps.lng).toFixed(5)}`, true) : '') : ''}
+        </div>
+        ${e ? `<div class="dn-sec">Checklist filled</div>${cl.length ? `<table class="dn-cl">${cl.map(c => `<tr><td>${esc(c.l)}</td><td>${esc(c.v)}${c.u ? ' <span>' + esc(c.u) + '</span>' : ''}</td></tr>`).join('')}</table>`
+             : '<div class="dn-none">No checklist values were saved with this PM (for example, it was imported from Excel).</div>'}` : ''}
+        ${e && e.remarks ? `<div class="dn-sec">Remarks</div><div class="dn-txt">${esc(e.remarks)}</div>` : ''}
+        ${rs.length ? `<div class="dn-sec">Date changes</div>${rs.map(x => `<div class="dn-txt">${x.fromDate ? dateFmt(isoToDate(String(x.fromDate).slice(0, 10))) : '—'} → ${x.toDate ? dateFmt(isoToDate(String(x.toDate).slice(0, 10))) : '—'} · ${esc([x.reason, x.note].filter(Boolean).join(' — ') || 'no reason')}${x.by ? ' · ' + esc(String(x.by).split('@')[0]) : ''}</div>`).join('')}` : ''}
+        <div class="dn-sec">📎 Check sheet — scans &amp; photos</div>
+        <div class="dn-files"></div>
+      </div>
+      <div class="modal-footer">
+        ${!done && r ? `<button class="btn secondary" onclick="openShiftDateModal(${attr(pmId)})">Change date</button><button class="btn" onclick="markDone(${attr(pmId)})">✓ Mark Done</button>` : ''}
+        <button class="btn${!done && r ? ' secondary' : ''}" onclick="closeModal()">Close</button>
+      </div>`);
+    const el = document.querySelector('#modal-host .dn-files');
+    if(el && fy && window.ScanKit) ScanKit.mount(el, { module: 'motor', shard: fy, key: pmId, hint: HINT,
+      emptyText: 'No check sheet attached to this PM yet. Take a photo of the filled sheet or upload the PDF.' });
+  }
+  function exportCsv(){
+    const { list: base } = filtered(); const list = F.show ? base.filter(x => x.v && x.v.k === F.show) : base;
+    const defs = STATE.checklistFields || [];
+    const cell = v => { const s = String(v == null ? '' : v); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const head = ['PM ID', 'Motor', 'Area', 'Category', 'Frequency', 'Planned', 'Done on', 'Result', 'Days vs plan', 'MTTR (min)', 'Done by', 'Remarks', 'Files'].concat(defs.map(d => d.label + (d.unit ? ` (${d.unit})` : '')));
+    const lines = [head.map(cell).join(',')].concat(list.sort((a, b) => b.actual.localeCompare(a.actual)).map(x => {
+      const fl = files(x.pmId); const cl = (x.e && x.e.checklist) || {};
+      return [x.pmId, x.motor, x.area, x.cat, x.freq, x.planned, x.actual, x.v ? x.v.t : 'DONE', x.v && x.v.days != null ? x.v.days : '', x.e.mttrMin == null ? '' : x.e.mttrMin,
+              x.e.loggedBy || '', x.e.remarks || '', fl ? fl.length : ''].concat(defs.map(d => cl[d.id] == null ? '' : cl[d.id])).map(cell).join(',');
+    }));
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Motor_Done_PMs_${isoDate(new Date())}.csv`;
+    document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+    toast('Exported', `${list.length} done PMs with checklist values`);
+  }
+  function wire(){
+    const nav = document.querySelector('.nav-item[data-page="done"]'); if(nav) nav.addEventListener('click', () => setTimeout(renderDonePms, 30));
+    [['dn-show', 'show'], ['dn-fy', 'fy'], ['dn-month', 'month'], ['dn-area', 'area']].forEach(([id, k]) => {
+      const el = $(id); if(el) el.addEventListener('change', () => { F[k] = el.value; if(k === 'fy') F.month = ''; renderDonePms(); }); });
+    const q = $('dn-q'); let t = null; if(q) q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { F.q = q.value; renderDonePms(); }, 150); });
+    const list = $('dn-list'); if(list) list.addEventListener('keydown', ev => { const row = ev.target.closest && ev.target.closest('.dn-row'); if(row && (ev.key === 'Enter' || ev.key === ' ')){ ev.preventDefault(); openPmRecord(row.dataset.pm); } });
+    const ra = window.renderAll;
+    if(typeof ra === 'function') window.renderAll = function(){ const out = ra.apply(this, arguments); try{ const p = $('page-done'); if(p && p.classList.contains('active')) renderDonePms(); }catch(err){ console.warn('[done pms]', err); } return out; };
+    if(window.ScanKit) ScanKit.onChange(() => { const p = $('page-done'); if(p && p.classList.contains('active')) renderDonePms(); });
+  }
+  window.renderDonePms = renderDonePms; window.openPmRecord = openPmRecord; window.donePmsExport = exportCsv; window.pmVerdictOf = function(pmId){
+    const r = rowsById()[pmId]; const e = (STATE.executions || {})[pmId]; return e && e.actualDate ? verdict(r ? r.date : '', e.actualDate) : null; };
+  window.donePmsFilter = function(o){ Object.assign(F, o || {}); ['show', 'fy', 'month', 'area'].forEach(k => { const el = $('dn-' + k); if(el) el.value = F[k]; }); const q = $('dn-q'); if(q) q.value = F.q; renderDonePms(); };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wire); else wire();
+})();
 </script>
 <script>window.__motorBooted = true;</script>
 </body>

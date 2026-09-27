@@ -197,6 +197,9 @@ iframe{width:100%;height:100%;border:none;background:var(--bg-deep)}
   .gs-strip{padding:6px 8px;gap:6px}
   .gs-strip button{min-width:32px;padding:0 7px}
 }
+.gs-pill.st-ontime,.gs-pill.st-hasfile{color:var(--accent-4);border-color:rgba(124,242,139,.5);background:rgba(124,242,139,.08)}
+.gs-pill.st-donelate{color:#ff6b8f;border-color:rgba(255,59,107,.55);background:rgba(255,59,107,.1)}
+.gs-snip{display:block;font-size:11.5px;color:var(--accent-2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -402,12 +405,16 @@ const SYN_GROUPS = [
 const SYN = new Map();
 SYN_GROUPS.forEach(g => g.forEach(w => { const k = norm(w); SYN.set(k, (SYN.get(k) || []).concat(g.map(norm).filter(x => x !== k))); }));
 const STOP = new Set(['the', 'of', 'for', 'and', 'in', 'on', 'at', 'to', 'is', 'me', 'my', 'please', 'show', 'find', 'where', 'all']);
-const STATUS_WORDS = { overdue: 'overdue', late: 'overdue', missed: 'overdue', due: 'due', upcoming: 'upcoming', soon: 'upcoming',
+const STATUS_WORDS = { overdue: 'overdue', missed: 'overdue', late: 'donelate', delayed: 'donelate', ontime: 'ontime', due: 'due', upcoming: 'upcoming', soon: 'upcoming',
+  files: 'hasfile', file: 'hasfile', scan: 'hasfile', scans: 'hasfile', attachment: 'hasfile', attachments: 'hasfile', photo: 'hasfile', photos: 'hasfile', checksheet: 'hasfile', checksheets: 'hasfile',
   done: 'done', completed: 'done', complete: 'done', executed: 'done', finished: 'done', pending: 'pending',
   open: 'open', ongoing: 'open', closed: 'closed', resolved: 'closed', notok: 'notok', nok: 'notok', failed: 'notok',
   observation: 'observation', scheduled: 'scheduled', norecord: 'norecord' };
 const ST_TEXT = { overdue: 'Overdue', due: 'Due', upcoming: 'Upcoming', done: 'Done', pending: 'Pending', open: 'Open', closed: 'Closed',
-  notok: 'Not OK', observation: 'Observation', scheduled: 'Scheduled', norecord: 'No record', ok: 'OK' };
+  notok: 'Not OK', observation: 'Observation', scheduled: 'Scheduled', norecord: 'No record', ok: 'OK', ontime: 'On time', donelate: 'Done late', hasfile: 'Has check sheet' };
+const PANEL_CL_DEFAULT = { pi_value: 'PI Value', ir_value: 'IR Value', busbar_torque: 'Busbar Torque', cable_term: 'Cable Termination', thermal_scan: 'Thermal Scan',
+  breaker_op: 'Breaker Operation', meter_check: 'Meter Calibration', cleaning: 'Panel Cleaning', observation: 'Observation / Remarks' };
+const DONE_ST = new Set(['done', 'ontime', 'donelate']);
 
 /* ─── frames ─── */
 function frameWin(tab){
@@ -421,7 +428,16 @@ function modalHost(w){ const d = w.document; return d.querySelector('#modal-host
 function isAdminNow(){ const w = frameWin('motor') || frameWin('panel') || frameWin('aic'); return !!(w && w.__pmRole === 'admin'); }
 
 /* ─── data sources: live tab first, else a read-only cloud copy ─── */
-const SRC = { shared: { data: null, at: 0, busy: false, err: '' }, aic: { data: null, at: 0, busy: false, err: '' }, passport: { data: null, at: 0, busy: false, err: '' } };
+const SRC = { shared: { data: null, at: 0, busy: false, err: '' }, aic: { data: null, at: 0, busy: false, err: '' }, passport: { data: null, at: 0, busy: false, err: '' },
+  scans: { data: null, at: 0, busy: false, err: '' } };
+const SCAN_TTL = 60 * 1000;
+function scanDocIds(st){
+  const ids = new Set();
+  Object.keys((st && st.fys) || {}).forEach(fy => ids.add('scanidx_motor_' + fy));
+  ((st && st.panels) || []).forEach(p => { if(p && p.pm_date) ids.add('scanidx_panel_' + fyOfIso(p.pm_date)); });
+  return [...ids];
+}
+function filesFor(mod, key){ const m = SRC.scans.data && SRC.scans.data[mod]; return (m && m[key]) || []; }
 const CLOUD_TTL = 5 * 60 * 1000;
 async function fsGet(id){
   const f = window.__gsFs; if(!f) throw new Error('not connected');
@@ -454,6 +470,14 @@ function fetchMissing(force){
   if(!livePassport() && stale(SRC.passport) && !SRC.passport.busy) jobs.push(load(SRC.passport, async () => {
     const items = {}; await Promise.all(Array.from({ length: 16 }, (_, i) => 'passport_b' + z2(i)).map(async id => {
       const d = await fsGet(id); Object.assign(items, (d && d.items) || {}); })); return items; }));
+  const sh = liveShared() || SRC.shared.data;
+  if(sh && (force || Date.now() - SRC.scans.at > SCAN_TTL) && !SRC.scans.busy) jobs.push(load(SRC.scans, async () => {
+    const out = { motor: {}, panel: {} };
+    await Promise.all(scanDocIds(sh).map(async id => { try{
+      const d = await fsGet(id); const mod = id.indexOf('scanidx_panel_') === 0 ? 'panel' : 'motor';
+      Object.keys((d && d.items) || {}).forEach(fid => { const it = d.items[fid]; if(it && it.pm) (out[mod][it.pm] = out[mod][it.pm] || []).push(it.name || 'file'); });
+    }catch(e){} }));
+    return out; }));
   if(jobs.length) renderStatus();
   return Promise.all(jobs);
 }
@@ -519,6 +543,15 @@ function motorStatus(r){
   if(d < sow) return 'OVERDUE'; if(d <= eow) return 'DUE';
   const in14 = new Date(T); in14.setDate(in14.getDate() + 14); return d <= in14 ? 'UPCOMING' : 'SCHEDULED';
 }
+function weekEndIso(iso){ const s = startOfWeek(dOf(iso)); s.setDate(s.getDate() + 6); return isoOf(s); }
+function verdictMotor(planned, actual){ if(!actual || !planned) return ''; return actual > weekEndIso(planned) ? 'donelate' : 'ontime'; }
+function verdictPanel(planned, actual){ if(!actual || !planned) return ''; return actual > addDaysIso(planned, 7) ? 'donelate' : 'ontime'; }
+function clPairs(cl, defs, fallback){
+  const out = []; cl = cl || {}; const has = v => v !== undefined && v !== null && String(v).trim() !== '';
+  (defs || []).forEach(d => { if(d && has(cl[d.id])) out.push([d.label, String(cl[d.id]) + (d.unit ? ' ' + d.unit : '')]); });
+  Object.keys(cl).forEach(k => { if(!(defs || []).some(d => d && d.id === k) && has(cl[k])) out.push([(fallback && fallback[k]) || k, String(cl[k])]); });
+  return out;
+}
 function indexMotor(st, out, info){
   const { rows, status } = motorRows(st);
   const T = isoOf(todayD()); const bySr = {};
@@ -539,9 +572,13 @@ function indexMotor(st, out, info){
     if(s === 'OVERDUE' || (s === 'DUE' && r.date <= T)) flags.push('pending');
     const ex = (st.executions || {})[r.pmId] || {};
     const why = (rs[r.pmId] || []).map(x => [x.reason, x.reasonNote, x.note].filter(Boolean).join(' ')).join(' · ');
+    const cl = clPairs(ex.checklist, st.checklistFields); const fl = filesFor('motor', r.pmId);
+    const vd = verdictMotor(r.date, r.actualDate); if(vd) flags.push(vd); if(fl.length) flags.push('hasfile');
     out.push(mk({ mod: 'motor', kind: 'pm', secondary: true, title: r.pmId, sub: `${r.motor} · ${r.area} · ${r.freq}`,
-      meta: r.actualDate ? 'Done ' + dmy(r.actualDate) : dmy(r.date), st: key, sr: r.sr, occ: +String(r.pmId).slice(5, 7), sortDate: r.date,
-      fields: [[r.pmId, 3], [r.motor, 1, true], [r.area, 1, true], [`${r.freq} cat ${r.cat}`, 0.5, true], [ex.remarks, 1], [ex.loggedBy, 0.8], [why, 0.8]],
+      meta: (r.actualDate ? 'Done ' + dmy(r.actualDate) : dmy(r.date)) + (fl.length ? ' · 📎' + fl.length : ''), st: vd || key, sr: r.sr, occ: +String(r.pmId).slice(5, 7),
+      sortDate: r.actualDate || r.date, snips: cl.concat(ex.remarks ? [['Remarks', ex.remarks]] : []).concat(fl.map(n => ['File', n])),
+      fields: [[r.pmId, 3], [r.motor, 1, true], [r.area, 1, true], [`${r.freq} cat ${r.cat}`, 0.5, true], [ex.remarks, 1], [ex.loggedBy, 0.8], [why, 0.8],
+               [cl.map(c => c.join(' ')).join(' · '), 2.5], [fl.join(' · '), 1.5]],
       dates: [r.date, r.actualDate], flags, go: { t: 'pmCard', pmId: r.pmId } }));
     info.pms++;
   });
@@ -573,14 +610,19 @@ function panelStatus(p, ex){
 const unitShort = a => String(a || '').replace('PANEL · ', '');
 function indexPanel(st, out, info){
   const ex = st.panelExecutions || {}; const units = {};
+  const pw = frameWin('panel'); const defs = st.panelChecklistFields || ev(pw, "typeof defaultPanelChecklist === 'function' ? defaultPanelChecklist() : null") || null;
   (st.panels || []).forEach(p => {
     if(!p || p.id == null) return;
     const e = ex[p.id] || {}; const s = panelStatus(p, ex[p.id]); const key = s.toLowerCase();
     const flags = [key]; if(s === 'OVERDUE' || s === 'DUE') flags.push('pending');
     units[p.area] = (units[p.area] || 0) + 1;
-    out.push(mk({ mod: 'panel', kind: 'panel', title: p.panel, sub: `${unitShort(p.area)} · ID ${pad3(p.id)} · yearly PM`, st: key,
-      meta: e.actualDate ? 'Done ' + dmy(e.actualDate) : dmy(p.pm_date), sortDate: p.pm_date,
-      fields: [[p.panel, 3], [`id ${p.id} ${pad3(p.id)}`, 1.5], [unitShort(p.area), 1.5], [e.submittedBy, 0.6], [e.remarks, 0.8]],
+    const cl = clPairs(e.checklist, defs, PANEL_CL_DEFAULT); const fl = filesFor('panel', `P${String(p.id).padStart(4, '0')}-${fyOfIso(p.pm_date)}`);
+    const vd = verdictPanel(p.pm_date, e.actualDate); if(vd) flags.push(vd); if(fl.length) flags.push('hasfile');
+    out.push(mk({ mod: 'panel', kind: 'panel', title: p.panel, sub: `${unitShort(p.area)} · ID ${pad3(p.id)} · yearly PM`, st: vd || key,
+      meta: (e.actualDate ? 'Done ' + dmy(e.actualDate) : dmy(p.pm_date)) + (fl.length ? ' · 📎' + fl.length : ''), sortDate: e.actualDate || p.pm_date,
+      snips: cl.concat(fl.map(n => ['File', n])),
+      fields: [[p.panel, 3], [`id ${p.id} ${pad3(p.id)}`, 1.5], [unitShort(p.area), 1.5], [e.submittedBy, 0.6], [e.remarks, 0.8],
+               [cl.map(c => c.join(' ')).join(' · '), 2.5], [fl.join(' · '), 1.5]],
       dates: [p.pm_date, e.actualDate], flags, go: { t: 'panelCard', pid: p.id, name: p.panel, area: p.area } }));
     info.panels++;
   });
@@ -678,6 +720,8 @@ const SECTIONS = [
   ['motor', 'compliance', 'Reschedules by Area', 'Reschedules by Area', 'Compliance · where delays happen', 'reschedule delay area'],
   ['motor', 'areas', 'Areas — Detailed Table', 'Areas', 'Load and category mix per area', 'area load composition table'],
   ['motor', 'daily', 'Action List', 'Daily View · Action List', 'Mark Done, change a date, today and this week', 'daily today this week mark done log execute complete shift date reschedule'],
+  ['motor', 'done', 'Done PMs', 'Done PMs · on time / late', 'Every done PM with its checklist (permit no.) and check-sheet files', 'done completed executed on time late log history permit checklist check sheet record execution'],
+  ['motor', 'done', '', 'Done late PMs (after overdue)', 'Motor PM · Done PMs filtered to late', 'late done after overdue delayed', 0, 'donePmsFilter', [{ show: 'late', fy: '', month: '', area: '', q: '' }]],
   ['motor', 'reliability', '', 'Reliability · MTTR / MTBF', 'Breakdowns, repair time, time between failures', 'reliability mttr mtbf breakdown repair failure downtime'],
   ['motor', 'reliability', 'Per-area Reliability Summary', 'Per-area Reliability Summary', 'Reliability · table by area', 'mttr mtbf area summary'],
   ['motor', 'motors', 'Motor Master', 'Motors · Motor Master list', 'All motors with category, frequency and next PM', 'motor list register master all motors next pm'],
@@ -701,7 +745,8 @@ const SECTIONS = [
   ['panel', 'compliance', 'Unit Detail', 'Panel Compliance', 'By unit and by month', 'compliance panel percentage'],
   ['panel', 'daily', 'Scheduled Panels', 'Panel Daily View', 'Mark Done panels, change a date', 'daily today mark done panel pm shift date'],
   ['panel', 'schedule', 'Schedule Matrix', 'Panel Schedule Matrix', 'Units × months', 'schedule matrix month panel plan'],
-  ['panel', 'executions', 'Completed PMs', 'Panel Execution Log', 'All completed panel PMs', 'execution log history done completed panel'],
+  ['panel', 'executions', 'Completed PMs', 'Panel Execution Log · on time / late', 'All done panel PMs with checklist (permit no.) and check-sheet files', 'execution log history done completed panel on time late permit checklist check sheet record'],
+  ['panel', 'executions', '', 'Panel PMs done late (after overdue)', 'Panel PM · Execution Log filtered to late', 'late done after overdue delayed panel', 0, 'panelLogFilter', [{ show: 'late', unit: '', month: '', q: '' }]],
   ['panel', 'master', 'Master Register', 'Panel Master Register', 'All panels with PM date and status', 'panel list master register all panels'],
   ['panel', 'checklist', 'Active Fields', 'Checklist Config (Panel PM)', 'Fields filled in at panel Mark Done', 'checklist fields panel required', 1],
   ['panel', 'import', 'Upload Panels', 'Panel Import / Export', 'Template, upload, export panels', 'import export upload template panels excel csv', 1],
@@ -762,6 +807,9 @@ function parseQuery(raw){
     Q.ranges.push({ a, b: addDaysIso(a, 6) }); Q.labels.push(m[1] + ' week'); });
   take(/\b(this|next|last)\s+month\b/g, m => { const off = { this: 0, next: 1, last: -1 }[m[1]];
     const a = isoOf(new Date(T.getFullYear(), T.getMonth() + off, 1)), b = isoOf(new Date(T.getFullYear(), T.getMonth() + off + 1, 0)); Q.ranges.push({ a, b }); Q.labels.push(m[1] + ' month'); });
+  take(/\b(?:done|completed|executed)\s+(?:late|after\s+(?:over\s*)?due|delayed)\b|\b(?:late|delayed)\s+(?:done|completed)\b|\bafter\s+over\s*due\b/g, m => { Q.status.add('donelate'); Q.statusWords.push(m[0].trim()); });
+  take(/\b(?:(?:done|completed)\s+)?(?:on|in)\s*time\b/g, m => { Q.status.add('ontime'); Q.statusWords.push(m[0].trim()); });
+  take(/\bcheck\s*sheets?\b/g, m => { Q.status.add('hasfile'); Q.statusWords.push(m[0].trim()); });
   take(/\bnot\s*ok\b/g, () => { Q.status.add('notok'); Q.statusWords.push('not ok'); });
   take(/\bno\s*record\b/g, () => { Q.status.add('norecord'); Q.statusWords.push('no record'); });
   const words = norm(s).split(' ').filter(Boolean);
@@ -847,11 +895,13 @@ function search(Q){
   const toks = tokens(Q.words);
   const exec = (q, tk, mode) => { const res = [];
     for(const e of IX){ const s = scoreEntry(e, q, tk, mode); if(s > 0) res.push({ e, s }); }
-    res.sort((a, b) => b.s - a.s || String(a.e.sortDate || '9').localeCompare(String(b.e.sortDate || '9')) || a.e.title.length - b.e.title.length);
+    const desc = [...q.status].some(x => DONE_ST.has(x));
+    res.sort((a, b) => b.s - a.s || (desc ? String(b.e.sortDate || '').localeCompare(String(a.e.sortDate || '')) : String(a.e.sortDate || '9').localeCompare(String(b.e.sortDate || '9'))) || a.e.title.length - b.e.title.length);
     return res; };
   let res = exec(Q, toks, 'and'), how = '';
   if(!res.length && Q.statusWords.length){                    // "open", "due" … were meant as plain words
-    const q2 = Object.assign({}, Q, { status: new Set(), statusWords: [], words: Q.words.concat(Q.statusWords.map(norm)) });
+    const keep = new Set(Q.words.concat(...Q.statusWords.map(w => norm(w).split(' '))));
+    const q2 = Object.assign({}, Q, { status: new Set(), statusWords: [], words: norm(Q.raw).split(' ').filter(w => keep.has(w)) });   // original word order
     q2.structured = !!(q2.ranges.length || q2.pm); q2.text = q2.words.join(' '); q2.textc = squash(q2.text);
     const t2 = tokens(q2.words); res = exec(q2, t2, 'and'); if(res.length){ Object.assign(Q, q2); toks.splice(0, toks.length, ...t2); }
   }
@@ -945,10 +995,18 @@ function itemHtml(e, i){
   const where = e.mod === 'pages' ? '' : `<span class="gs-w">${esc(whereText(e))}</span>`;
   return `<button type="button" class="gs-item${i === CUR.act ? ' act' : ''}" data-i="${i}">
     <span class="gs-kind k-${e.kind}">${esc(KIND[e.kind] || e.kind)}</span>
-    <span class="gs-main"><span class="gs-t">${hl(e.title, CUR.src)}</span><span class="gs-s">${hl(e.sub, CUR.src)}</span>${where}</span>
+    <span class="gs-main"><span class="gs-t">${hl(e.title, CUR.src)}</span><span class="gs-s">${hl(e.sub, CUR.src)}</span>${snipHtml(e)}${where}</span>
     <span class="gs-side">${pill(e)}${e.meta ? `<span class="gs-meta">${hl(e.meta, CUR.src)}</span>` : ''}</span><span class="gs-go">›</span></button>`;
 }
+function snipHtml(e){
+  if(!e.snips || !e.snips.length || !CUR.src || !CUR.toks.length) return '';
+  const re = mkRe(CUR.src);
+  const hit = e.snips.find(([l, v]) => { re.lastIndex = 0; return re.test(String(v)); });
+  return hit ? `<span class="gs-snip">${esc(hit[0])}: ${hl(hit[1], CUR.src)}</span>` : '';
+}
 function whereText(e){
+  if(e.go.t === 'pmCard' && e.flags.has('done')) return 'Opens the PM record · checklist + check-sheet files';
+  if(e.go.t === 'panelCard' && e.flags.has('done')) return 'Opens the panel PM record · checklist + check-sheet files';
   return ({ motorCard: 'Opens the motor card · PM plan + Mark Done', pmCard: 'Opens the PM card · Mark Done / change date', motorArea: 'Motors page, filtered to this area',
     find: 'Motor PM › ' + ({ owners: 'Area Owners', checklist: 'Checklist Config', manage: 'Manage Data › PM Calendar' })[e.go.page],
     panelCard: 'Opens the panel card · Mark Done / change date', panelUnit: 'Panel Master, filtered to this unit', complaintRow: 'Complaint Log row',
@@ -971,6 +1029,15 @@ function renderResults(){
   let h = '';
   if(CUR.how === 'close') h += `<div class="gs-note">No result has <b>all</b> the words — showing the closest matches.</div>`;
   else if(Q.labels.length || Q.status.size) h += `<div class="gs-note">Filtered by ${esc(Q.labels.concat(Q.statusWords).join(' · '))}</div>`;
+  if([...Q.status].some(x => DONE_ST.has(x)) || Q.status.has('hasfile')){
+    const by = { motor: [0, 0], panel: [0, 0] };
+    const q2 = Object.assign({}, Q, { status: new Set(['done']) });           // summary over ALL done PMs in the same scope
+    IX.forEach(e => { const b = by[e.mod]; if(!b || !(e.kind === 'pm' || e.kind === 'panel')) return; if(!scoreEntry(e, q2, CUR.toks, 'and')) return;
+      if(e.flags.has('ontime')) b[0]++; if(e.flags.has('donelate')) b[1]++; });
+    const line = (n, [o, l]) => (o + l) ? `<b>${n}</b>: ${o + l} done · <span style="color:var(--accent-4)">${o} on time</span> · <span style="color:var(--accent-3)">${l} late</span> · ${Math.round(o * 100 / (o + l))}% on time` : '';
+    const ls = [line('Motor PM', by.motor), line('Panel PM', by.panel)].filter(Boolean);
+    if(ls.length) h += `<div class="gs-note">${ls.join('<br>')}<br><span style="font-size:11px;color:var(--text-muted)">On time = motor done within its planned week · panel within 7 days of its date. Late = done after it became overdue.</span></div>`;
+  }
   const top = list[0], second = list[1];
   const showTop = CUR.scope === 'all' && list.length > 1 && (!second || top.s >= second.s * 1.25) && top.s >= 20;
   if(showTop){ CUR.flat.push(top.e); h += `<div class="gs-top-hit"><div class="gs-lbl">Best match · ${esc(GNAME[top.e.mod])}</div>${itemHtml(top.e, 0)}</div>`; }
@@ -986,7 +1053,7 @@ function renderResults(){
   body.querySelectorAll('.gs-item').forEach(b => b.onclick = () => go(CUR.flat[+b.dataset.i]));
   body.querySelectorAll('[data-more]').forEach(b => b.onclick = () => { CUR.open[b.dataset.more] = 1; renderResults(); });
 }
-const EXAMPLES = ['M018', 'MCC-3', 'fire pump', 'overdue', 'today', 'this week', 'earth pit', 'transformer', 'not ok', 'holiday', 'backup', 'compresor'];
+const EXAMPLES = ['M018', 'MCC-3', 'done late', 'on time', 'check sheet', 'overdue', 'today', 'this week', 'earth pit', 'transformer', 'not ok', 'holiday', 'compresor'];
 function renderGuide(){
   let recent = []; try{ recent = JSON.parse(localStorage.getItem('itc_gs_recent') || '[]'); }catch(e){}
   $('gs-body').innerHTML = `<div class="gs-guide">
@@ -999,7 +1066,9 @@ function renderGuide(){
       <b>Codes</b><span>Spaces and dashes don't matter: <code>mcc3</code> = MCC-3 = MCC 3</span>
       <b>PM IDs</b><span><code>M018</code> (motor Sr 18) · <code>M018-03</code> · <code>M018-03-FY2026-27</code></span>
       <b>Dates</b><span><code>12-10-2026</code> · <code>12/10/26</code> · <code>12 Oct</code> · <code>Oct 2026</code> · <code>today</code> · <code>tomorrow</code> · <code>this week</code> · <code>next week</code></span>
-      <b>Status</b><span><code>overdue</code> · <code>due</code> · <code>upcoming</code> · <code>done</code> · <code>pending</code> · <code>open</code> · <code>closed</code> · <code>not ok</code> · <code>no record</code></span>
+      <b>Status</b><span><code>overdue</code> · <code>due</code> · <code>upcoming</code> · <code>done</code> · <code>on time</code> · <code>done late</code> · <code>pending</code> · <code>open</code> · <code>closed</code> · <code>not ok</code> · <code>no record</code></span>
+      <b>Checklist</b><span>Any value filled at Mark Done — e.g. the <b>permit no.</b> — finds that PM and opens its record with the checklist</span>
+      <b>Files</b><span><code>check sheet</code> · <code>files</code> · a file name — PMs that have a check-sheet photo / PDF attached</span>
       <b>Mix</b><span><code>overdue fuel yard</code> · <code>today boiler</code> · <code>not ok earth pit</code></span>
       <b>Pages</b><span>Settings and screens too: <code>holiday</code> · <code>checklist</code> · <code>mttr</code> · <code>import</code> · <code>backup</code></span>
       <b>After a jump</b><span>Use ▲ ▼ on the yellow strip to step through every highlighted match · ✕ clears it</span>
@@ -1108,7 +1177,10 @@ async function go(e){
 }
 const GO = {
   async motorCard(w, g){ w.openModal(motorCardHtml(w, g.sr)); return w.document.getElementById('modal-host'); },
-  async pmCard(w, g){ const h = pmCardHtml(w, g.pmId); if(!h){ toast('That PM is no longer in the plan.'); return null; } w.openModal(h); return w.document.getElementById('modal-host'); },
+  async pmCard(w, g){
+    const ex = (ev(w, 'STATE.executions') || {})[g.pmId];
+    if(ex && ex.actualDate && typeof w.openPmRecord === 'function'){ w.openPmRecord(g.pmId); return w.document.getElementById('modal-host'); }
+    const h = pmCardHtml(w, g.pmId); if(!h){ toast('That PM is no longer in the plan.'); return null; } w.openModal(h); return w.document.getElementById('modal-host'); },
   async motorList(w, g){
     const d = w.document; navPage(w, 'motors'); await sleep(120);
     const set = (id, v) => { const el = d.getElementById(id); if(el) el.value = v; };
@@ -1129,7 +1201,10 @@ const GO = {
     const scope = (g.within && d.querySelector(g.within)) || d.getElementById('page-' + g.page);
     return flash(w, findText(scope, g.text) || scope);
   },
-  async panelCard(w, g){ const h = panelCardHtml(w, g); if(!h){ toast('That panel is no longer in the list.'); return null; } w.openModal(h); return w.document.getElementById('m-host'); },
+  async panelCard(w, g){
+    const st = ev(w, 'STATE') || {}; const p = panelIn(st, g); const ex = p && (st.panelExecutions || {})[p.id];
+    if(p && ex && ex.actualDate && typeof w.openPanelRecord === 'function'){ w.openPanelRecord(p.id); return w.document.getElementById('m-host'); }
+    const h = panelCardHtml(w, g); if(!h){ toast('That panel is no longer in the list.'); return null; } w.openModal(h); return w.document.getElementById('m-host'); },
   async panelList(w, g){
     const d = w.document; navPage(w, 'master'); await sleep(150);
     const s = d.getElementById('m-search'), u = d.getElementById('m-unit'); if(s) s.value = g.name || ''; if(u) u.value = '';
@@ -1183,10 +1258,11 @@ const GO = {
   },
   async action(w, g){
     if(g.page && (g.tab === 'aic' || g.tab === 'passport')){ w.setView(g.page); await sleep(120); }
+    if(g.page && (g.tab === 'motor' || g.tab === 'panel')){ navPage(w, g.page); await sleep(250); }
     if(typeof w[g.fn] !== 'function'){ toast('This action is not available in the version of the module that is open.'); return null; }
     await w[g.fn].apply(w, g.args || []);
     await sleep(200);
-    return modalHost(w);
+    return modalHost(w) || (g.page ? flash(w, w.document.getElementById('page-' + g.page)) : null);
   },
 };
 
@@ -1197,6 +1273,10 @@ function motorLive(w){
   return { st, rows, status };
 }
 const pillM = s => `<span class="status-pill status-${s.toLowerCase()}">${s}</span>`;
+function doneChip(w, r){
+  const v = typeof w.pmVerdictOf === 'function' ? w.pmVerdictOf(r.pmId) : null; const late = v ? v.k === 'late' : verdictMotor(r.date, r.actualDate) === 'donelate';
+  return `<span style="font-size:11px;color:${late ? 'var(--accent-3)' : 'var(--accent-4)'}">✓ ${dmy(r.actualDate)}${late ? ' · late' : ''}</span>`;
+}
 function motorCardHtml(w, sr){
   const { st, rows, status } = motorLive(w);
   const m = (st.motors || []).find(x => x.sr === sr); if(!m) return `<div class="modal-head"><div class="modal-title">Motor not found</div><button class="modal-close" onclick="closeModal()">×</button></div>`;
@@ -1210,7 +1290,7 @@ function motorCardHtml(w, sr){
   const row = r => { const s = status(r);
     return `<div class="gs-row"><span class="d">${dmy(r.date)}</span><span class="freq-pill freq-${esc(r.freq)}">${esc(r.freq)}</span>${pillM(s)}
       <span class="id" onclick="parent.GS && parent.GS.card('pm', ${attr(r.pmId)})">${esc(r.pmId)}</span>
-      ${r.actualDate ? `<span style="font-size:11px;color:var(--accent-4)">✓ ${dmy(r.actualDate)}</span>` : (s === 'OVERDUE' || s === 'DUE')
+      ${r.actualDate ? doneChip(w, r) : (s === 'OVERDUE' || s === 'DUE')
         ? `<button class="btn b" onclick="markDone(${attr(r.pmId)})">Mark Done</button>` : `<button class="btn secondary b" onclick="openShiftDateModal(${attr(r.pmId)})">Change date</button>`}</div>`; };
   return `<div class="modal-head"><div><div class="modal-title">⚙ ${esc(m.motor)}</div><div class="modal-subtitle">${esc(m.area)} · Sr ${m.sr}</div></div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="modal-body">
@@ -1243,10 +1323,11 @@ function pmCardHtml(w, pmId){
         <div><div class="k">Duration</div><div class="v">${fmtMin(ex.mttrMin)}</div></div>
         <div class="full"><div class="k">Logged by</div><div class="v">${esc(ex.loggedBy || '—')}</div></div>
         ${ex.remarks ? `<div class="full"><div class="k">Remarks</div><div class="v">${esc(ex.remarks)}</div></div>` : ''}` : ''}
-        ${rs.length ? `<div class="full"><div class="k">Date changes</div><div class="v">${rs.map(x => esc([x.from && dmy(String(x.from).slice(0, 10)), x.to && '→ ' + dmy(String(x.to).slice(0, 10)), x.reason, x.reasonNote].filter(Boolean).join(' '))).join('<br>')}</div></div>` : ''}
+        ${rs.length ? `<div class="full"><div class="k">Date changes</div><div class="v">${rs.map(x => esc([x.fromDate && dmy(String(x.fromDate).slice(0, 10)), x.toDate && '→ ' + dmy(String(x.toDate).slice(0, 10)), x.reason, x.note].filter(Boolean).join(' '))).join('<br>')}</div></div>` : ''}
       </div>
     </div>
     <div class="modal-footer gs-foot"><button class="btn secondary" onclick="parent.GS && parent.GS.card('motor', ${r.sr})">⚙ Motor card</button>
+      ${typeof w.openPmRecord === 'function' ? `<button class="btn secondary" onclick="openPmRecord(${attr(pmId)})">📎 Check sheet</button>` : ''}
       ${ex ? '<button class="btn" onclick="closeModal()">Close</button>' : `<button class="btn secondary" onclick="openShiftDateModal(${attr(pmId)})">Change date</button><button class="btn" onclick="markDone(${attr(pmId)})">✓ Mark Done</button>`}</div>`;
 }
 function panelIn(st, g){
@@ -1269,6 +1350,7 @@ function panelCardHtml(w, g){
       </div>
     </div>
     <div class="modal-foot gs-foot"><button class="btn ghost" onclick="parent.GS && parent.GS.jump('panelList', ${attr({ pid: p.id, name: p.panel, area: p.area })})">Show in Panel Master</button>
+      ${typeof w.openPanelRecord === 'function' ? `<button class="btn ghost" onclick="openPanelRecord(${p.id})">📎 Check sheet</button>` : ''}
       ${ex && ex.actualDate ? '<button class="btn" onclick="closeModal()">Close</button>' : `<button class="btn ghost" onclick="openShiftDate(${p.id})">Change date</button><button class="btn" onclick="markDone(${p.id})">✓ Mark Done</button>`}</div>`;
 }
 
@@ -1381,7 +1463,9 @@ function init(){
 }
 window.GS = {
   open, close, run, buildIndex, fetchMissing, parseQuery,
-  card(kind, id){ const w = frameWin('motor'); if(!w) return; injectCss(w); const h = kind === 'pm' ? pmCardHtml(w, id) : motorCardHtml(w, id);
+  card(kind, id){ const w = frameWin('motor'); if(!w) return; injectCss(w);
+    if(kind === 'pm'){ const ex = (ev(w, 'STATE.executions') || {})[id]; if(ex && ex.actualDate && typeof w.openPmRecord === 'function'){ w.openPmRecord(id); return; } }
+    const h = kind === 'pm' ? pmCardHtml(w, id) : motorCardHtml(w, id);
     if(!h){ toast('That PM is no longer in the plan.'); return; } w.openModal(h); if(FIND && FIND.w === w) setTimeout(() => { FIND.target = modalHost(w); markAll(); renderStrip(); }, 60); },
   async jump(t, g){ const tab = t.startsWith('panel') ? 'panel' : 'motor'; const w = frameWin(tab); if(!w) return; try{ w.closeModal(); }catch(e){} const el = await GO[t](w, g); if(FIND && FIND.w === w){ FIND.target = el; setTimeout(() => { markAll(); renderStrip(); }, 80); } },
   _state: () => ({ IX, INFO, CUR, FIND, SRC }),

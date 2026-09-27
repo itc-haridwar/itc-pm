@@ -2533,5 +2533,212 @@ import { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot } from "https:/
 window.__pmScanFs = { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot };
 document.dispatchEvent(new CustomEvent('pm-scanfs-ready'));
 </script>
+<style id="dn-style">
+/* Phase 3.12b · Execution Log — on time / late, record + check sheet */
+.dn-kpis{display:grid;grid-template-columns:repeat(4,1fr);background:var(--bg-1);border:1px solid var(--line);border-radius:4px;margin-bottom:14px;overflow:hidden}
+.dn-kpi{padding:12px 14px;border-right:1px solid var(--line)}
+.dn-kpi:last-child{border-right:0}
+.dn-kpi .l{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:.15em;text-transform:uppercase}
+.dn-kpi .v{font-size:24px;font-weight:600;margin-top:6px;color:var(--text);font-variant-numeric:tabular-nums}
+.dn-kpi.on .v{color:var(--green)} .dn-kpi.late .v{color:var(--red)} .dn-kpi.pct .v{color:var(--accent)}
+.ctrl.dn-grow{flex:1;min-width:190px}
+.ctrl.dn-grow input{width:100%}
+#t-exec tbody tr[data-pid]{cursor:pointer}
+.dn-pill{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;font-weight:600;padding:3px 7px;border-radius:2px;white-space:nowrap}
+.dn-pill.ontime{color:var(--green);background:var(--green-soft)}
+.dn-pill.late{color:var(--red);background:var(--red-soft)}
+.dn-pill.unk{color:var(--text-2);background:var(--bg-2)}
+.dn-late{display:block;font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:10px;color:var(--red);margin-top:3px}
+.dn-snip{font-size:11px;color:var(--amber);margin-top:3px}
+.dn-file{color:var(--accent);white-space:nowrap;font-size:11px}
+mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
+.dn-banner{margin:0 0 12px;padding:10px 12px;border-radius:2px;font-size:12.5px;line-height:1.45;border:1px solid var(--line-2);color:var(--text-2)}
+.dn-banner b{color:var(--text)}
+.dn-banner.ontime{border-color:rgba(34,197,94,.45);background:var(--green-soft)} .dn-banner.ontime b{color:var(--green)}
+.dn-banner.late{border-color:rgba(239,68,68,.45);background:var(--red-soft)} .dn-banner.late b{color:var(--red)}
+.dn-banner.open{border-color:rgba(245,158,11,.45);background:var(--amber-soft)}
+.dn-kv{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:6px 0 4px}
+.dn-kv .k{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-3)}
+.dn-kv .v{font-size:13px;color:var(--text);margin-top:2px;word-break:break-word}
+.dn-kv .full{grid-column:1/-1}
+.dn-sec{font-family:'JetBrains Mono','IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-3);margin:16px 0 6px}
+.dn-cl{width:100%;border-collapse:collapse;font-size:12.5px}
+.dn-cl td{padding:7px 8px;border-top:1px solid var(--line);vertical-align:top}
+.dn-cl tr:first-child td{border-top:0}
+.dn-cl td:first-child{color:var(--text-2);width:48%}
+.dn-cl td:last-child{color:var(--text);font-weight:600;word-break:break-word}
+.dn-cl td span{color:var(--text-3);font-weight:400}
+.dn-none,.dn-txt{font-size:12.5px;color:var(--text-2);line-height:1.5;white-space:pre-wrap}
+@media (max-width:900px){ .dn-kpis{grid-template-columns:repeat(2,1fr)} .dn-kpi:nth-child(2){border-right:0} .dn-kpi:nth-child(-n+2){border-bottom:1px solid var(--line)} }
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   Phase 3.12b · EXECUTION LOG — on time / late, the full PM record and its
+   check-sheet files.
+   • Execution Log gets: Show (All / On time / Late), Unit, Month, and a
+     search box that also looks inside the filled checklist (Permit No …),
+     the person and file names · KPIs with on-time % · Result and 📎 columns.
+   • Tap a row → panel PM record: verdict, times, filled checklist, date
+     changes and the check-sheet photos / PDFs (view · download · add).
+   • ON TIME = done no later than 7 days after the planned date.
+     LATE    = done after that — it was already OVERDUE (same 7-day rule the
+               module uses for the OVERDUE status).
+   Add-on only: renderExecutions is replaced by this richer version; nothing
+   else is changed.
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const HINT = 'Add each checklist page as its own scan. Photos are compressed to about 200 KB; PDFs can be up to 4 MB.';
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const F = { show: '', unit: '', month: '', q: '' };
+  const z2 = n => String(n).padStart(2, '0');
+  function fyOf(iso){ const d = isoToDate(String(iso || '').slice(0, 10)); if(!d || isNaN(d)) return ''; const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `FY${y}-${z2((y + 1) % 100)}`; }
+  const scanKey = p => { const fy = fyOf(p.pm_date); return fy ? `P${String(p.id).padStart(4, '0')}-${fy}` : ''; };
+  function addDaysIso(iso, n){ const d = isoToDate(iso); d.setDate(d.getDate() + n); return isoDate(d); }
+  function verdict(planned, actual){
+    if(!actual) return null;
+    if(!planned) return { k: 'unk', t: 'DONE', days: null, note: '' };
+    const days = Math.round((isoToDate(actual) - isoToDate(planned)) / 86400000);
+    const late = actual > addDaysIso(planned, 7);
+    const note = days === 0 ? 'on the planned day' : days < 0 ? `${-days} day${days === -1 ? '' : 's'} before the planned date` : `${days} day${days === 1 ? '' : 's'} after the planned date`;
+    return { k: late ? 'late' : 'ontime', t: late ? 'LATE' : 'ON TIME', days, note };
+  }
+  function checklistOf(e){
+    const defs = STATE.panelChecklistFields || (typeof defaultPanelChecklist === 'function' ? defaultPanelChecklist() : []);
+    const cl = (e && e.checklist) || {}; const out = [];
+    const has = v => v !== undefined && v !== null && String(v).trim() !== '';
+    defs.forEach(d => { if(has(cl[d.id])) out.push({ l: d.label, v: String(cl[d.id]), u: d.unit || '' }); });
+    Object.keys(cl).forEach(k => { if(!defs.some(d => d.id === k) && has(cl[k])) out.push({ l: k, v: String(cl[k]), u: '' }); });
+    return out;
+  }
+  function files(p){ const fy = fyOf(p.pm_date), key = scanKey(p); if(!fy || !key || !window.ScanKit) return undefined; ScanKit.ensure('panel', fy); return ScanKit.list('panel', fy, key); }
+  function items(){
+    return Object.keys(STATE.panelExecutions || {}).map(pid => {
+      const e = STATE.panelExecutions[pid]; if(!e || !e.actualDate) return null;
+      const p = (STATE.panels || []).find(x => x.id === parseInt(pid, 10)); if(!p) return null;
+      return { p, e, v: verdict(p.pm_date, e.actualDate) };
+    }).filter(Boolean);
+  }
+  const sq = s => String(s).replace(/[^a-z0-9]/g, '');
+  function hay(x){
+    const fl = files(x.p) || [];
+    return [x.p.panel, unitShort(x.p.area), 'id ' + x.p.id, String(x.p.id).padStart(3, '0'), x.e.submittedBy, x.e.remarks, dateFmt(isoToDate(x.e.actualDate)), dateFmt(isoToDate(x.p.pm_date)), x.v ? x.v.t : '']
+      .concat(checklistOf(x.e).map(c => c.l + ' ' + c.v)).concat(fl.map(f => f.name)).join(' · ').toLowerCase();
+  }
+  const matches = (h, words) => { const hc = sq(h); return words.every(w => h.includes(w) || (sq(w).length >= 3 && hc.includes(sq(w)))); };
+  function hl(text, words){
+    text = String(text == null ? '' : text); if(!words.length) return esc(text);
+    const re = new RegExp('(' + words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).sort((a, b) => b.length - a.length).join('|') + ')', 'gi');
+    let out = '', last = 0, m; while((m = re.exec(text))){ if(!m[0]){ re.lastIndex++; continue; } out += esc(text.slice(last, m.index)) + '<mark class="dn-mk">' + esc(m[0]) + '</mark>'; last = m.index + m[0].length; }
+    return out + esc(text.slice(last));
+  }
+  function fillSelect(el, opts, cur){ if(!el) return ''; el.innerHTML = opts.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join(''); el.value = cur; if(el.value !== cur) el.value = ''; return el.value; }
+  function ensureUi(){
+    const page = $('page-executions'); if(!page || $('dn-show')) return;
+    const ctr = page.querySelector('.controls'); if(!ctr) return;
+    ctr.insertAdjacentHTML('afterbegin', `
+      <div class="ctrl"><div class="ctrl-label">Show</div><select id="dn-show"><option value="">All done</option><option value="ontime">On time</option><option value="late">Done late (after overdue)</option></select></div>
+      <div class="ctrl"><div class="ctrl-label">Unit</div><select id="dn-unit"></select></div>
+      <div class="ctrl"><div class="ctrl-label">Month done</div><select id="dn-month"></select></div>
+      <div class="ctrl dn-grow"><div class="ctrl-label">Search</div><input id="dn-q" type="search" placeholder="Panel, permit no., person, file…"></div>`);
+    const card = page.querySelector('.card');
+    if(card) card.insertAdjacentHTML('beforebegin', `<div class="dn-kpis"><div class="dn-kpi"><div class="l">Done</div><div class="v" id="dn-k-done">—</div></div>
+      <div class="dn-kpi on"><div class="l">On time</div><div class="v" id="dn-k-on">—</div></div><div class="dn-kpi late"><div class="l">Done late</div><div class="v" id="dn-k-late">—</div></div>
+      <div class="dn-kpi pct"><div class="l">On-time %</div><div class="v" id="dn-k-pct">—</div></div></div>`);
+    const desc = page.querySelector('.page-desc'); if(desc) desc.textContent = 'All completed Panel PMs · on time = done within 7 days of the planned date · late = done after it became overdue · tap a row for its checklist and check-sheet files.';
+    [['dn-show', 'show'], ['dn-unit', 'unit'], ['dn-month', 'month']].forEach(([id, k]) => { const el = $(id); el.addEventListener('change', () => { F[k] = el.value; renderExecutions(); }); });
+    let t = null; $('dn-q').addEventListener('input', ev => { clearTimeout(t); t = setTimeout(() => { F.q = ev.target.value; renderExecutions(); }, 150); });
+    $('t-exec').addEventListener('click', ev => {
+      if(ev.target.closest('button, a, input')) return;
+      const tr = ev.target.closest('tr[data-pid]'); if(tr) openPanelRecord(+tr.dataset.pid);
+    });
+  }
+  function renderExecutionsX(){
+    ensureUi();
+    const all = items();
+    const units = [...new Set(all.map(x => x.p.area))].sort();
+    F.unit = fillSelect($('dn-unit'), [['', 'All units']].concat(units.map(u => [u, unitShort(u)])), F.unit);
+    const months = [...new Set(all.map(x => x.e.actualDate.slice(0, 7)))].sort().reverse();
+    F.month = fillSelect($('dn-month'), [['', 'All months']].concat(months.map(m => [m, MON[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4)])), F.month);
+    const words = F.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    let base = all.filter(x => (!F.unit || x.p.area === F.unit) && (!F.month || x.e.actualDate.startsWith(F.month)));
+    if(words.length) base = base.filter(x => matches(hay(x), words));
+    const on = base.filter(x => x.v && x.v.k === 'ontime').length, late = base.filter(x => x.v && x.v.k === 'late').length;
+    const set = (id, v) => { const el = $(id); if(el) el.textContent = v; };
+    set('dn-k-done', base.length); set('dn-k-on', on); set('dn-k-late', late); set('dn-k-pct', (on + late) ? Math.round(on * 100 / (on + late)) + '%' : '—');
+    const list = (F.show ? base.filter(x => x.v && x.v.k === F.show) : base).sort((a, b) => (b.e.actualDate || '').localeCompare(a.e.actualDate || '') || (b.e.submittedAt || '').localeCompare(a.e.submittedAt || ''));
+    set('e-count', `${list.length} of ${all.length} executions`);
+    const adm = isAdmin();
+    let h = '<thead><tr><th>Unit</th><th>Panel</th><th>Result</th><th class="num">Actual</th><th class="num">Planned</th><th>📎</th><th class="num">MTTR</th><th>By</th>' + (adm ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
+    if(!list.length){
+      h += `<tr><td colspan="${adm ? 9 : 8}" style="text-align:center;padding:40px;color:var(--text-3)">${all.length ? 'No execution matches these filters' : 'No executions yet'}</td></tr>`;
+    } else {
+      list.forEach(({ p, e, v }) => {
+        const fl = files(p); const n = fl ? fl.length : 0; v = v || { k: 'unk', t: 'DONE' };
+        let snip = '';
+        if(words.length){
+          const cand = checklistOf(e).map(c => [c.l, c.v + (c.u ? ' ' + c.u : '')]).concat((fl || []).map(f => ['File', f.name]));
+          const hit = cand.find(([l, val]) => words.some(w => (l + ' ' + val).toLowerCase().includes(w) || (sq(w).length >= 3 && sq((l + ' ' + val).toLowerCase()).includes(sq(w)))));
+          if(hit) snip = `<div class="dn-snip">${esc(hit[0])}: ${hl(hit[1], words)}</div>`;
+        }
+        h += `<tr data-pid="${p.id}" title="Tap for the checklist and check-sheet files">
+          <td class="unit-name">${hl(unitShort(p.area), words)}</td>
+          <td>${hl(p.panel, words)}${snip}</td>
+          <td><span class="dn-pill ${v.k}">${v.t}</span>${v.k === 'late' ? `<span class="dn-late">+${v.days} d</span>` : ''}</td>
+          <td class="num">${dateFmt(isoToDate(e.actualDate))}</td>
+          <td class="num">${dateFmt(isoToDate(p.pm_date))}</td>
+          <td>${n ? `<span class="dn-file">📎 ${n}</span>` : '<span style="color:var(--text-3)">—</span>'}</td>
+          <td class="num">${e.mttrMin || '—'}<span style="color:var(--text-3);font-size:10px"> m</span></td>
+          <td class="mono" style="font-size:11px">${hl((e.submittedBy || '').split('@')[0], words)}</td>` +
+          (adm ? `<td><button class="btn ghost sm" onclick="event.stopPropagation();markUndo(${p.id})">↶ Undo</button></td>` : '') + '</tr>';
+      });
+    }
+    h += '</tbody>';
+    const t = $('t-exec'); if(t) t.innerHTML = h;
+  }
+  function openPanelRecord(pid){
+    const p = (STATE.panels || []).find(x => x.id === pid); if(!p){ toast('Not found', 'This panel may have been deleted.', 'warn'); return; }
+    const e = (STATE.panelExecutions || {})[pid] || null; const done = !!(e && e.actualDate); const v = done ? verdict(p.pm_date, e.actualDate) : null;
+    const cl = e ? checklistOf(e) : []; const rs = (STATE.reschedules || []).filter(x => x && x.pid === pid);
+    const kv = (label, val, full) => `<div${full ? ' class="full"' : ''}><div class="k">${label}</div><div class="v">${val}</div></div>`;
+    const dt = s => { if(!s) return '—'; const d = new Date(s); if(isNaN(d)) return esc(s); return `${dateFmt(d)} ${z2(d.getHours())}:${z2(d.getMinutes())}`; };
+    const st = typeof getPanelStatus === 'function' ? getPanelStatus(p) : '';
+    openModal(`
+      <div class="modal-head"><div><div class="modal-eyebrow">▍ Panel PM record · ID ${String(p.id).padStart(3, '0')}</div><div class="modal-title">${esc(p.panel)}</div></div><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="info-strip"><div class="ttl">${esc(p.panel)}</div><div class="meta">${esc(unitShort(p.area))} · Yearly PM · ${esc(scanKey(p))}</div></div>
+        ${done ? `<div class="dn-banner ${v.k}"><b>${v.k === 'late' ? '⚠ Done late' : '✓ Done on time'}</b> — ${dateFmt(isoToDate(e.actualDate))}, ${esc(v.note)}${v.k === 'late' ? '. It was overdue when it was done (more than 7 days after the planned date).' : ''}</div>`
+               : `<div class="dn-banner open"><b>Not done yet</b> — planned ${dateFmt(isoToDate(p.pm_date))} · ${esc(st)}</div>`}
+        <div class="dn-kv">
+          ${kv('Planned date', dateFmt(isoToDate(p.pm_date)))}
+          ${kv('Done on', done ? dateFmt(isoToDate(e.actualDate)) : '—')}
+          ${e ? kv('PM start', dt(e.pmStart)) + kv('PM stop', dt(e.pmStop)) + kv('Duration (MTTR)', e.mttrMin ? esc(e.mttrMin) + ' min' : '—') + kv('Done by', esc(e.submittedBy || '—'))
+             + kv('Saved at', dt(e.submittedAt)) + (e.gps && e.gps.lat != null ? kv('GPS', `${(+e.gps.lat).toFixed(5)}, ${(+e.gps.lng).toFixed(5)}`) : '') : ''}
+        </div>
+        ${e ? `<div class="dn-sec">Checklist filled</div>${cl.length ? `<table class="dn-cl">${cl.map(c => `<tr><td>${esc(c.l)}</td><td>${esc(c.v)}${c.u ? ' <span>' + esc(c.u) + '</span>' : ''}</td></tr>`).join('')}</table>`
+             : '<div class="dn-none">No checklist values were saved with this PM (for example, it was imported).</div>'}` : ''}
+        ${rs.length ? `<div class="dn-sec">Date changes</div>${rs.map(x => `<div class="dn-txt">${x.fromDate ? dateFmt(isoToDate(String(x.fromDate).slice(0, 10))) : '—'} → ${x.toDate ? dateFmt(isoToDate(String(x.toDate).slice(0, 10))) : '—'} · ${esc([x.reason, x.note].filter(Boolean).join(' — ') || 'no reason')}</div>`).join('')}` : ''}
+        <div class="dn-sec">📎 Check sheet — scans &amp; photos</div>
+        <div class="dn-files"></div>
+      </div>
+      <div class="modal-foot">
+        ${!done ? `<button class="btn ghost" onclick="openShiftDate(${p.id})">Change date</button><button class="btn" onclick="markDone(${p.id})">✓ Mark Done</button>` : ''}
+        <button class="btn${!done ? ' ghost' : ''}" onclick="closeModal()">Close</button>
+      </div>`);
+    const el = document.querySelector('#m-host .dn-files'); const fy = fyOf(p.pm_date), key = scanKey(p);
+    if(el && fy && key && window.ScanKit) ScanKit.mount(el, { module: 'panel', shard: fy, key, hint: HINT,
+      emptyText: 'No check sheet attached to this PM yet. Take a photo of the filled sheet or upload the PDF.' });
+  }
+  renderExecutions = renderExecutionsX;          // eslint-disable-line no-global-assign — richer log, same page
+  window.renderExecutions = renderExecutionsX;
+  window.openPanelRecord = openPanelRecord;
+  window.panelVerdictOf = function(pid){ const p = (STATE.panels || []).find(x => x.id === pid); const e = (STATE.panelExecutions || {})[pid]; return p && e && e.actualDate ? verdict(p.pm_date, e.actualDate) : null; };
+  window.panelLogFilter = function(o){ ensureUi(); Object.assign(F, o || {}); ['show', 'unit', 'month'].forEach(k => { const el = $('dn-' + k); if(el) el.value = F[k]; }); const q = $('dn-q'); if(q) q.value = F.q; renderExecutionsX(); };
+  if(window.ScanKit) ScanKit.onChange(() => { const pg = $('page-executions'); if(pg && pg.classList.contains('active')) renderExecutionsX(); });
+  try{ renderExecutionsX(); }catch(err){ console.warn('[exec log]', err); }
+})();
+</script>
 </body>
 </html>
