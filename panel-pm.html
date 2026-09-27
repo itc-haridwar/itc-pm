@@ -1468,6 +1468,15 @@ function captureGPS(){
   );
 }
 function nowDT(){ const d=new Date(); const z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`; }
+function dtFmtShort(d){ const z=n=>String(n).padStart(2,'0'); return `${z(d.getDate())}-${z(d.getMonth()+1)} ${z(d.getHours())}:${z(d.getMinutes())}`; }
+// 3.11f — Mark Done quick buttons: Start = Stop minus N minutes
+function mdStartBefore(min){
+  const stopEl = document.getElementById('md-pp'), startEl = document.getElementById('md-ps');
+  if(!stopEl || !startEl) return;
+  const s = stopEl.value ? new Date(stopEl.value) : new Date();
+  const d = new Date(s.getTime() - min*60000), z=n=>String(n).padStart(2,'0');
+  startEl.value = `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+}
 
 function markDone(pid){
   if(!requireOps('mark done')) return;
@@ -1499,11 +1508,17 @@ function markDone(pid){
       <div class="gps-strip pending" id="gps-ind"><span>📍 GPS</span><span id="gps-txt">Capturing…</span></div>
       <div class="f-row">
         <div class="field"><label class="req">Actual Date</label><input type="date" id="md-ad" value="${today}" ${dMin} ${dMax} required/></div>
-        <div class="field"><label class="req">Start</label><input type="datetime-local" id="md-ps" value="${nowDT()}" required/></div>
+        <div class="field"><label class="req">Start</label><input type="datetime-local" id="md-ps" value="${nowDT()}" required/>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+            <button type="button" class="btn ghost" style="padding:4px 9px;font-size:10px" onclick="mdStartBefore(30)">−30 min</button>
+            <button type="button" class="btn ghost" style="padding:4px 9px;font-size:10px" onclick="mdStartBefore(60)">−1 h</button>
+            <button type="button" class="btn ghost" style="padding:4px 9px;font-size:10px" onclick="mdStartBefore(120)">−2 h</button>
+          </div></div>
       </div>
+      <div style="font-size:11px;color:var(--text-3);margin:-4px 0 10px">Set Start and Stop to record the PM duration (MTTR). If they are left the same, the PM is still saved — just without a duration.</div>
       <div class="f-row">
         <div class="field"><label class="req">Stop</label><input type="datetime-local" id="md-pp" value="${nowDT()}" required/></div>
-        <div class="field"><label>Done by</label><input type="text" id="md-by" value="${window.__pmCurrentUser?window.__pmCurrentUser.email.split('@')[0]:''}"/></div>
+        <div class="field"><label>Done by</label><input type="text" id="md-by" value="${window.__pmCurrentUser&&window.__pmCurrentUser.email?window.__pmCurrentUser.email.split('@')[0]:''}"/></div>
       </div>
       <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.18em;text-transform:uppercase;font-weight:500;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line)">▍ Checklist</div>
       ${fh}
@@ -1516,6 +1531,7 @@ function markDone(pid){
   captureGPS();
 }
 function submitDone(pid){
+  if(!requireOps('mark done')) return;
   const fields = STATE.panelChecklistFields || defaultPanelChecklist();
   const cl = {};
   for(const f of fields){
@@ -1527,13 +1543,17 @@ function submitDone(pid){
   const ad = document.getElementById('md-ad').value;
   if(!ad){ toast('Missing','Date is required','warn'); return; }
   if(!isAdmin() && ad !== isoDate(TODAY)){ toast('Restricted','User can only set today','warn'); return; }
+  // 3.11f: times never block the save. Same / empty times → saved without a duration (no MTTR).
   const ps = document.getElementById('md-ps').value;
   const pp = document.getElementById('md-pp').value;
-  if(!ps || !pp){ toast('Missing','Times required','warn'); return; }
-  const ss = new Date(ps), sp = new Date(pp);
-  if(sp<=ss){ toast('Invalid','Stop must be after start','warn'); return; }
-  const by = document.getElementById('md-by').value.trim() || (window.__pmCurrentUser?window.__pmCurrentUser.email:'unknown');
-  STATE.panelExecutions[pid] = { actualDate:ad, pmStart:ss.toISOString(), pmStop:sp.toISOString(), mttrMin:Math.round((sp-ss)/60000), checklist:cl, gps:_gps, submittedBy:by, submittedAt:new Date().toISOString() };
+  let pmStart = '', pmStop = '', mttrMin = null;
+  if(ps && pp){
+    const ss = new Date(ps), sp = new Date(pp);
+    if(sp < ss){ toast('Check the times', 'Stop ('+dtFmtShort(sp)+') is earlier than Start ('+dtFmtShort(ss)+'). Correct one of them — or make them the same to save without a duration.', 'warn'); return; }
+    if(sp > ss){ pmStart = ss.toISOString(); pmStop = sp.toISOString(); mttrMin = Math.round((sp-ss)/60000); }
+  }
+  const by = document.getElementById('md-by').value.trim() || (window.__pmCurrentUser ? (window.__pmCurrentUser.email || window.__pmCurrentUser.uid) : 'unknown');
+  STATE.panelExecutions[pid] = { actualDate:ad, pmStart, pmStop, mttrMin, checklist:cl, gps:_gps || null, submittedBy:by, submittedAt:new Date().toISOString() };
   saveToFirebase();
   closeModal();
   renderAll();

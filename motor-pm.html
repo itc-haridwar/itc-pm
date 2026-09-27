@@ -425,7 +425,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
 <script>
 /* Phase 3.11 — phones have no console: show script errors on screen and warn if the
    page never finishes loading (old cached copy, or file cut short on GitHub). */
-window.__motorBuild = '3.11 · 27-09-2026';
+window.__motorBuild = '3.11f · 27-09-2026';
 window.__motorErrors = [];
 (function(){
   function show(msg){
@@ -441,7 +441,7 @@ window.__motorErrors = [];
   window.addEventListener('unhandledrejection', function(e){ var r = e && e.reason; show((r && (r.code ? r.code + ' — ' : '') + (r.message || r)) || 'request failed'); });
   setTimeout(function(){
     if(window.__motorBooted) return;
-    show('This page did not finish loading. The motor-pm.html on GitHub is probably cut short or an old copy is cached. Re-upload it with Add file → Upload files (GitHub must show 5,133 lines ending with &lt;/html&gt;) and clear the browser cache.');
+    show('This page did not finish loading. The motor-pm.html on GitHub is probably cut short or an old copy is cached. Re-upload it with Add file → Upload files (GitHub must show 5166 lines ending with &lt;/html&gt;) and clear the browser cache.');
   }, 15000);
 })();
 </script>
@@ -449,7 +449,7 @@ window.__motorErrors = [];
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">ITC <span>HARIDWAR</span></div>
-      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.11 · 27-09-2026</span></div>
+      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.11f · 27-09-2026</span></div>
     </div>
     <nav class="nav" id="nav">
       <div class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</div>
@@ -488,8 +488,8 @@ window.__motorErrors = [];
       </div>
       <div class="topbar-meta">
         <span><span class="live-dot"></span>&nbsp;LIVE</span>
-        <span>Today<b id="topbar-date">—</b></span>
-        <span>Week<b id="topbar-week">—</b></span>
+        <span onclick="maybeShowDailyPopup(true)" style="cursor:pointer" title="Tap for today's PM plan">Today<b id="topbar-date">—</b></span>
+        <span onclick="maybeShowWeeklyPopup(true)" style="cursor:pointer" title="Tap for this week's summary">Week<b id="topbar-week">—</b></span>
         <span class="notif-icon" onclick="motorDiagnostics()" title="Check version &amp; connection" style="font-size:15px">🩺</span>
         <span class="notif-icon" id="notif-bell" onclick="toggleNotifPanel()" title="Pending PM confirmations">
           🔔
@@ -1506,6 +1506,8 @@ function initCloudStorage(){
         if(typeof renderAll === 'function') renderAll();
       }
       setupCloudSync();
+      // 3.11d: live data loaded → the daily / weekly popups may show now
+      document.dispatchEvent(new CustomEvent('pm-state-ready'));
     });
   } else {
     document.addEventListener('pm-firebase-ready', initCloudStorage, {once:true});
@@ -2965,6 +2967,14 @@ function nowForInput(){
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 function dtInputToISO(v){ return v ? new Date(v).toISOString() : ''; }
+// 3.11f — Mark Done quick buttons: PM Start = PM Stop minus N minutes
+function mdStartBefore(min){
+  const stopEl = document.getElementById('md-pm-stop'), startEl = document.getElementById('md-pm-start');
+  if(!stopEl || !startEl) return;
+  const s = stopEl.value ? new Date(stopEl.value) : new Date();
+  const d = new Date(s.getTime() - min * 60000), pad = n=>String(n).padStart(2,'0');
+  startEl.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 function openChecklistModal(pmId){
   const row = pmRowById(pmId);
@@ -3028,8 +3038,14 @@ function openChecklistModal(pmId){
         <div class="field-group">
           <label class="required">PM Start</label>
           <input type="datetime-local" id="md-pm-start" value="${nowForInput()}" required/>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+            <button type="button" class="btn secondary" style="padding:4px 9px;font-size:10px" onclick="mdStartBefore(30)">−30 min</button>
+            <button type="button" class="btn secondary" style="padding:4px 9px;font-size:10px" onclick="mdStartBefore(60)">−1 h</button>
+            <button type="button" class="btn secondary" style="padding:4px 9px;font-size:10px" onclick="mdStartBefore(120)">−2 h</button>
+          </div>
         </div>
       </div>
+      <div style="font-size:11px;color:var(--text-muted);margin:-4px 0 10px">Set Start and Stop to record the PM duration (MTTR). If they are left the same, the PM is still saved — just without a duration.</div>
       <div class="field-row">
         <div class="field-group">
           <label class="required">PM Stop</label>
@@ -3114,14 +3130,22 @@ function submitChecklist(pmId){
     return;
   }
 
+  // 3.11f: times never block the save. Same / empty times → saved without a duration (no MTTR).
   const ps = document.getElementById('md-pm-start').value;
   const pp = document.getElementById('md-pm-stop').value;
-  if(!ps || !pp){ toast('Missing time','PM Start and Stop both required','warn'); return; }
-  data.pmStart = dtInputToISO(ps);
-  data.pmStop = dtInputToISO(pp);
-  const startD = new Date(ps), stopD = new Date(pp);
-  if(stopD <= startD){ toast('Invalid time','PM Stop must be after PM Start','warn'); return; }
-  data.mttrMin = Math.round((stopD - startD) / 60000);
+  data.pmStart = ''; data.pmStop = ''; data.mttrMin = null;
+  if(ps && pp){
+    const startD = new Date(ps), stopD = new Date(pp);
+    if(stopD < startD){
+      toast('Check the times', `PM Stop (${dateTimeFmt(stopD)}) is earlier than PM Start (${dateTimeFmt(startD)}). Correct one of them — or make them the same to save without a duration.`, 'warn');
+      return;
+    }
+    if(stopD > startD){
+      data.pmStart = dtInputToISO(ps);
+      data.pmStop = dtInputToISO(pp);
+      data.mttrMin = Math.round((stopD - startD) / 60000);
+    }
+  }
 
   const hadBD = document.getElementById('md-had-bd').value === 'yes';
   if(hadBD){
@@ -4517,14 +4541,14 @@ document.querySelectorAll('.nav-item').forEach(el=>{
    - Daily popup: shown ONCE per day on first visit, lists today's planned motors
    - Weekly popup: shown ONCE per week on first visit (any day), lists due-this-week + overdue
    Both close with × button or click outside. Both have sessionStorage + localStorage to prevent re-showing. */
-function maybeShowDailyPopup(){
+function maybeShowDailyPopup(force){
   try{
     const todayKey = 'pm_daily_popup_' + isoDate(TODAY);
-    if(localStorage.getItem(todayKey)) return; // already shown today
+    if(!force && localStorage.getItem(todayKey)) return; // already shown today
     if(!cachedRows || !cachedRows.length) return;
     const todayStr = isoDate(TODAY);
     const todayItems = (cachedRowsAll || cachedRows).filter(r => r.date === todayStr && !r.actualDate);
-    if(todayItems.length === 0) return; // nothing planned today
+    if(todayItems.length === 0){ if(force) toast("Today's plan", 'No motor PM planned today (' + dateFmt(TODAY) + ').'); return; } // nothing planned today
 
     const list = todayItems.slice(0, 30).map(r=>{
       const m = STATE.motors.find(mm=>mm.sr===r.sr) || {motor:'?', area:'?', cat:'?'};
@@ -4560,19 +4584,19 @@ function maybeShowDailyPopup(){
   }catch(e){ console.warn('Daily popup failed:', e); }
 }
 
-function maybeShowWeeklyPopup(){
+function maybeShowWeeklyPopup(force){
   try{
     // Show once per ISO week (Mon-Sun). Key is YYYY-Www format.
     const sow = startOfWeek(TODAY);
     const weekKey = 'pm_weekly_popup_' + isoDate(sow);
-    if(localStorage.getItem(weekKey)) return;
+    if(!force && localStorage.getItem(weekKey)) return;
     if(!cachedRows || !cachedRows.length) return;
 
     const eow = new Date(sow); eow.setDate(eow.getDate()+6);
     const dueRows = (cachedRowsAll || cachedRows).filter(r=>{ const d=isoToDate(r.date); return d>=sow && d<=eow && !r.actualDate; });
     const overdueRows = (cachedRowsAll || cachedRows).filter(r=>isoToDate(r.date) < sow && !r.actualDate);
 
-    if(dueRows.length === 0 && overdueRows.length === 0) return;
+    if(dueRows.length === 0 && overdueRows.length === 0){ if(force) toast('Weekly summary', 'Nothing due or overdue this week.'); return; }
 
     const fmtItems = (items, color)=>items.slice(0,10).map(r=>{
       const m = STATE.motors.find(mm=>mm.sr===r.sr) || {motor:'?', area:'?'};
@@ -4617,6 +4641,9 @@ function maybeShowWeeklyPopup(){
 let _popupsShown = false;
 function maybeShowPopups(){
   if(_popupsShown) return;
+  // 3.11d: wait until the plan is loaded, and never cover a window the user already opened
+  if(!(cachedRowsAll || cachedRows) || !(cachedRowsAll || cachedRows).length) return;
+  if(document.querySelector('#modal-host.show')) return;
   _popupsShown = true;
   // Try weekly first (more important). If skipped, try daily.
   const sow = startOfWeek(TODAY);
@@ -4630,8 +4657,14 @@ function maybeShowPopups(){
 
 /* Initial */
 renderAll();
-// Show popups after initial render + small delay for Firebase load
-setTimeout(maybeShowPopups, 1500);
+// 3.11d: show the daily / weekly popup once the LIVE plan is loaded from the cloud
+// (not the built-in default data); if there is no connection at all (offline / preview), after 10 s.
+document.addEventListener('pm-state-ready', ()=>{ window.__pmStateReady = true; setTimeout(maybeShowPopups, 400); }, {once:true});
+setTimeout(function popupFallback(){
+  if(window.__pmStateReady) return;                                  // live data arrived → shown by the event
+  if(window.__pmFirebaseReady){ setTimeout(popupFallback, 3000); return; }   // connected, still loading → keep waiting
+  maybeShowPopups();                                                // no connection at all → use the copy on this phone
+}, 10000);
 </script>
 
 <script>
