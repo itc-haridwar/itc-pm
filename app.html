@@ -102,6 +102,101 @@ iframe{width:100%;height:100%;border:none;background:var(--bg-deep)}
   .tab{padding:12px 16px}
   .user-name{display:none}
 }
+
+/* ═══ 3.12 · Global search ═══ */
+.gs-open{flex:1;max-width:460px;margin:0 18px;display:flex;align-items:center;gap:10px;background:var(--bg-panel-2);border:1px solid var(--border-bright);color:var(--text-dim);border-radius:8px;padding:8px 12px;font:inherit;font-size:12.5px;cursor:pointer;text-align:left;min-width:0}
+.gs-open:hover,.gs-open:focus-visible{border-color:var(--accent);color:var(--text);outline:none}
+.gs-open .gs-ph{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-open kbd,.gs-kbd{font-family:'JetBrains Mono',monospace;font-size:10px;border:1px solid var(--border-bright);border-radius:4px;padding:1px 6px;color:var(--text-muted)}
+.gs-ico{font-size:14px;line-height:1}
+
+.gs{position:fixed;inset:0;z-index:50;background:rgba(4,7,14,.72);display:flex;justify-content:center;align-items:flex-start;padding:6vh 16px 16px}
+.gs[hidden]{display:none}
+.gs-panel{width:100%;max-width:780px;max-height:88vh;display:flex;flex-direction:column;background:var(--bg-panel);border:1px solid var(--border-bright);border-radius:12px;box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden}
+.gs-top{display:flex;gap:10px;align-items:center;padding:14px 14px 10px;border-bottom:1px solid var(--border)}
+.gs-box{flex:1;display:flex;align-items:center;gap:10px;background:var(--bg-deep);border:1px solid var(--accent);border-radius:8px;padding:0 10px;min-width:0}
+.gs-box input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--text);font:inherit;font-size:16px;padding:11px 0}
+.gs-box input::-webkit-search-cancel-button{display:none}
+.gs-x{background:none;border:0;color:var(--text-muted);font-size:15px;cursor:pointer;padding:6px}
+.gs-x:hover{color:var(--text)}
+.gs-close{background:transparent;border:1px solid var(--border-bright);color:var(--text-dim);border-radius:6px;padding:9px 12px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.gs-close:hover{color:var(--text);border-color:var(--text-dim)}
+.gs-scopes{display:flex;gap:6px;padding:10px 14px 0;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.gs-scopes::-webkit-scrollbar{display:none}
+.gs-chip{flex:none;display:inline-flex;align-items:center;gap:6px;background:var(--bg-panel-2);border:1px solid var(--border-bright);color:var(--text-dim);border-radius:999px;padding:6px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.gs-chip:hover{color:var(--text)}
+.gs-chip.on{background:rgba(0,217,255,.12);border-color:var(--accent);color:var(--accent)}
+.gs-chip .n{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-muted)}
+.gs-chip.on .n{color:var(--accent)}
+.gs-chip.dim{opacity:.45}
+.gs-status{padding:8px 14px;font-size:11px;color:var(--text-muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.gs-status b{color:var(--text-dim);font-weight:600}
+.gs-status .gs-ref{background:none;border:0;color:var(--accent);font:inherit;font-size:11px;cursor:pointer;padding:0 2px}
+.gs-spin{display:inline-block;width:10px;height:10px;border:2px solid var(--border-bright);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-1px}
+.gs-body{overflow-y:auto;padding:0 8px 14px;-webkit-overflow-scrolling:touch;flex:1}
+.gs-note{margin:4px 6px 10px;padding:9px 12px;border:1px dashed var(--border-bright);border-radius:8px;font-size:12px;color:var(--text-dim)}
+.gs-note b{color:var(--text)}
+.gs-gh{display:flex;justify-content:space-between;align-items:center;padding:14px 8px 6px;font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--text-muted);font-weight:700}
+.gs-gh .c{font-family:'JetBrains Mono',monospace;letter-spacing:0}
+.gs-item{width:100%;display:flex;align-items:center;gap:10px;text-align:left;background:transparent;border:1px solid transparent;border-radius:8px;padding:9px 8px;color:var(--text);font:inherit;cursor:pointer}
+.gs-item:hover,.gs-item.act{background:var(--bg-panel-2);border-color:var(--border-bright)}
+.gs-item.act{border-color:var(--accent)}
+.gs-kind{flex:none;width:74px;text-align:center;font-size:9px;letter-spacing:1px;font-weight:700;border-radius:4px;padding:4px 0;border:1px solid var(--border-bright);color:var(--text-dim);text-transform:uppercase}
+.gs-kind.k-motor,.gs-kind.k-pm{color:var(--accent);border-color:rgba(0,217,255,.45)}
+.gs-kind.k-panel,.gs-kind.k-punit{color:var(--accent-2);border-color:rgba(255,176,0,.45)}
+.gs-kind.k-complaint,.gs-kind.k-carea{color:var(--accent-3);border-color:rgba(255,59,107,.45)}
+.gs-kind.k-aicitem,.gs-kind.k-record,.gs-kind.k-activity{color:var(--accent-4);border-color:rgba(124,242,139,.45)}
+.gs-kind.k-equip,.gs-kind.k-parea,.gs-kind.k-ptype{color:#c9a7ff;border-color:rgba(201,167,255,.45)}
+.gs-main{flex:1;min-width:0}
+.gs-t{display:block;font-size:13.5px;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.gs-s{display:block;font-size:11.5px;color:var(--text-dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-w{display:block;font-size:10.5px;color:var(--text-muted);margin-top:2px}
+.gs-side{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:34%}
+.gs-meta{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-dim);white-space:nowrap}
+.gs-go{color:var(--text-muted);font-size:18px;line-height:1;flex:none}
+.gs mark{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
+.gs-pill{font-size:9px;letter-spacing:.8px;font-weight:700;border-radius:3px;padding:2px 6px;text-transform:uppercase;white-space:nowrap;border:1px solid var(--border-bright);color:var(--text-dim)}
+.gs-pill.st-overdue,.gs-pill.st-notok,.gs-pill.st-open,.gs-pill.st-repair{color:#ff6b8f;border-color:rgba(255,59,107,.55);background:rgba(255,59,107,.1)}
+.gs-pill.st-due,.gs-pill.st-norecord,.gs-pill.st-observation{color:#ffc24d;border-color:rgba(255,176,0,.55);background:rgba(255,176,0,.1)}
+.gs-pill.st-upcoming,.gs-pill.st-standby{color:var(--accent);border-color:rgba(0,217,255,.5);background:rgba(0,217,255,.08)}
+.gs-pill.st-done,.gs-pill.st-ok,.gs-pill.st-closed,.gs-pill.st-service{color:var(--accent-4);border-color:rgba(124,242,139,.5);background:rgba(124,242,139,.08)}
+.gs-pill.st-admin{color:var(--text-muted)}
+.gs-more{display:block;margin:4px 8px 0;background:none;border:0;color:var(--accent);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:6px 0}
+.gs-top-hit{margin:10px 2px 2px;border:1px solid var(--accent);border-radius:10px;background:linear-gradient(135deg,rgba(0,217,255,.08),transparent 60%)}
+.gs-top-hit .gs-item{padding:12px 10px}
+.gs-top-hit .gs-lbl{padding:8px 12px 0;font-size:10px;letter-spacing:1.6px;color:var(--accent);font-weight:700;text-transform:uppercase}
+.gs-guide{padding:6px 8px}
+.gs-guide h3{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--text-muted);margin:14px 0 8px;font-weight:700}
+.gs-guide .lead{font-size:13px;color:var(--text-dim);line-height:1.5;margin-top:6px}
+.gs-ex{display:flex;flex-wrap:wrap;gap:6px}
+.gs-tips{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:12px;color:var(--text-dim);line-height:1.45}
+.gs-tips b{color:var(--text);font-weight:600;white-space:nowrap}
+.gs-tips code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);background:rgba(0,217,255,.08);border-radius:3px;padding:0 4px}
+.gs-empty{padding:26px 10px;text-align:center;color:var(--text-dim);font-size:13px}
+.gs-empty .gs-ex{justify-content:center;margin-top:10px}
+
+.gs-strip{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#2a2306;border-bottom:1px solid #6b5a14;color:#ffe9a3;font-size:12px;flex-shrink:0;min-height:40px}
+.gs-strip[hidden]{display:none}
+.gs-strip .q{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gs-strip .q b{color:#FFD84D}
+.gs-strip .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:#ffd84d;white-space:nowrap}
+.gs-strip button{background:rgba(255,216,77,.12);border:1px solid #6b5a14;color:#ffe9a3;border-radius:6px;min-width:34px;height:30px;padding:0 9px;font:inherit;font-size:13px;cursor:pointer}
+.gs-strip button:hover{background:rgba(255,216,77,.25)}
+.gs-strip button:disabled{opacity:.35;cursor:default}
+.gs-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:60;background:var(--bg-panel);border:1px solid var(--accent);color:var(--text);border-radius:8px;padding:10px 16px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:calc(100vw - 32px)}
+.gs-toast[hidden]{display:none}
+
+@media (max-width:640px){
+  .gs-open{order:3;flex-basis:100%;max-width:none;margin:0;padding:9px 12px}
+  .gs-open kbd{display:none}
+  .gs{padding:0}
+  .gs-panel{max-width:none;max-height:none;height:100%;border-radius:0;border:0}
+  .gs-top{padding:10px}
+  .gs-kind{width:62px;font-size:8.5px}
+  .gs-side{max-width:38%}
+  .gs-strip{padding:6px 8px;gap:6px}
+  .gs-strip button{min-width:32px;padding:0 7px}
+}
 </style>
 </head>
 <body>
@@ -111,6 +206,7 @@ iframe{width:100%;height:100%;border:none;background:var(--bg-deep)}
       <div class="brand-logo">ITC <span>HARIDWAR</span></div>
       <div class="brand-sub">COT PM Module</div>
     </div>
+    <button type="button" class="gs-open" id="gs-open" aria-label="Search everything"><span class="gs-ico">🔍</span><span class="gs-ph">Search motors, panels, PM IDs, reports, pages…</span><kbd>/</kbd></button>
     <div class="user-block">
       <span class="user-name">Signed in as <b id="user-display">…</b></span>
       <button class="signout-btn" onclick="doSignOut()">Sign Out</button>
@@ -124,6 +220,7 @@ iframe{width:100%;height:100%;border:none;background:var(--bg-deep)}
     <div class="tab" data-tab="aic"><span class="tab-icon">🛡</span> Asset Integrity <span class="tab-badge">NEW</span></div>
     <div class="tab" data-tab="passport"><span class="tab-icon">📘</span> Factory Passport <span class="tab-badge">NEW</span></div>
   </nav>
+  <div class="gs-strip" id="gs-strip" hidden></div>
 
   <main class="tab-content">
     <div class="loader" id="app-loader"><div class="spinner"></div></div>
@@ -138,10 +235,14 @@ iframe{width:100%;height:100%;border:none;background:var(--bg-deep)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+// 3.12 — read-only access for the global search (tabs that are not opened yet)
+window.__gsFs = { db: getFirestore(app), doc, getDoc };
+window.__appBuild = '3.12 · 27-09-2026';
 
 // 3.10b — always load the newest module files (no stale phone cache after a GitHub update)
 const FRESH = '?v=' + Date.now();
@@ -188,6 +289,1106 @@ document.querySelectorAll('.tab').forEach(t=>{
     }
   });
 });
+</script>
+
+<!-- ═══ 3.12 · Global search (one box for the whole module) ═══ -->
+<div class="gs" id="gs" hidden role="dialog" aria-modal="true" aria-label="Search everything">
+  <div class="gs-panel">
+    <div class="gs-top">
+      <div class="gs-box"><span class="gs-ico">🔍</span>
+        <input id="gs-q" type="search" placeholder="Motor, panel, PM ID, tag, report no., date, page…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-label="Search">
+        <button type="button" class="gs-x" id="gs-clear" aria-label="Clear search">✕</button></div>
+      <button type="button" class="gs-close" id="gs-close">Close</button>
+    </div>
+    <div class="gs-scopes" id="gs-scopes"></div>
+    <div class="gs-status" id="gs-status"></div>
+    <div class="gs-body" id="gs-body"></div>
+  </div>
+</div>
+<div class="gs-toast" id="gs-toast" hidden></div>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   3.12 · GLOBAL SEARCH — one box for Motor PM, Panel PM, Complaints,
+   Asset Integrity and Factory Passport.
+   • Reads each module's LIVE data from its tab (same site), or — for a tab
+     not opened yet — a read-only copy from the cloud. Never writes anything.
+   • Typo-tolerant, multi-word, dash/space-blind (MCC3 = MCC-3 = MCC 3),
+     PM IDs, dates, status words (overdue, due, done, open, not ok …).
+   • Tap a result → the tab opens, the page / record opens, the spot flashes
+     yellow and every match is highlighted; ▲ ▼ on the yellow strip step
+     through them.
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+const $ = id => document.getElementById(id);
+const TABS = {
+  motor:     { frame: 'motor-frame',     name: 'Motor PM',          icon: '⚙' },
+  panel:     { frame: 'panel-frame',     name: 'Panel PM',          icon: '▤' },
+  complaint: { frame: 'complaint-frame', name: 'Complaints',        icon: '🛠' },
+  aic:       { frame: 'aic-frame',       name: 'Asset Integrity',   icon: '🛡' },
+  passport:  { frame: 'passport-frame',  name: 'Factory Passport',  icon: '📘' },
+};
+const GROUPS = ['motor', 'panel', 'complaint', 'aic', 'passport', 'pages'];
+const GNAME = { motor: '⚙ Motor PM', panel: '▤ Panel PM', complaint: '🛠 Complaints', aic: '🛡 Asset Integrity', passport: '📘 Factory Passport', pages: '🧭 Pages & settings' };
+const SHORT = { motor: 'Motor', panel: 'Panel', complaint: 'Complaints', aic: 'Asset Integrity', passport: 'Passport', pages: 'Pages' };
+const KIND = { motor: 'Motor', pm: 'PM', area: 'Area', owner: 'Owner', field: 'Checklist', holiday: 'Calendar', panel: 'Panel', punit: 'Unit',
+  complaint: 'Complaint', carea: 'Area', aicitem: 'Item', record: 'Record', activity: 'Activity', equip: 'Equipment', parea: 'Area', ptype: 'Type',
+  section: 'Page', action: 'Action' };
+const KIND_BOOST = { motor: 6, panel: 6, equip: 6, record: 4, complaint: 4, activity: 5, aicitem: 3, area: 3, punit: 3, parea: 2, ptype: 2,
+  owner: 3, field: 2, holiday: 2, carea: 1, section: 3, action: 3, pm: 0 };
+const UNITS = [ { id: 'P1-FOODS', phase: 'Ph-1', name: 'Foods' }, { id: 'P1-PCPB', phase: 'Ph-1', name: 'PCPB' },
+                { id: 'P1-COT', phase: 'Ph-1', name: 'COT' }, { id: 'P2-PPB', phase: 'Ph-2', name: 'PPB' } ];
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+const FREQ_WORDS = { BM: 'bm bimonthly bi monthly every 60 days', Q: 'q quarterly every 90 days', HY: 'hy half yearly halfyearly every 180 days' };
+const CYCLE = { BM: 60, Q: 90, HY: 180 };
+
+/* ─── small helpers ─── */
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const attr = v => esc(JSON.stringify(v));
+const z2 = n => String(n).padStart(2, '0');
+const pad3 = n => String(n).padStart(3, '0');
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const isoOf = d => `${d.getFullYear()}-${z2(d.getMonth() + 1)}-${z2(d.getDate())}`;
+function dOf(iso){ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function dmy(iso){ const d = dOf(iso); return d ? `${z2(d.getDate())}-${z2(d.getMonth() + 1)}-${d.getFullYear()}` : '—'; }
+function todayD(){ const t = new Date(); t.setHours(0, 0, 0, 0); return t; }
+function addDaysIso(iso, n){ const d = dOf(iso); d.setDate(d.getDate() + n); return isoOf(d); }
+function startOfWeek(d){ const x = new Date(d); const w = x.getDay(); x.setDate(x.getDate() + (w === 0 ? -6 : 1 - w)); x.setHours(0, 0, 0, 0); return x; }
+function addMonthsIso(iso, n){ const d = dOf(iso); if(!d) return ''; const day = d.getDate(); d.setMonth(d.getMonth() + (+n || 0)); if(d.getDate() < day) d.setDate(0); return isoOf(d); }
+function unitLabel(id){ const u = UNITS.find(x => x.id === id); return u ? `${u.phase} · ${u.name}` : (id || '—'); }
+function freqLabel(m){ return ({ 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Annual', 24: 'Every 2 years' })[+m] || `Every ${m} months`; }
+function fmtDT(s){ const d = new Date(s); return (!s || isNaN(d)) ? '—' : `${z2(d.getDate())}-${z2(d.getMonth() + 1)}-${d.getFullYear()} ${z2(d.getHours())}:${z2(d.getMinutes())}`; }
+function fmtMin(m){ if(m == null || m === '') return '—'; m = +m; return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; }
+function withTimeout(p, ms){ return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]); }
+
+function norm(s){
+  return String(s == null ? '' : s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/(\d)[.,](?=\d)/g, '$1\u0001').replace(/[^a-z0-9\u0001]+/g, ' ').replace(/\u0001/g, '.').trim();
+}
+const squash = s => s.replace(/[^a-z0-9]/g, '');
+let LB_OK = true; try{ new RegExp('(?<![0-9])a'); }catch(e){ LB_OK = false; }      // older iPhones: no look-behind
+function mkRe(src){ if(!LB_OK) src = src.split('(?<![0-9])').join(''); return new RegExp(src, 'gi'); }
+
+/* Damerau-Levenshtein with an early exit once the distance passes max */
+function lev(a, b, max){
+  if(a === b) return 0;
+  const la = a.length, lb = b.length;
+  if(Math.abs(la - lb) > max) return max + 1;
+  let p2 = null, p = Array.from({ length: lb + 1 }, (_, j) => j);
+  for(let i = 1; i <= la; i++){
+    const c = [i]; let rowMin = i;
+    for(let j = 1; j <= lb; j++){
+      let v = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if(p2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+      c.push(v); if(v < rowMin) rowMin = v;
+    }
+    if(rowMin > max) return max + 1;
+    p2 = p; p = c;
+  }
+  return p[lb];
+}
+
+/* plant words people use for the same thing */
+const SYN_GROUPS = [
+  ['transformer', 'traffo', 'trafo', 'xmer', 'trf', 'tx'], ['generator', 'genset', 'dg', 'diesel generator'],
+  ['compressor', 'comp', 'compr'], ['earthing', 'earth', 'grounding'], ['holiday', 'holidays', 'festival', 'leave', 'off day'],
+  ['breakdown', 'bd', 'failure', 'fault'], ['bimonthly', 'bm'], ['quarterly', 'q'], ['halfyearly', 'hy', 'half yearly'],
+  ['sewage', 'stp'], ['effluent', 'etp'], ['illumination', 'lux', 'lighting'], ['thermography', 'thermal', 'ir scan'],
+  ['complaint', 'complaints', 'issue'], ['backup', 'back up'], ['reschedule', 'shift date', 'change date', 'postpone'],
+  ['capacitor', 'apfc', 'power factor'], ['motor', 'motors', 'mtr'], ['panel', 'panels', 'pnl'], ['pump', 'pumps'],
+  ['owner', 'owners', 'responsible'], ['execution', 'executions', 'executed', 'logged'], ['markdone', 'mark done'],
+];
+const SYN = new Map();
+SYN_GROUPS.forEach(g => g.forEach(w => { const k = norm(w); SYN.set(k, (SYN.get(k) || []).concat(g.map(norm).filter(x => x !== k))); }));
+const STOP = new Set(['the', 'of', 'for', 'and', 'in', 'on', 'at', 'to', 'is', 'me', 'my', 'please', 'show', 'find', 'where', 'all']);
+const STATUS_WORDS = { overdue: 'overdue', late: 'overdue', missed: 'overdue', due: 'due', upcoming: 'upcoming', soon: 'upcoming',
+  done: 'done', completed: 'done', complete: 'done', executed: 'done', finished: 'done', pending: 'pending',
+  open: 'open', ongoing: 'open', closed: 'closed', resolved: 'closed', notok: 'notok', nok: 'notok', failed: 'notok',
+  observation: 'observation', scheduled: 'scheduled', norecord: 'norecord' };
+const ST_TEXT = { overdue: 'Overdue', due: 'Due', upcoming: 'Upcoming', done: 'Done', pending: 'Pending', open: 'Open', closed: 'Closed',
+  notok: 'Not OK', observation: 'Observation', scheduled: 'Scheduled', norecord: 'No record', ok: 'OK' };
+
+/* ─── frames ─── */
+function frameWin(tab){
+  const fr = $(TABS[tab].frame);
+  if(!fr || !fr.getAttribute('src') || fr.getAttribute('src') === 'about:blank') return null;
+  try{ const w = fr.contentWindow; if(!w || !w.document || w.location.href === 'about:blank' || w.document.readyState === 'loading') return null; return w; }
+  catch(e){ return null; }
+}
+function ev(w, code){ try{ return w ? w.eval(code) : undefined; }catch(e){ return undefined; } }
+function modalHost(w){ const d = w.document; return d.querySelector('#modal-host.show, #m-host.show'); }
+function isAdminNow(){ const w = frameWin('motor') || frameWin('panel') || frameWin('aic'); return !!(w && w.__pmRole === 'admin'); }
+
+/* ─── data sources: live tab first, else a read-only cloud copy ─── */
+const SRC = { shared: { data: null, at: 0, busy: false, err: '' }, aic: { data: null, at: 0, busy: false, err: '' }, passport: { data: null, at: 0, busy: false, err: '' } };
+const CLOUD_TTL = 5 * 60 * 1000;
+async function fsGet(id){
+  const f = window.__gsFs; if(!f) throw new Error('not connected');
+  const s = await withTimeout(f.getDoc(f.doc(f.db, 'itc_pm', id)), 15000);
+  return s.exists() ? s.data() : null;
+}
+function liveShared(){
+  const st = ev(frameWin('motor'), "typeof STATE !== 'undefined' ? STATE : null");
+  return st && st.motors && st.motors.length ? st : null;
+}
+function livePanel(){ const st = ev(frameWin('panel'), "typeof STATE !== 'undefined' ? STATE : null"); return st && st.panels && st.panels.length ? st : null; }
+function liveComplaint(){ const st = ev(frameWin('complaint'), "typeof STATE !== 'undefined' ? STATE : null"); return st && Array.isArray(st.complaints) ? st : null; }
+function liveAic(){ return ev(frameWin('aic'), "typeof A !== 'undefined' && A.master ? { master: A.master, recs: A.recs } : null") || null; }
+function livePassport(){ return ev(frameWin('passport'), "typeof P !== 'undefined' && P.loadedBuckets && P.loadedBuckets.size >= 16 ? P.items : null") || null; }
+function srcFrom(){
+  return { shared: liveShared() ? 'live' : SRC.shared.data ? 'cloud' : '', aic: liveAic() ? 'live' : SRC.aic.data ? 'cloud' : '',
+           passport: livePassport() ? 'live' : SRC.passport.data ? 'cloud' : '' };
+}
+function fetchMissing(force){
+  const jobs = [];
+  const stale = s => force || !s.data || Date.now() - s.at > CLOUD_TTL;
+  if(!liveShared() && stale(SRC.shared) && !SRC.shared.busy) jobs.push(load(SRC.shared, async () => {
+    const d = await fsGet('shared_state'); return d && d.payload ? JSON.parse(d.payload) : null; }));
+  if(!liveAic() && stale(SRC.aic) && !SRC.aic.busy) jobs.push(load(SRC.aic, async () => {
+    const m = await fsGet('aic_master'); if(!m) return { master: { activities: {}, equipment: {} }, recs: {} };
+    const y = +fyOfIso(isoOf(todayD())).slice(2, 6);
+    const fys = [...new Set([fyOfIso(isoOf(todayD())), `FY${y - 1}-${z2(y % 100)}`].concat(Object.keys(m.fyDocs || {})))];
+    const recs = {}; await Promise.all(fys.map(async fy => { try{ const r = await fsGet('aic_records_' + fy); recs[fy] = (r && r.records) || {}; }catch(e){} }));
+    return { master: { activities: m.activities || {}, equipment: m.equipment || {} }, recs }; }));
+  if(!livePassport() && stale(SRC.passport) && !SRC.passport.busy) jobs.push(load(SRC.passport, async () => {
+    const items = {}; await Promise.all(Array.from({ length: 16 }, (_, i) => 'passport_b' + z2(i)).map(async id => {
+      const d = await fsGet(id); Object.assign(items, (d && d.items) || {}); })); return items; }));
+  if(jobs.length) renderStatus();
+  return Promise.all(jobs);
+}
+async function load(s, fn){
+  s.busy = true; s.err = '';
+  try{ s.data = await fn(); s.at = Date.now(); }catch(e){ s.err = (e && (e.code || e.message)) || 'failed'; }
+  s.busy = false; buildIndex(); if(isOpen()) run(); else renderStatus();
+}
+function fyOfIso(iso){ const d = dOf(iso); const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `FY${y}-${z2((y + 1) % 100)}`; }
+
+/* ─── index ─── */
+let IX = [], VOCAB = [], INFO = {}, BUILT = 0;
+const FZ = new Map();
+function mk(o){
+  const F = [];
+  (o.fields || []).forEach(f => { if(!f || f[0] == null || f[0] === '') return; const n = norm(f[0]); if(!n) return;
+    F.push({ n, c: squash(n), w: f[1] || 1, ctx: !!f[2], ws: n.split(' ') }); });
+  o.F = F; o.W = new Set(); F.forEach(f => f.ws.forEach(x => o.W.add(x)));
+  o.all = F.map(f => f.n).join(' | '); o.allc = F.map(f => f.c).join('|');
+  o.tn = norm(o.title); o.tc = squash(o.tn);
+  o.dates = (o.dates || []).filter(Boolean); o.flags = new Set(o.flags || []);
+  return o;
+}
+function buildIndex(){
+  const out = [], info = { motors: 0, pms: 0, panels: 0, complaints: 0, aic: 0, records: 0, passport: 0, pages: 0 };
+  const shared = liveShared() || SRC.shared.data;
+  try{ if(shared) indexMotor(shared, out, info); }catch(e){ console.warn('[search] motor index', e); }
+  try{ const ps = livePanel() || shared; if(ps) indexPanel(ps, out, info); }catch(e){ console.warn('[search] panel index', e); }
+  try{ const cs = liveComplaint() || shared; if(cs) indexComplaints(cs, out, info); }catch(e){ console.warn('[search] complaint index', e); }
+  try{ const a = liveAic() || SRC.aic.data; if(a) indexAic(a, out, info); }catch(e){ console.warn('[search] aic index', e); }
+  try{ const p = livePassport() || SRC.passport.data; if(p) indexPassport(p, out, info); }catch(e){ console.warn('[search] passport index', e); }
+  indexSections(out, info);
+  IX = out; INFO = info; BUILT = Date.now(); FZ.clear();
+  const v = new Map(); out.forEach(e => e.W.forEach(w => { if(w.length >= 3 && !/\d/.test(w)) v.set(w, (v.get(w) || 0) + 1); }));
+  VOCAB = [...v.entries()];
+}
+
+/* Motor PM — the module's own rows when the tab is open (identical to what it shows) */
+function motorRows(st){
+  const w = frameWin('motor');
+  const live = ev(w, "(typeof cachedRowsAll !== 'undefined' && cachedRowsAll && cachedRowsAll.length) ? cachedRowsAll : ((typeof cachedRows !== 'undefined' && cachedRows) || null)");
+  if(live && live.length && st === liveShared() && typeof w.getStatus === 'function') return { rows: live, status: r => w.getStatus(r) };
+  const rows = [], mm = {}; (st.motors || []).forEach(m => { mm[m.sr] = m; });
+  Object.keys(st.fys || {}).forEach(fyKey => {
+    const fy = st.fys[fyKey]; if(!fy || !Array.isArray(fy.schedule)) return;
+    const start = new Date(fy.fyStart);
+    fy.schedule.forEach(s => {
+      const m = mm[s.sr]; if(!m) return;
+      let d = new Date(start); d.setDate(d.getDate() + (s.week - 1) * 7 + ((s.day || 1) - 1));
+      if(s.date){ const dd = dOf(s.date); if(dd) d = dd; }
+      if(s.customDate){ const cd = new Date(s.customDate); if(!isNaN(cd)) d = new Date(cd.getTime()); }
+      if(isNaN(d)) return;
+      const pmId = `M${pad3(s.sr)}-${z2(s.occ)}-${fyKey}`; const ex = (st.executions || {})[pmId];
+      rows.push({ sr: s.sr, area: m.area, motor: m.motor, cat: m.cat, freq: s.freq, date: isoOf(d), week: s.week, day: s.day || 1, pmId,
+                  actualDate: ex ? ex.actualDate : '', remarks: ex ? ex.remarks : '' });
+    });
+  });
+  return { rows, status: motorStatus };
+}
+function motorStatus(r){
+  if(r.actualDate) return 'DONE';
+  const d = dOf(r.date), T = todayD(), sow = startOfWeek(T), eow = new Date(sow); eow.setDate(eow.getDate() + 6);
+  if(d < sow) return 'OVERDUE'; if(d <= eow) return 'DUE';
+  const in14 = new Date(T); in14.setDate(in14.getDate() + 14); return d <= in14 ? 'UPCOMING' : 'SCHEDULED';
+}
+function indexMotor(st, out, info){
+  const { rows, status } = motorRows(st);
+  const T = isoOf(todayD()); const bySr = {};
+  rows.forEach(r => { (bySr[r.sr] = bySr[r.sr] || []).push(r); });
+  const rs = {}; (st.reschedules || []).forEach(x => { if(x && x.pmId) (rs[x.pmId] = rs[x.pmId] || []).push(x); });
+  (st.motors || []).forEach(m => {
+    const list = (bySr[m.sr] || []).slice().sort((a, b) => a.date.localeCompare(b.date));
+    const next = list.find(r => !r.actualDate && r.date >= T);
+    const freq = list.length ? list[list.length - 1].freq : ({ A: 'BM', B: 'Q', C: 'HY' })[m.cat] || '';
+    out.push(mk({ mod: 'motor', kind: 'motor', title: m.motor, sub: `${m.area} · Sr ${m.sr} · Cat ${m.cat} · ${freq}`,
+      meta: next ? 'Next ' + dmy(next.date) : '', sr: m.sr,
+      fields: [[m.motor, 3], [`m${m.sr} m${pad3(m.sr)} sr ${m.sr} ${m.sr}`, 2.5], [m.area, 1.5], [`cat ${m.cat} category ${m.cat} ${freq} ${FREQ_WORDS[freq] || ''}`, 0.8]],
+      go: { t: 'motorCard', sr: m.sr } }));
+    info.motors++;
+  });
+  rows.forEach(r => {
+    const s = status(r), key = s.toLowerCase(); const flags = [key];
+    if(s === 'OVERDUE' || (s === 'DUE' && r.date <= T)) flags.push('pending');
+    const ex = (st.executions || {})[r.pmId] || {};
+    const why = (rs[r.pmId] || []).map(x => [x.reason, x.reasonNote, x.note].filter(Boolean).join(' ')).join(' · ');
+    out.push(mk({ mod: 'motor', kind: 'pm', secondary: true, title: r.pmId, sub: `${r.motor} · ${r.area} · ${r.freq}`,
+      meta: r.actualDate ? 'Done ' + dmy(r.actualDate) : dmy(r.date), st: key, sr: r.sr, occ: +String(r.pmId).slice(5, 7), sortDate: r.date,
+      fields: [[r.pmId, 3], [r.motor, 1, true], [r.area, 1, true], [`${r.freq} cat ${r.cat}`, 0.5, true], [ex.remarks, 1], [ex.loggedBy, 0.8], [why, 0.8]],
+      dates: [r.date, r.actualDate], flags, go: { t: 'pmCard', pmId: r.pmId } }));
+    info.pms++;
+  });
+  const areas = {}; (st.motors || []).forEach(m => { areas[m.area] = (areas[m.area] || 0) + 1; });
+  const owners = {}; (st.areaOwners || []).forEach(o => { if(o && o.area) owners[o.area] = o; });
+  Object.keys(areas).forEach(a => { const o = owners[a] || {};
+    out.push(mk({ mod: 'motor', kind: 'area', title: a, sub: `${areas[a]} motor${areas[a] === 1 ? '' : 's'}${o.name ? ' · owner ' + o.name : ''}`,
+      fields: [[a, 3], [o.name, 0.8], ['area', 0.3]], go: { t: 'motorArea', area: a } })); });
+  (st.areaOwners || []).forEach(o => { if(!o || !o.name) return;
+    out.push(mk({ mod: 'motor', kind: 'owner', title: o.name, sub: `Area owner · ${o.area || '—'}${o.phone ? ' · ' + o.phone : ''}`,
+      fields: [[o.name, 3], [o.email, 2], [o.phone, 2], [o.area, 1]], go: { t: 'find', page: 'owners', text: o.name } })); });
+  (st.checklistFields || []).forEach(f => { if(!f || !f.label) return;
+    out.push(mk({ mod: 'motor', kind: 'field', title: f.label, sub: `Motor PM checklist field${f.unit ? ' · ' + f.unit : ''}${f.required ? ' · required' : ''}`,
+      fields: [[f.label, 3], ['checklist field', 0.4]], go: { t: 'find', page: 'checklist', text: f.label } })); });
+  const cal = st.pmCalendar || {};
+  (cal.holidays || []).map(h => Object.assign({ type: 'Holiday' }, h)).concat((cal.buffers || []).map(h => Object.assign({ type: 'Buffer day' }, h))).forEach(h => {
+    if(!h.date) return;
+    out.push(mk({ mod: 'motor', kind: 'holiday', title: `${h.name || h.type} · ${dmy(h.date)}`, sub: `${h.type} in the PM calendar · no motor PM on this day`,
+      fields: [[h.name, 3], [h.type + ' calendar off day', 0.8]], dates: [h.date], flags: ['holiday'], sortDate: h.date,
+      go: { t: 'find', page: 'manage', within: '#pm-cal', text: dmy(h.date) } })); });
+}
+
+/* Panel PM */
+function panelStatus(p, ex){
+  if(ex && ex.actualDate) return 'DONE';
+  const diff = Math.floor((dOf(p.pm_date) - todayD()) / 86400000);
+  return diff < -7 ? 'OVERDUE' : diff < 0 ? 'DUE' : diff <= 14 ? 'UPCOMING' : 'SCHEDULED';
+}
+const unitShort = a => String(a || '').replace('PANEL · ', '');
+function indexPanel(st, out, info){
+  const ex = st.panelExecutions || {}; const units = {};
+  (st.panels || []).forEach(p => {
+    if(!p || p.id == null) return;
+    const e = ex[p.id] || {}; const s = panelStatus(p, ex[p.id]); const key = s.toLowerCase();
+    const flags = [key]; if(s === 'OVERDUE' || s === 'DUE') flags.push('pending');
+    units[p.area] = (units[p.area] || 0) + 1;
+    out.push(mk({ mod: 'panel', kind: 'panel', title: p.panel, sub: `${unitShort(p.area)} · ID ${pad3(p.id)} · yearly PM`, st: key,
+      meta: e.actualDate ? 'Done ' + dmy(e.actualDate) : dmy(p.pm_date), sortDate: p.pm_date,
+      fields: [[p.panel, 3], [`id ${p.id} ${pad3(p.id)}`, 1.5], [unitShort(p.area), 1.5], [e.submittedBy, 0.6], [e.remarks, 0.8]],
+      dates: [p.pm_date, e.actualDate], flags, go: { t: 'panelCard', pid: p.id, name: p.panel, area: p.area } }));
+    info.panels++;
+  });
+  Object.keys(units).forEach(u => out.push(mk({ mod: 'panel', kind: 'punit', title: unitShort(u), sub: `${units[u]} panels · Panel PM unit`,
+    fields: [[unitShort(u), 3], ['unit panels', 0.4]], go: { t: 'panelUnit', area: u } })));
+}
+
+/* Complaints */
+function indexComplaints(st, out, info){
+  (st.complaints || []).forEach(c => {
+    if(!c || !c.id) return; const s = c.status === 'open' ? 'open' : 'closed';
+    const day = c.start ? isoOf(new Date(c.start)) : '';
+    out.push(mk({ mod: 'complaint', kind: 'complaint', title: c.issue || '(no description)', sub: `${c.area || '—'} · ${fmtDT(c.start)}${c.downtimeMin != null ? ' · ' + fmtMin(c.downtimeMin) : ''}${c.attendedBy ? ' · ' + c.attendedBy : ''}`,
+      st: s, sortDate: day, fields: [[c.issue, 3], [c.area, 1.5], [c.actionTaken, 1.2], [c.attendedBy, 1], [c.loggedBy, 0.5]],
+      dates: [day], flags: [s, s === 'closed' ? 'done' : 'pending'], go: { t: 'complaintRow', id: c.id } }));
+    info.complaints++;
+  });
+  (st.complaintAreas || []).forEach(a => { if(!a) return;
+    out.push(mk({ mod: 'complaint', kind: 'carea', title: a, sub: 'Complaint area', fields: [[a, 2.5]], go: { t: 'complaintArea', area: a } })); });
+}
+
+/* Asset Integrity — replica of the module's own item logic */
+function indexAic(A, out, info){
+  const master = A.master || {}; const actsAll = master.activities || {}, eqAll = master.equipment || {};
+  const acts = Object.values(actsAll).filter(a => a && a.id && a.active !== false).sort((x, y) => (x.order || 99) - (y.order || 99) || String(x.name).localeCompare(y.name));
+  const eqs = Object.values(eqAll).filter(e => e && e.id && e.active !== false);
+  const recs = []; Object.values(A.recs || {}).forEach(m => Object.values(m || {}).forEach(r => { if(r && r.id) recs.push(r); }));
+  const nextDue = r => { const a = actsAll[r.actId]; return r.nextDue || (a && r.date ? addMonthsIso(r.date, a.months) : ''); };
+  const T = isoOf(todayD()); const latest = {};
+  recs.forEach(r => { const k = `${r.actId}|${r.unit}|${r.eqId || ''}`; const c = latest[k];
+    if(!c || r.date > c.date || (r.date === c.date && String(r.at) > String(c.at))) latest[k] = r; });
+  acts.forEach(a => {
+    const units = a.units && a.units.length ? a.units : UNITS.map(u => u.id);
+    out.push(mk({ mod: 'aic', kind: 'activity', title: a.name, sub: `${freqLabel(a.months)}${a.ref ? ' · ' + a.ref : ''}`,
+      fields: [[a.name, 3], [a.ref, 1.2], [a.scope, 0.7], [freqLabel(a.months), 0.5]], go: { t: 'aicActivity', actId: a.id } }));
+    units.forEach(u => {
+      const list = eqs.filter(e => e.actId === a.id && e.unit === u);
+      const targets = list.length ? list.map(e => ({ eqId: e.id, label: e.name, loc: e.location || '' })) : [{ eqId: '', label: 'Whole unit', loc: '' }];
+      targets.forEach(t => {
+        const last = latest[`${a.id}|${u}|${t.eqId}`] || null; const due = last ? nextDue(last) : '';
+        let st = 'norecord';
+        if(last){ const d = Math.round((dOf(due) - dOf(T)) / 86400000); st = d < 0 ? 'overdue' : d <= 30 ? 'due' : 'ok'; }
+        const notOk = !!(last && last.result === 'Not OK');
+        const flags = [st]; if(st === 'overdue' || st === 'norecord') flags.push('pending'); if(st === 'due') flags.push('upcoming'); if(notOk) flags.push('notok');
+        out.push(mk({ mod: 'aic', kind: 'aicitem', title: `${a.name} · ${t.label}`, st: notOk ? 'notok' : st, sortDate: due || '0000',
+          sub: `${unitLabel(u)}${t.loc ? ' · ' + t.loc : ''} · last ${last ? dmy(last.date) : '—'}`, meta: due ? 'Due ' + dmy(due) : '',
+          fields: [[a.name, 2.5], [t.label, 2.5], [unitLabel(u), 1.5], [t.loc, 1], [freqLabel(a.months), 0.4]],
+          dates: [due], flags, go: { t: 'aicHistory', actId: a.id, unit: u, eqId: t.eqId } }));
+        info.aic++;
+      });
+    });
+  });
+  recs.forEach(r => {
+    const a = actsAll[r.actId]; const e = r.eqId ? eqAll[r.eqId] : null; const target = r.eqId ? (e ? e.name : '(removed equipment)') : 'Whole unit';
+    const key = r.result === 'OK' ? 'ok' : r.result === 'Not OK' ? 'notok' : 'observation';
+    out.push(mk({ mod: 'aic', kind: 'record', title: `${a ? a.name : 'Record'} · ${target}`, st: key, sortDate: r.date,
+      sub: `${unitLabel(r.unit)} · done ${dmy(r.date)}${r.reportNo ? ' · report ' + r.reportNo : ''}${r.doneBy ? ' · ' + r.doneBy : ''}`,
+      fields: [[a && a.name, 2], [target, 2], [r.reportNo, 3], [r.reportDesc, 1.5], [r.doneBy, 1.2], [r.readings, 1], [r.remarks, 1], [unitLabel(r.unit), 1], [r.by, 0.4]],
+      dates: [r.date, nextDue(r)], flags: [key, 'done'], go: { t: 'aicRecord', id: r.id } }));
+    info.records++;
+  });
+}
+
+/* Factory Passport */
+function indexPassport(items, out, info){
+  const list = Object.values(items || {}).filter(i => i && i.id); const areas = {}, types = {};
+  list.forEach(i => {
+    const stt = String(i.status || 'In service'); const key = /repair/i.test(stt) ? 'repair' : /standby/i.test(stt) ? 'standby' : /decom/i.test(stt) ? 'admin' : 'service';
+    if(i.area){ const k = i.unit + '|' + i.area; areas[k] = (areas[k] || 0) + 1; }
+    if(i.type) types[i.type] = (types[i.type] || 0) + 1;
+    out.push(mk({ mod: 'passport', kind: 'equip', title: i.name || i.tag || '(no name)', st: key, stText: stt,
+      sub: [i.type, unitLabel(i.unit), i.area, i.tag].filter(Boolean).join(' · '),
+      fields: [[i.name, 3], [i.tag, 3], [i.serial, 2.5], [i.make, 1.5], [i.model, 1.5], [i.type, 1.2], [i.area, 1.2], [unitLabel(i.unit), 1],
+               [i.year, 0.8], [(i.specs || []).map(s => s.k + ' ' + s.v).join(' · '), 1], [i.notes, 0.8], [stt, 0.5]],
+      go: { t: 'passport', id: i.id } }));
+    info.passport++;
+  });
+  Object.keys(areas).forEach(k => { const [u, a] = k.split('|');
+    out.push(mk({ mod: 'passport', kind: 'parea', title: a, sub: `${unitLabel(u)} · ${areas[k]} equipment`, fields: [[a, 3], [unitLabel(u), 1]], go: { t: 'passportFilter', f: { unit: u, area: a, type: '', q: '' } } })); });
+  Object.keys(types).forEach(t => out.push(mk({ mod: 'passport', kind: 'ptype', title: t, sub: `${types[t]} equipment of this type`, fields: [[t, 3]], go: { t: 'passportFilter', f: { unit: '', area: '', type: t, q: '' } } })));
+}
+
+/* Pages, cards and actions of every module */
+const SECTIONS = [
+  // Motor PM
+  ['motor', 'overview', '', 'Overview', 'Motor PM dashboard · KPIs, monthly profile, overdue list', 'dashboard home kpi summary'],
+  ['motor', 'overview', 'Monthly PM Profile', 'Monthly PM Profile', 'Overview · planned vs executed by month', 'chart month planned executed'],
+  ['motor', 'overview', 'Frequency Mix', 'Frequency Mix', 'Overview · PMs by cycle', 'bm q hy bimonthly quarterly halfyearly cycle'],
+  ['motor', 'overview', 'Weekly Workload Profile', 'Weekly Workload Profile', 'Overview · PMs per week against capacity', 'week load capacity workload'],
+  ['motor', 'overview', '▍ Overdue & Pending Motors', 'Overdue & Pending Motors', 'Overview · top 20 open PMs', 'overdue pending late missed open'],
+  ['motor', 'overview', 'Category Mix', 'Category Mix', 'Overview · A / B / C motors', 'category a b c'],
+  ['motor', 'schedule', '52-Week Heatmap', 'Schedule · 52-Week Heatmap', 'Every motor × every week of the year', 'schedule plan calendar yearly heatmap week'],
+  ['motor', 'compliance', '', 'Compliance', 'Planned vs executed, month cards', 'compliance percentage target achieved'],
+  ['motor', 'compliance', 'Reschedule Reasons', 'Reschedule Reasons', 'Compliance · why PMs got delayed', 'reschedule delay reason postponed'],
+  ['motor', 'compliance', 'Reschedules by Area', 'Reschedules by Area', 'Compliance · where delays happen', 'reschedule delay area'],
+  ['motor', 'areas', 'Areas — Detailed Table', 'Areas', 'Load and category mix per area', 'area load composition table'],
+  ['motor', 'daily', 'Action List', 'Daily View · Action List', 'Mark Done, change a date, today and this week', 'daily today this week mark done log execute complete shift date reschedule'],
+  ['motor', 'reliability', '', 'Reliability · MTTR / MTBF', 'Breakdowns, repair time, time between failures', 'reliability mttr mtbf breakdown repair failure downtime'],
+  ['motor', 'reliability', 'Per-area Reliability Summary', 'Per-area Reliability Summary', 'Reliability · table by area', 'mttr mtbf area summary'],
+  ['motor', 'motors', 'Motor Master', 'Motors · Motor Master list', 'All motors with category, frequency and next PM', 'motor list register master all motors next pm'],
+  ['motor', 'owners', 'Add Area Owner', 'Area Owners', 'Who is responsible for each area', 'owner responsible person email phone assign'],
+  ['motor', 'checklist', 'Current Checklist Fields', 'Checklist Config (Motor PM)', 'Fields filled in at Mark Done', 'checklist fields form required'],
+  ['motor', 'manage', 'Upload Weekly Execution Data', 'Upload Weekly Execution Data', 'Manage Data · CSV / Excel of done PMs', 'upload import excel csv executions weekly data'],
+  ['motor', 'manage', 'Forward Year Planning', 'Forward Year Planning', 'Manage Data · financial years', 'fy financial year next year add fy'],
+  ['motor', 'manage', 'Schedule Health Check', 'Schedule Health Check', 'Manage Data · live audit of the rolling plan', 'health audit late max 4 per day check plan rolling'],
+  ['motor', 'manage', 'PM Calendar · holidays & buffer days', 'PM Calendar · holidays & buffer days', 'Manage Data · days with no motor PM', 'holiday buffer leave off day festival calendar sunday'],
+  ['motor', 'manage', 'Motor Master · Add / Edit / Remove', 'Add / Edit / Remove motors', 'Manage Data · category, last PM done', 'add motor edit delete remove category last pm done new motor'],
+  ['motor', 'manage', 'Backup Everything', 'Backup Everything', 'Manage Data · download all Motor PM data', 'backup download export json save'],
+  ['motor', 'manage', 'Restore Backup', 'Restore Backup', 'Manage Data · load a backup file', 'restore upload backup', 1],
+  ['motor', 'manage', 'Factory Reset', 'Factory Reset', 'Manage Data · wipe and start again', 'reset erase wipe', 1],
+  ['motor', '', '', "Today's PM plan (popup)", 'Motor PM · open the daily plan popup', 'today popup daily plan todays', 0, 'maybeShowDailyPopup', [true]],
+  ['motor', '', '', 'Weekly PM summary (popup)', 'Motor PM · open the weekly popup', 'week weekly popup summary', 0, 'maybeShowWeeklyPopup', [true]],
+  ['motor', '', '', 'Connection check · Motor PM 🩺', 'Checks sign-in, cloud read / write and data size', 'diagnostics not working sync connection check problem error', 0, 'motorDiagnostics', []],
+  // Panel PM
+  ['panel', 'overview', '', 'Panel PM Overview', 'Status, units, monthly workload', 'panel dashboard overview'],
+  ['panel', 'overview', '▍ Overdue & Pending Panels', 'Overdue & Pending Panels', 'Panel PM overview · open panels', 'overdue pending panels late'],
+  ['panel', 'overview', 'MTTR · Unit Average', 'Panel MTTR by unit', 'Panel PM overview · repair time', 'mttr repair time panel'],
+  ['panel', 'compliance', 'Unit Detail', 'Panel Compliance', 'By unit and by month', 'compliance panel percentage'],
+  ['panel', 'daily', 'Scheduled Panels', 'Panel Daily View', 'Mark Done panels, change a date', 'daily today mark done panel pm shift date'],
+  ['panel', 'schedule', 'Schedule Matrix', 'Panel Schedule Matrix', 'Units × months', 'schedule matrix month panel plan'],
+  ['panel', 'executions', 'Completed PMs', 'Panel Execution Log', 'All completed panel PMs', 'execution log history done completed panel'],
+  ['panel', 'master', 'Master Register', 'Panel Master Register', 'All panels with PM date and status', 'panel list master register all panels'],
+  ['panel', 'checklist', 'Active Fields', 'Checklist Config (Panel PM)', 'Fields filled in at panel Mark Done', 'checklist fields panel required', 1],
+  ['panel', 'import', 'Upload Panels', 'Panel Import / Export', 'Template, upload, export panels', 'import export upload template panels excel csv', 1],
+  // Complaints
+  ['complaint', '', 'Log New Complaint', 'Log New Complaint', 'Complaints · area, issue, start / stop time', 'new complaint log breakdown register issue downtime'],
+  ['complaint', '', 'Complaint Log', 'Complaint Log', 'Complaints · list, filters and CSV export', 'complaint list history export csv downtime'],
+  ['complaint', '', 'Manage Areas', 'Complaint Areas', 'Complaints · add or remove areas', 'area add remove complaint areas', 1],
+  // Asset Integrity
+  ['aic', 'overview', 'Compliance matrix', 'Compliance matrix', 'Asset Integrity · activity × plant unit', 'statutory compliance matrix asset integrity'],
+  ['aic', 'overview', 'Action list', 'Asset Integrity Action list', 'Overdue first · every activity and unit', 'action list overdue due statutory'],
+  ['aic', 'records', 'Records', 'Asset Integrity Records', 'All test records with report files', 'records test reports certificates history'],
+  ['aic', 'setup', 'Activities', 'Activities (Asset Integrity)', 'What is tested and how often', 'activities frequency setup statutory'],
+  ['aic', 'setup', 'Equipment', 'Equipment (Asset Integrity)', 'Transformers, earth pits, ladders … per unit', 'equipment setup earth pit transformer ladder'],
+  ['aic', '', '', 'Add test report', 'Asset Integrity · new record with report file', 'add test report new record upload pdf certificate', 0, 'aicAddReport', []],
+  ['aic', '', '', 'Connection check · Asset Integrity 🩺', 'Checks sign-in and cloud access', 'diagnostics not working connection check problem error', 0, 'aicDiagnostics', []],
+  // Factory Passport
+  ['passport', 'find', 'Find equipment', 'Find equipment', 'Factory Passport · filters and search', 'passport find equipment list'],
+  ['passport', 'find', '', 'Add equipment', 'Factory Passport · new equipment passport', 'add equipment new passport', 0, 'fpForm', []],
+  ['passport', 'tools', 'Import from Excel / CSV', 'Import from Excel / CSV', 'Factory Passport · bulk upload', 'import excel csv upload bulk passport'],
+  ['passport', 'tools', 'Export', 'Passport Export', 'Factory Passport · download', 'export download passport csv'],
+  ['passport', 'tools', 'Start from the PM modules', 'Start from the PM modules', 'Factory Passport · create from motors / panels', 'motors panels start pm modules create'],
+];
+function indexSections(out, info){
+  SECTIONS.forEach(([tab, page, anchor, title, sub, kw, admin, fn, args]) => {
+    out.push(mk({ mod: 'pages', kind: fn ? 'action' : 'section', title, sub: `${TABS[tab].name} · ${sub}`, admin: !!admin,
+      fields: [[title, 3], [kw, 1.2], [sub, 0.8], [TABS[tab].name, 0.4]],
+      go: { t: fn ? 'action' : 'section', tab, page, anchor, fn, args } }));
+    info.pages++;
+  });
+}
+
+/* ─── query ─── */
+function parseQuery(raw){
+  let s = ' ' + String(raw || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '') + ' ';
+  const Q = { raw: String(raw || ''), ranges: [], isos: [], status: new Set(), statusWords: [], pm: null, labels: [] };
+  const T = todayD(), Ti = isoOf(T);
+  const take = (re, fn) => { s = s.replace(re, function(){ const m = Array.from(arguments); return fn(m) === false ? m[0] : ' '; }); };
+  const addDay = (y, mo, d, lab) => {
+    const dt = new Date(y, mo - 1, d); if(isNaN(dt) || dt.getMonth() !== mo - 1 || dt.getDate() !== d || y < 2000 || y > 2100) return false;
+    const i = isoOf(dt); Q.ranges.push({ a: i, b: i }); Q.isos.push(i); Q.labels.push(lab || dmy(i));
+  };
+  const near = (mo, d) => { const y = T.getFullYear(); let best = null;
+    [y - 1, y, y + 1].forEach(yy => { const t = new Date(yy, mo - 1, d); if(!best || Math.abs(t - T) < Math.abs(best - T)) best = t; }); return best.getFullYear(); };
+  const yr = v => { v = +v; return v < 100 ? 2000 + v : v; };
+  const MON = '(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\.?';
+  take(/\bm[\s-]?0*(\d{1,3})(?:\s*-\s*0*(\d{1,2}))?(?:\s*-\s*fy\s?(\d{4})\s*-?\s*(\d{2}))?(?![\d.])/g, m => {
+    Q.pm = { sr: +m[1], occ: m[2] ? +m[2] : null, fy: m[3] ? `FY${m[3]}-${m[4]}` : null }; Q.labels.push('PM ' + m[0].trim().toUpperCase()); });
+  take(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g, m => addDay(+m[1], +m[2], +m[3]));
+  take(/\b(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4}|\d{2})\b/g, m => addDay(yr(m[3]), +m[2], +m[1]));
+  take(new RegExp('\\b(\\d{1,2})(?:st|nd|rd|th)?[\\s-]*' + MON + '(?:[\\s,-]+(\\d{4}))?(?![a-z0-9])', 'g'), m => { const mo = MONTHS.indexOf(m[2]) + 1; return addDay(m[3] ? +m[3] : near(mo, +m[1]), mo, +m[1]); });
+  take(new RegExp('\\b' + MON + '[\\s-]+(\\d{1,2})(?:st|nd|rd|th)?(?:[\\s,]+(\\d{4}))?(?![a-z0-9])', 'g'), m => { const mo = MONTHS.indexOf(m[1]) + 1; return addDay(m[3] ? +m[3] : near(mo, +m[2]), mo, +m[2]); });
+  take(new RegExp('\\b' + MON + "[\\s-']*(\\d{4})\\b", 'g'), m => { const mo = MONTHS.indexOf(m[1]) + 1, y = +m[2];
+    const a = isoOf(new Date(y, mo - 1, 1)), b = isoOf(new Date(y, mo, 0)); Q.ranges.push({ a, b }); Q.labels.push(m[0].trim()); });
+  take(/\btoday\b/g, () => { Q.ranges.push({ a: Ti, b: Ti }); Q.isos.push(Ti); Q.labels.push('today'); });
+  take(/\btomorrow\b/g, () => { const i = addDaysIso(Ti, 1); Q.ranges.push({ a: i, b: i }); Q.isos.push(i); Q.labels.push('tomorrow'); });
+  take(/\byesterday\b/g, () => { const i = addDaysIso(Ti, -1); Q.ranges.push({ a: i, b: i }); Q.isos.push(i); Q.labels.push('yesterday'); });
+  take(/\b(this|next|last)\s+week\b/g, m => { const off = { this: 0, next: 7, last: -7 }[m[1]]; const a = addDaysIso(isoOf(startOfWeek(T)), off);
+    Q.ranges.push({ a, b: addDaysIso(a, 6) }); Q.labels.push(m[1] + ' week'); });
+  take(/\b(this|next|last)\s+month\b/g, m => { const off = { this: 0, next: 1, last: -1 }[m[1]];
+    const a = isoOf(new Date(T.getFullYear(), T.getMonth() + off, 1)), b = isoOf(new Date(T.getFullYear(), T.getMonth() + off + 1, 0)); Q.ranges.push({ a, b }); Q.labels.push(m[1] + ' month'); });
+  take(/\bnot\s*ok\b/g, () => { Q.status.add('notok'); Q.statusWords.push('not ok'); });
+  take(/\bno\s*record\b/g, () => { Q.status.add('norecord'); Q.statusWords.push('no record'); });
+  const words = norm(s).split(' ').filter(Boolean);
+  const rest = [];
+  words.forEach(w => { if(STATUS_WORDS[w]){ Q.status.add(STATUS_WORDS[w]); Q.statusWords.push(w); } else rest.push(w); });
+  Q.words = rest.length > 1 ? rest.filter(w => !STOP.has(w)) : rest;
+  if(!Q.words.length && rest.length) Q.words = rest;
+  Q.structured = !!(Q.ranges.length || Q.status.size || Q.pm);
+  return Q;
+}
+function tokens(words){
+  return words.map(tok => {
+    const tc = squash(tok), isNum = /^\d+$/.test(tok);
+    const alts = new Set(SYN.get(tok) || []);
+    if(tok.length >= 4 && /s$/.test(tok) && !isNum){ alts.add(tok.slice(0, -1)); if(/es$/.test(tok)) alts.add(tok.slice(0, -2)); }
+    return { tok, tc, isNum, alts: [...alts].filter(a => a && a !== tok), fz: fuzzy(tok) };
+  });
+}
+function fuzzy(tok){
+  if(tok.length < 4 || /\d/.test(tok)) return [];
+  if(FZ.has(tok)) return FZ.get(tok);
+  const d = tok.length >= 8 ? 2 : 1, out = [];
+  for(const [w] of VOCAB){
+    if(w === tok) continue;
+    if(Math.abs(w.length - tok.length) <= d && lev(tok, w, d) <= d) out.push(w);
+    else if(tok.length >= 5 && w.length > tok.length && lev(tok, w.slice(0, tok.length), 1) <= 1) out.push(w);
+    if(out.length >= 40) break;
+  }
+  FZ.set(tok, out); return out;
+}
+function fieldScore(f, tok, tc, isNum){
+  if(f.ws.includes(tok)) return 10;
+  if(isNum){
+    for(const w of f.ws) if(w.startsWith(tok) && !/\d/.test(w.charAt(tok.length))) return 6;
+    return tok.length >= 3 && f.c.includes(tc) ? 4 : 0;
+  }
+  if(tok.length === 1) return 0;
+  for(const w of f.ws) if(w.startsWith(tok)) return 7;
+  if(tok.length >= 3 && f.n.includes(tok)) return 4;
+  if(tc.length >= 3 && f.c.includes(tc)) return 5;
+  return 0;
+}
+function tokenScore(e, t){
+  if(!(e.all.includes(t.tok) || (t.tc.length >= 3 && e.allc.includes(t.tc)) || t.alts.some(a => e.all.includes(a)) || t.fz.some(a => e.W.has(a)))) return null;
+  let best = 0, ctx = true;
+  for(const f of e.F){
+    let s = fieldScore(f, t.tok, t.tc, t.isNum);
+    if(!s) for(const a of t.alts){ const x = fieldScore(f, a, squash(a), false) * 0.8; if(x > s) s = x; }
+    if(!s) for(const a of t.fz){ if(f.ws.includes(a)){ s = 3; break; } }
+    if(s){ const v = s * f.w; if(v > best || (v === best && !f.ctx)){ best = v; ctx = f.ctx; } }
+  }
+  return best ? { s: best, ctx } : null;
+}
+function scoreEntry(e, Q, toks, mode){
+  if(Q.ranges.length && !e.dates.some(d => Q.ranges.some(r => d >= r.a && d <= r.b))) return 0;
+  if(Q.status.size && ![...Q.status].some(s => e.flags.has(s))) return 0;
+  if(Q.pm){
+    if(e.sr !== Q.pm.sr) return 0;
+    if(e.kind === 'pm' && Q.pm.occ != null && e.occ !== Q.pm.occ) return 0;
+    if(e.kind === 'pm' && Q.pm.fy && !e.title.endsWith(Q.pm.fy)) return 0;
+  }
+  let score = 0, hits = 0, own = false;
+  for(const t of toks){
+    const r = tokenScore(e, t);
+    if(!r){ if(mode === 'and') return 0; continue; }
+    score += r.s; hits++; if(!r.ctx) own = true;
+  }
+  if(toks.length && !hits) return 0;
+  if(e.secondary && !Q.structured && !own) return 0;          // PM rows need a PM-type query (ID, date, status or a remark)
+  if(toks.length){
+    if(e.tn === Q.text || (Q.textc.length >= 3 && e.tc === Q.textc)) score += 30;
+    else if(Q.text.length >= 2 && e.tn.includes(Q.text)) score += 18;
+    else if(Q.textc.length >= 3 && e.tc.includes(Q.textc)) score += 12;
+    if(mode === 'or') score *= hits / toks.length;
+  } else score = 10;
+  if(Q.pm){ if(e.kind === 'motor') score += Q.pm.occ != null ? 20 : 40; if(e.kind === 'pm') score += Q.pm.occ != null ? 45 : 8; }
+  score += KIND_BOOST[e.kind] || 0;
+  if(e.admin && !isAdminNow()) score *= 0.6;
+  return score;
+}
+function search(Q){
+  Q.text = Q.words.join(' '); Q.textc = squash(Q.text);
+  const toks = tokens(Q.words);
+  const exec = (q, tk, mode) => { const res = [];
+    for(const e of IX){ const s = scoreEntry(e, q, tk, mode); if(s > 0) res.push({ e, s }); }
+    res.sort((a, b) => b.s - a.s || String(a.e.sortDate || '9').localeCompare(String(b.e.sortDate || '9')) || a.e.title.length - b.e.title.length);
+    return res; };
+  let res = exec(Q, toks, 'and'), how = '';
+  if(!res.length && Q.statusWords.length){                    // "open", "due" … were meant as plain words
+    const q2 = Object.assign({}, Q, { status: new Set(), statusWords: [], words: Q.words.concat(Q.statusWords.map(norm)) });
+    q2.structured = !!(q2.ranges.length || q2.pm); q2.text = q2.words.join(' '); q2.textc = squash(q2.text);
+    const t2 = tokens(q2.words); res = exec(q2, t2, 'and'); if(res.length){ Object.assign(Q, q2); toks.splice(0, toks.length, ...t2); }
+  }
+  if(!res.length && toks.length > 1){ res = exec(Q, toks, 'or'); if(res.length) how = 'close'; }
+  return { res, toks, how };
+}
+function suggestions(Q){
+  const out = [];
+  Q.words.forEach(w => {
+    if(w.length < 3 || /\d/.test(w)) return;
+    const c = VOCAB.map(([v, n]) => [v, lev(w, v, 3), n]).filter(x => x[1] <= Math.max(2, Math.floor(w.length / 3))).sort((a, b) => a[1] - b[1] || b[2] - a[2]).slice(0, 4);
+    c.forEach(x => out.push(Q.raw.toLowerCase().replace(w, x[0])));
+  });
+  return [...new Set(out)].slice(0, 6);
+}
+
+/* highlight pattern shared by the results list and the in-page highlighter */
+function hlSource(Q, toks){
+  const pats = [];
+  const chars = w => w.split('').map(reEsc).join('[\\W_]*');
+  toks.forEach(t => {
+    if(t.isNum) pats.push('(?<![0-9])0*' + reEsc(t.tok) + '(?![0-9])');
+    else if(t.tok.length === 1) pats.push('\\b' + reEsc(t.tok) + '\\b');
+    else if(t.tc) pats.push(chars(t.tc));
+    t.alts.concat(t.fz.slice(0, 12)).forEach(a => { const ws = a.split(' ').filter(Boolean); if(ws.length) pats.push(ws.map(chars).join('[\\W_]+')); });
+  });
+  Q.isos.forEach(i => { const [y, m, d] = i.split('-'); pats.push(`${d}[-·/.]${m}[-·/.]${y}`, i); });
+  if(Q.pm) pats.push('M0*' + Q.pm.sr + (Q.pm.occ != null ? '-0*' + Q.pm.occ : '') + '(?![0-9])');
+  if(!pats.length) return '';
+  return pats.sort((a, b) => b.length - a.length).join('|');
+}
+function hl(text, src){
+  text = String(text == null ? '' : text); if(!src) return esc(text);
+  const re = mkRe(src); let out = '', last = 0, m;
+  while((m = re.exec(text))){ if(!m[0]){ re.lastIndex++; continue; } out += esc(text.slice(last, m.index)) + '<mark>' + esc(m[0]) + '</mark>'; last = m.index + m[0].length; }
+  return out + esc(text.slice(last));
+}
+
+/* ─── UI ─── */
+let CUR = { Q: null, res: [], toks: [], src: '', scope: 'all', open: {}, act: 0, flat: [] };
+let PUSHED = false, TIMER = null;
+const isOpen = () => !$('gs').hidden;
+function open(q){
+  const box = $('gs'); if(!box) return;
+  const wasOpen = isOpen();
+  box.hidden = false;
+  if(!wasOpen){ try{ history.pushState({ gs: 1 }, ''); PUSHED = true; }catch(e){} }
+  if(!BUILT || Date.now() - BUILT > 15000) buildIndex();
+  fetchMissing(false);
+  const inp = $('gs-q'); if(typeof q === 'string') inp.value = q;
+  run(); setTimeout(() => { inp.focus(); inp.select(); }, 30);
+}
+function close(fromPop){
+  const box = $('gs'); if(!box || box.hidden) return;
+  box.hidden = true;
+  if(PUSHED && !fromPop){ PUSHED = false; try{ history.back(); }catch(e){} }
+  else PUSHED = false;
+}
+function renderStatus(){
+  const el = $('gs-status'); if(!el) return;
+  const f = srcFrom(), busy = SRC.shared.busy || SRC.aic.busy || SRC.passport.busy;
+  const n = x => Number(x || 0).toLocaleString('en-IN');
+  const errs = ['shared', 'aic', 'passport'].filter(k => SRC[k].err && !f[k]).map(k => ({ shared: 'PM data', aic: 'Asset Integrity', passport: 'Passport' })[k]);
+  el.innerHTML = `${busy ? '<span class="gs-spin"></span> loading…' : '🗂'} <span>Searching <b>${n(INFO.motors)}</b> motors · <b>${n(INFO.pms)}</b> PMs · <b>${n(INFO.panels)}</b> panels · <b>${n(INFO.complaints)}</b> complaints · <b>${n((INFO.aic || 0) + (INFO.records || 0))}</b> AIC · <b>${n(INFO.passport)}</b> passport · <b>${n(INFO.pages)}</b> pages</span>`
+    + (errs.length ? ` <span style="color:var(--accent-3)">· could not read ${errs.join(', ')}</span>` : '')
+    + ` <button type="button" class="gs-ref" id="gs-refresh" title="Read the newest data">↻ refresh</button>`;
+  const b = $('gs-refresh'); if(b) b.onclick = () => { buildIndex(); fetchMissing(true); run(); };
+}
+function run(){
+  renderStatus();
+  const raw = $('gs-q').value;
+  if(!raw.trim()){ CUR = Object.assign(CUR, { Q: null, res: [], flat: [] }); renderScopes(); return renderGuide(); }
+  const Q = parseQuery(raw); const { res, toks, how } = search(Q);
+  CUR = Object.assign(CUR, { Q, res, toks, how, src: hlSource(Q, toks), act: 0, open: {} });
+  renderScopes(); renderResults();
+}
+function renderScopes(){
+  const el = $('gs-scopes'); const counts = { all: CUR.res.length }; GROUPS.forEach(g => { counts[g] = 0; });
+  CUR.res.forEach(r => { counts[r.e.mod]++; });
+  const q = !!CUR.Q;
+  el.innerHTML = ['all'].concat(GROUPS).map(g => `<button type="button" class="gs-chip${CUR.scope === g ? ' on' : ''}${q && g !== 'all' && !counts[g] ? ' dim' : ''}" data-scope="${g}">${g === 'all' ? 'All' : GNAME[g]}${q ? ` <span class="n">${counts[g] > 999 ? '999+' : counts[g]}</span>` : ''}</button>`).join('');
+  el.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => { CUR.scope = b.dataset.scope; renderScopes(); CUR.Q ? renderResults() : renderGuide(); });
+}
+function pill(e){
+  if(e.stText) return `<span class="gs-pill st-${e.st}">${esc(e.stText)}</span>`;
+  if(e.st) return `<span class="gs-pill st-${e.st}">${esc(ST_TEXT[e.st] || e.st)}</span>`;
+  if(e.admin) return '<span class="gs-pill st-admin">Admin</span>';
+  return '';
+}
+function itemHtml(e, i){
+  const where = e.mod === 'pages' ? '' : `<span class="gs-w">${esc(whereText(e))}</span>`;
+  return `<button type="button" class="gs-item${i === CUR.act ? ' act' : ''}" data-i="${i}">
+    <span class="gs-kind k-${e.kind}">${esc(KIND[e.kind] || e.kind)}</span>
+    <span class="gs-main"><span class="gs-t">${hl(e.title, CUR.src)}</span><span class="gs-s">${hl(e.sub, CUR.src)}</span>${where}</span>
+    <span class="gs-side">${pill(e)}${e.meta ? `<span class="gs-meta">${hl(e.meta, CUR.src)}</span>` : ''}</span><span class="gs-go">›</span></button>`;
+}
+function whereText(e){
+  return ({ motorCard: 'Opens the motor card · PM plan + Mark Done', pmCard: 'Opens the PM card · Mark Done / change date', motorArea: 'Motors page, filtered to this area',
+    find: 'Motor PM › ' + ({ owners: 'Area Owners', checklist: 'Checklist Config', manage: 'Manage Data › PM Calendar' })[e.go.page],
+    panelCard: 'Opens the panel card · Mark Done / change date', panelUnit: 'Panel Master, filtered to this unit', complaintRow: 'Complaint Log row',
+    complaintArea: 'Complaints › Manage Areas', aicHistory: 'Opens its record history', aicRecord: 'Opens the record + report files',
+    aicActivity: 'Action list for this activity', passport: 'Opens the equipment passport', passportFilter: 'Find equipment, filtered' })[e.go.t] || '';
+}
+function renderResults(){
+  const body = $('gs-body'); const Q = CUR.Q;
+  const list = CUR.res.filter(r => CUR.scope === 'all' || r.e.mod === CUR.scope);
+  CUR.flat = [];
+  if(!list.length){
+    const sug = suggestions(Q);
+    body.innerHTML = `<div class="gs-empty">No match for <b>“${esc(Q.raw)}”</b>${CUR.scope !== 'all' ? ' in ' + esc(SHORT[CUR.scope]) + ' — <a href="#" id="gs-all" style="color:var(--accent)">search everywhere</a>' : ''}.
+      ${Q.labels.length ? `<div style="margin-top:6px;font-size:12px">Looked for: ${esc(Q.labels.join(' · '))}${Q.statusWords.length ? ' · ' + esc(Q.statusWords.join(', ')) : ''}</div>` : ''}
+      ${sug.length ? `<div style="margin-top:12px;font-size:12px;color:var(--text-muted)">Did you mean</div><div class="gs-ex">${sug.map(s => `<button type="button" class="gs-chip" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
+      ${!IX.length || INFO.motors === 0 ? '<div class="gs-note" style="margin-top:14px">Data is still loading — try again in a moment.</div>' : ''}</div>`;
+    const a = $('gs-all'); if(a) a.onclick = ev => { ev.preventDefault(); CUR.scope = 'all'; renderScopes(); renderResults(); };
+    return wireChips(body);
+  }
+  let h = '';
+  if(CUR.how === 'close') h += `<div class="gs-note">No result has <b>all</b> the words — showing the closest matches.</div>`;
+  else if(Q.labels.length || Q.status.size) h += `<div class="gs-note">Filtered by ${esc(Q.labels.concat(Q.statusWords).join(' · '))}</div>`;
+  const top = list[0], second = list[1];
+  const showTop = CUR.scope === 'all' && list.length > 1 && (!second || top.s >= second.s * 1.25) && top.s >= 20;
+  if(showTop){ CUR.flat.push(top.e); h += `<div class="gs-top-hit"><div class="gs-lbl">Best match · ${esc(GNAME[top.e.mod])}</div>${itemHtml(top.e, 0)}</div>`; }
+  const groups = {}; list.forEach(r => { if(showTop && r === top) return; (groups[r.e.mod] = groups[r.e.mod] || []).push(r); });
+  const order = CUR.toks.length ? Object.keys(groups).sort((a, b) => groups[b][0].s - groups[a][0].s) : GROUPS.filter(g => groups[g]);
+  order.forEach(g => {
+    const rows = groups[g]; const lim = CUR.open[g] || CUR.scope !== 'all' ? 150 : 5;
+    h += `<div class="gs-gh"><span>${esc(GNAME[g])}</span><span class="c">${rows.length}</span></div>`;
+    rows.slice(0, lim).forEach(r => { h += itemHtml(r.e, CUR.flat.length); CUR.flat.push(r.e); });
+    if(rows.length > lim) h += `<button type="button" class="gs-more" data-more="${g}">Show all ${rows.length} in ${esc(SHORT[g])} ›</button>`;
+  });
+  body.innerHTML = h;
+  body.querySelectorAll('.gs-item').forEach(b => b.onclick = () => go(CUR.flat[+b.dataset.i]));
+  body.querySelectorAll('[data-more]').forEach(b => b.onclick = () => { CUR.open[b.dataset.more] = 1; renderResults(); });
+}
+const EXAMPLES = ['M018', 'MCC-3', 'fire pump', 'overdue', 'today', 'this week', 'earth pit', 'transformer', 'not ok', 'holiday', 'backup', 'compresor'];
+function renderGuide(){
+  let recent = []; try{ recent = JSON.parse(localStorage.getItem('itc_gs_recent') || '[]'); }catch(e){}
+  $('gs-body').innerHTML = `<div class="gs-guide">
+    <div class="lead">One box for <b>Motor PM, Panel PM, Complaints, Asset Integrity and Factory Passport</b>. Tap a result to jump there — the spot flashes <span style="background:#FFD84D;color:#111;padding:0 4px;border-radius:2px">yellow</span> and every match on the page is highlighted.</div>
+    ${recent.length ? `<h3>Recent</h3><div class="gs-ex">${recent.map(s => `<button type="button" class="gs-chip" data-q="${esc(s)}">🕘 ${esc(s)}</button>`).join('')}</div>` : ''}
+    <h3>Try</h3><div class="gs-ex">${EXAMPLES.map(s => `<button type="button" class="gs-chip" data-q="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+    <h3>How to search</h3><div class="gs-tips">
+      <b>Anything</b><span>Part of a name, area, tag, serial no., make, rating, report no., remark or person</span>
+      <b>Typos OK</b><span><code>compresor</code> finds compressor · <code>traffo</code> finds transformer</span>
+      <b>Codes</b><span>Spaces and dashes don't matter: <code>mcc3</code> = MCC-3 = MCC 3</span>
+      <b>PM IDs</b><span><code>M018</code> (motor Sr 18) · <code>M018-03</code> · <code>M018-03-FY2026-27</code></span>
+      <b>Dates</b><span><code>12-10-2026</code> · <code>12/10/26</code> · <code>12 Oct</code> · <code>Oct 2026</code> · <code>today</code> · <code>tomorrow</code> · <code>this week</code> · <code>next week</code></span>
+      <b>Status</b><span><code>overdue</code> · <code>due</code> · <code>upcoming</code> · <code>done</code> · <code>pending</code> · <code>open</code> · <code>closed</code> · <code>not ok</code> · <code>no record</code></span>
+      <b>Mix</b><span><code>overdue fuel yard</code> · <code>today boiler</code> · <code>not ok earth pit</code></span>
+      <b>Pages</b><span>Settings and screens too: <code>holiday</code> · <code>checklist</code> · <code>mttr</code> · <code>import</code> · <code>backup</code></span>
+      <b>After a jump</b><span>Use ▲ ▼ on the yellow strip to step through every highlighted match · ✕ clears it</span>
+    </div></div>`;
+  wireChips($('gs-body'));
+}
+function wireChips(root){ root.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { $('gs-q').value = b.dataset.q; run(); $('gs-q').focus(); }); }
+function saveRecent(q){
+  q = String(q || '').trim(); if(!q) return;
+  try{ const r = JSON.parse(localStorage.getItem('itc_gs_recent') || '[]').filter(x => x.toLowerCase() !== q.toLowerCase()); r.unshift(q); localStorage.setItem('itc_gs_recent', JSON.stringify(r.slice(0, 8))); }catch(e){}
+}
+let TOAST_T = null;
+function toast(msg, ms){ const t = $('gs-toast'); if(!t) return; t.innerHTML = msg; t.hidden = false; clearTimeout(TOAST_T); if(ms !== 0) TOAST_T = setTimeout(() => { t.hidden = true; }, ms || 3500); }
+function untoast(){ const t = $('gs-toast'); if(t) t.hidden = true; }
+
+/* ─── jump ─── */
+const READY = {
+  motor: w => ev(w, "!!window.__motorBooted && typeof STATE !== 'undefined' && !!(STATE.motors || []).length && typeof cachedRowsAll !== 'undefined' && !!(cachedRowsAll || cachedRows)"),
+  panel: w => ev(w, "!!window.__pmFirebaseReady && typeof STATE !== 'undefined' && !!(STATE.panels || []).length && !!document.getElementById('m-host')"),
+  complaint: w => ev(w, "!!window.__pmFirebaseReady && typeof STATE !== 'undefined' && Array.isArray(STATE.complaints) && !!document.getElementById('t-comp')"),
+  aic: w => ev(w, "typeof A !== 'undefined' && A.master !== undefined"),
+  passport: w => ev(w, "typeof P !== 'undefined' && !!P.loadedBuckets && P.loadedBuckets.size >= 16"),
+};
+let PROG = false;
+function ensureTab(tab){
+  const tabEl = document.querySelector(`.tab[data-tab="${tab}"]`); const fr = $(TABS[tab].frame);
+  const fresh = !fr || fr.getAttribute('src') === 'about:blank';
+  if(tabEl){ PROG = true; tabEl.click(); PROG = false; }
+  return new Promise(resolve => {
+    const t0 = Date.now(); let shown = false, okSince = 0;
+    (function poll(){
+      const w = frameWin(tab);
+      if(w && fresh && tab === 'panel') ev(w, "typeof _panelPopupsShown !== 'undefined' && (_panelPopupsShown = true)");   // jumping in: no welcome popup over the target
+      const ok = !!(w && READY[tab](w));
+      if(ok && !okSince) okSince = Date.now();
+      if(ok && (!fresh || Date.now() - okSince > 700)){ untoast(); return resolve(w); }
+      if(!shown && Date.now() - t0 > 500){ shown = true; toast(`<span class="gs-spin"></span> Opening ${esc(TABS[tab].name)}…`, 0); }
+      if(Date.now() - t0 > 25000){ untoast(); return resolve(w && ok ? w : null); }
+      setTimeout(poll, 150);
+    })();
+  });
+}
+const FRAME_CSS = `
+.gs-flash{outline:3px solid #FFD84D !important;outline-offset:3px;border-radius:6px;animation:gsPulse 1.1s ease-in-out 3;scroll-margin:70px}
+tr.gs-flash{outline-offset:-2px}
+tr.gs-flash>td{background:rgba(255,216,77,.18) !important}
+@keyframes gsPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,216,77,0)}50%{box-shadow:0 0 0 8px rgba(255,216,77,.28)}}
+mark.gs-hit{background:#FFD84D !important;color:#111 !important;border-radius:2px;padding:0 1px}
+mark.gs-hit.gs-cur{background:#FF9F1A !important;color:#000 !important;box-shadow:0 0 0 2px #fff}
+.gs-kv{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:12px 0}
+.gs-kv .k{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted,var(--text-3,#8b96b1))}
+.gs-kv .v{font-size:13px;color:var(--text,#e8ecf3);margin-top:2px;word-break:break-word}
+.gs-kv .full{grid-column:1/-1}
+.gs-sec{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted,var(--text-3,#8b96b1));margin:14px 0 6px;font-weight:700}
+.gs-rows{border:1px solid var(--border,var(--line,#1f2a44));border-radius:6px;overflow:hidden}
+.gs-row{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:8px 10px;border-top:1px solid var(--border,var(--line,#1f2a44));font-size:12px}
+.gs-row:first-child{border-top:0}
+.gs-row .d{font-family:'JetBrains Mono',monospace;min-width:84px}
+.gs-row .id{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--accent,#00d9ff);cursor:pointer;text-decoration:underline dotted;flex:1}
+.gs-row .b{padding:5px 10px !important;font-size:11px !important;margin-left:auto}
+.gs-foot{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+`;
+function injectCss(w){
+  const d = w.document; if(d.getElementById('gs-style')) return;
+  const s = d.createElement('style'); s.id = 'gs-style'; s.textContent = FRAME_CSS; d.head.appendChild(s);
+}
+function flash(w, el, block){
+  if(!el) return null;
+  el.classList.remove('gs-flash'); void el.offsetWidth; el.classList.add('gs-flash');
+  const tall = el.getBoundingClientRect().height > w.innerHeight * 0.6;
+  try{ el.scrollIntoView({ block: block || (tall ? 'start' : 'center'), behavior: 'smooth' }); }catch(e){ el.scrollIntoView(); }
+  setTimeout(() => { try{ el.classList.remove('gs-flash'); }catch(e){} }, 4500);
+  return el;
+}
+const ntext = s => norm(s).replace(/\s+/g, ' ');
+function cardByTitle(w, title, scopeSel){
+  const d = w.document; const scope = scopeSel ? d.querySelector(scopeSel) : d; if(!scope) return null;
+  const want = ntext(title);
+  const els = [...scope.querySelectorAll('.card-title, .card-t, .action-tile-title, .rules-title, .page-title')];
+  const el = els.find(e => ntext(e.textContent) === want) || els.find(e => ntext(e.textContent).includes(want));
+  return el ? (el.closest('.card, .action-tile') || el) : null;
+}
+function findText(scope, text, sel){
+  if(!scope) return null; const want = ntext(text); let best = null;
+  scope.querySelectorAll(sel || 'tr, li, .li, .daily-item, .daily-row, .chip, .list-item, .field-row, .cf-row').forEach(el => {
+    const t = ntext(el.textContent); if(t.includes(want) && (!best || t.length < ntext(best.textContent).length)) best = el; });
+  return best;
+}
+function navPage(w, page){
+  const el = w.document.querySelector(`.nav-item[data-page="${page}"]`); if(el) el.click();
+}
+async function go(e){
+  if(!e) return;
+  saveRecent($('gs-q').value);
+  const Q = CUR.Q, src = CUR.src; close();
+  const tab = e.go.tab || e.mod;
+  const w = await ensureTab(tab);
+  if(!w){ toast(`${esc(TABS[tab].name)} did not finish loading — check the connection and try again.`, 5000); return; }
+  injectCss(w); clearMarks();
+  try{ if(modalHost(w) && typeof w.closeModal === 'function') w.closeModal(); }catch(err){}
+  let target = null;
+  try{ target = await (GO[e.go.t] || GO.section)(w, e.go, e); }
+  catch(err){ console.warn('[search] jump failed', err); toast('Could not open that item: ' + esc(err.message || err), 5000); }
+  await sleep(250);
+  startFind(w, tab, target, e, src, Q);
+}
+const GO = {
+  async motorCard(w, g){ w.openModal(motorCardHtml(w, g.sr)); return w.document.getElementById('modal-host'); },
+  async pmCard(w, g){ const h = pmCardHtml(w, g.pmId); if(!h){ toast('That PM is no longer in the plan.'); return null; } w.openModal(h); return w.document.getElementById('modal-host'); },
+  async motorList(w, g){
+    const d = w.document; navPage(w, 'motors'); await sleep(120);
+    const set = (id, v) => { const el = d.getElementById(id); if(el) el.value = v; };
+    set('m-search', g.name || ''); set('m-area', ''); set('m-cat', ''); set('m-freq', '');
+    if(typeof w.renderMotors === 'function') w.renderMotors();
+    const tr = [...d.querySelectorAll('#m-tbody tr')].find(r => r.cells[0] && r.cells[0].textContent.trim() === String(g.sr));
+    return flash(w, tr || d.getElementById('page-motors'));
+  },
+  async motorArea(w, g){
+    const d = w.document; navPage(w, 'motors'); await sleep(120);
+    const s = d.getElementById('m-search'); if(s) s.value = ''; ['m-cat', 'm-freq'].forEach(id => { const el = d.getElementById(id); if(el) el.value = ''; });
+    const a = d.getElementById('m-area'); if(a){ a.value = g.area; if(a.value !== g.area && s) s.value = g.area; }
+    if(typeof w.renderMotors === 'function') w.renderMotors();
+    return flash(w, cardByTitle(w, 'Motor Master', '#page-motors'), 'start');
+  },
+  async find(w, g){
+    const d = w.document; navPage(w, g.page); await sleep(250);
+    const scope = (g.within && d.querySelector(g.within)) || d.getElementById('page-' + g.page);
+    return flash(w, findText(scope, g.text) || scope);
+  },
+  async panelCard(w, g){ const h = panelCardHtml(w, g); if(!h){ toast('That panel is no longer in the list.'); return null; } w.openModal(h); return w.document.getElementById('m-host'); },
+  async panelList(w, g){
+    const d = w.document; navPage(w, 'master'); await sleep(150);
+    const s = d.getElementById('m-search'), u = d.getElementById('m-unit'); if(s) s.value = g.name || ''; if(u) u.value = '';
+    if(typeof w.renderMaster === 'function') w.renderMaster();
+    const p = panelIn(ev(w, 'STATE') || {}, g); const id = p ? p.id : g.pid;
+    const tr = [...d.querySelectorAll('#t-master tbody tr')].find(r => r.cells[0] && r.cells[0].textContent.trim() === pad3(id));
+    return flash(w, tr || d.getElementById('page-master'));
+  },
+  async panelUnit(w, g){
+    const d = w.document; navPage(w, 'master'); await sleep(150);
+    const s = d.getElementById('m-search'), u = d.getElementById('m-unit'); if(s) s.value = '';
+    if(u){ if(u.options.length <= 1 && typeof w.renderMaster === 'function') w.renderMaster(); u.value = g.area; }
+    if(typeof w.renderMaster === 'function') w.renderMaster();
+    const t = d.getElementById('t-master'); return flash(w, t ? (t.closest('.card') || t) : null, 'start');
+  },
+  async complaintRow(w, g){
+    const d = w.document; const st = ev(w, 'STATE'); if(!st) return null;
+    let changed = false;
+    [['f-area', ''], ['f-month', ''], ['f-status', ''], ['f-search', '']].forEach(([id, v]) => { const el = d.getElementById(id); if(el && el.value !== v){ el.value = v; changed = true; } });
+    if(changed && typeof w.renderTable === 'function') w.renderTable();
+    const rows = st.complaints.slice().sort((a, b) => (b.loggedAt || '').localeCompare(a.loggedAt || ''));
+    const idx = rows.findIndex(c => c.id === g.id);
+    const tr = idx >= 0 ? d.querySelectorAll('#t-comp tbody tr')[idx] : null;
+    return flash(w, tr || cardByTitle(w, 'Complaint Log'));
+  },
+  async complaintArea(w, g){ const card = cardByTitle(w, 'Manage Areas'); return flash(w, findText(card, g.area, '.chip, span, div') || card); },
+  async aicRecord(w, g){ w.aicOpenRecord(g.id); return w.document.getElementById('modal-host'); },
+  async aicHistory(w, g){ w.aicHistory(g.actId, g.unit, g.eqId || ''); return w.document.getElementById('modal-host'); },
+  async aicActivity(w, g){
+    ev(w, `A.ov.unit = ''; A.ov.status = ''; A.ov.act = ${JSON.stringify(g.actId)}; A.ov.cu = '';`);
+    w.setView('overview'); await sleep(120);
+    return flash(w, w.document.getElementById('ov-list-card'), 'start');
+  },
+  async passport(w, g){ w.fpOpen(g.id); return w.document.getElementById('modal-host'); },
+  async passportFilter(w, g){
+    ev(w, `P.f = ${JSON.stringify(g.f)};`); w.setView('find'); await sleep(120);
+    const l = w.document.getElementById('f-list'); return flash(w, l ? (l.closest('.card') || l) : null, 'start');
+  },
+  async section(w, g){
+    const d = w.document;
+    if(g.tab === 'motor' || g.tab === 'panel'){
+      const nav = d.querySelector(`.nav-item[data-page="${g.page}"]`);
+      if(nav && nav.classList.contains('admin-only') && w.__pmRole !== 'admin'){ toast('That page is for admins only.', 4000); }
+      navPage(w, g.page); await sleep(300);
+      const pg = d.getElementById('page-' + g.page);
+      if(!g.anchor){ w.scrollTo(0, 0); return flash(w, pg && (pg.querySelector('.card') || pg), 'start'); }
+      return flash(w, cardByTitle(w, g.anchor, '#page-' + g.page) || pg);
+    }
+    if(g.tab === 'aic' || g.tab === 'passport'){ if(g.page) w.setView(g.page); await sleep(150); return flash(w, cardByTitle(w, g.anchor, '#view')); }
+    return flash(w, cardByTitle(w, g.anchor));
+  },
+  async action(w, g){
+    if(g.page && (g.tab === 'aic' || g.tab === 'passport')){ w.setView(g.page); await sleep(120); }
+    if(typeof w[g.fn] !== 'function'){ toast('This action is not available in the version of the module that is open.'); return null; }
+    await w[g.fn].apply(w, g.args || []);
+    await sleep(200);
+    return modalHost(w);
+  },
+};
+
+/* ─── cards shown inside the module (its own window, its own buttons) ─── */
+function motorLive(w){
+  const st = ev(w, 'STATE') || {}; const rows = ev(w, '(typeof cachedRowsAll !== "undefined" && cachedRowsAll) || cachedRows') || [];
+  const status = r => (typeof w.getStatus === 'function' ? w.getStatus(r) : motorStatus(r));
+  return { st, rows, status };
+}
+const pillM = s => `<span class="status-pill status-${s.toLowerCase()}">${s}</span>`;
+function motorCardHtml(w, sr){
+  const { st, rows, status } = motorLive(w);
+  const m = (st.motors || []).find(x => x.sr === sr); if(!m) return `<div class="modal-head"><div class="modal-title">Motor not found</div><button class="modal-close" onclick="closeModal()">×</button></div>`;
+  const T = isoOf(todayD());
+  const list = rows.filter(r => r.sr === sr).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const done = list.filter(r => r.actualDate).sort((a, b) => a.actualDate.localeCompare(b.actualDate));
+  const last = done[done.length - 1]; const open = list.filter(r => !r.actualDate); const next = open.find(r => r.date >= T);
+  const overdue = open.filter(r => status(r) === 'OVERDUE').length;
+  const show = done.slice(-3).concat(open.slice(0, 9)).sort((a, b) => a.date.localeCompare(b.date));
+  const freq = list.length ? list[list.length - 1].freq : '';
+  const row = r => { const s = status(r);
+    return `<div class="gs-row"><span class="d">${dmy(r.date)}</span><span class="freq-pill freq-${esc(r.freq)}">${esc(r.freq)}</span>${pillM(s)}
+      <span class="id" onclick="parent.GS && parent.GS.card('pm', ${attr(r.pmId)})">${esc(r.pmId)}</span>
+      ${r.actualDate ? `<span style="font-size:11px;color:var(--accent-4)">✓ ${dmy(r.actualDate)}</span>` : (s === 'OVERDUE' || s === 'DUE')
+        ? `<button class="btn b" onclick="markDone(${attr(r.pmId)})">Mark Done</button>` : `<button class="btn secondary b" onclick="openShiftDateModal(${attr(r.pmId)})">Change date</button>`}</div>`; };
+  return `<div class="modal-head"><div><div class="modal-title">⚙ ${esc(m.motor)}</div><div class="modal-subtitle">${esc(m.area)} · Sr ${m.sr}</div></div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="motor-info-card"><div class="name">${esc(m.motor)}</div><div class="meta">${esc(m.area)} · <span class="cat-pill cat-${esc(m.cat)}">${esc(m.cat)}</span> <span class="freq-pill freq-${esc(freq)}">${esc(freq)}</span> · every ${CYCLE[freq] || '—'} days</div></div>
+      <div class="gs-kv">
+        <div><div class="k">Last PM done</div><div class="v">${last ? dmy(last.actualDate) : '—'}</div></div>
+        <div><div class="k">Next PM</div><div class="v">${next ? dmy(next.date) + ' ' + pillM(status(next)) : '—'}</div></div>
+        <div><div class="k">PMs planned</div><div class="v">${list.length} · ${done.length} done</div></div>
+        <div><div class="k">Overdue</div><div class="v"${overdue ? ' style="color:var(--accent-3)"' : ''}>${overdue}</div></div>
+      </div>
+      <div class="gs-sec">PM plan · last done and next ones</div>
+      <div class="gs-rows">${show.map(row).join('') || '<div class="gs-row">No PMs in the plan.</div>'}</div>
+    </div>
+    <div class="modal-footer gs-foot"><button class="btn secondary" onclick="parent.GS && parent.GS.jump('motorList', ${attr({ sr: m.sr, name: m.motor })})">Show in Motor list</button><button class="btn" onclick="closeModal()">Close</button></div>`;
+}
+function pmCardHtml(w, pmId){
+  const { st, rows, status } = motorLive(w);
+  const r = rows.find(x => x.pmId === pmId); if(!r) return '';
+  const s = status(r); const ex = (st.executions || {})[pmId]; const rs = (st.reschedules || []).filter(x => x && x.pmId === pmId);
+  const fy = String(pmId).split('-').slice(2).join('-');
+  return `<div class="modal-head"><div><div class="modal-title">🗓 ${esc(pmId)}</div><div class="modal-subtitle">${esc(r.motor)}</div></div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body">
+      <div class="motor-info-card"><div class="name">${esc(r.motor)}</div><div class="meta">${esc(r.area)} · <span class="cat-pill cat-${esc(r.cat)}">${esc(r.cat)}</span> <span class="freq-pill freq-${esc(r.freq)}">${esc(r.freq)}</span></div></div>
+      <div class="gs-kv">
+        <div><div class="k">Planned date</div><div class="v">${dmy(r.date)}</div></div>
+        <div><div class="k">Status</div><div class="v">${pillM(s)}</div></div>
+        <div><div class="k">Week · FY</div><div class="v">W${esc(r.week)} · ${esc(fy)}</div></div>
+        <div><div class="k">Cycle</div><div class="v">every ${CYCLE[r.freq] || '—'} days</div></div>
+        ${ex ? `<div><div class="k">Done on</div><div class="v" style="color:var(--accent-4)">${dmy(ex.actualDate)}</div></div>
+        <div><div class="k">Duration</div><div class="v">${fmtMin(ex.mttrMin)}</div></div>
+        <div class="full"><div class="k">Logged by</div><div class="v">${esc(ex.loggedBy || '—')}</div></div>
+        ${ex.remarks ? `<div class="full"><div class="k">Remarks</div><div class="v">${esc(ex.remarks)}</div></div>` : ''}` : ''}
+        ${rs.length ? `<div class="full"><div class="k">Date changes</div><div class="v">${rs.map(x => esc([x.from && dmy(String(x.from).slice(0, 10)), x.to && '→ ' + dmy(String(x.to).slice(0, 10)), x.reason, x.reasonNote].filter(Boolean).join(' '))).join('<br>')}</div></div>` : ''}
+      </div>
+    </div>
+    <div class="modal-footer gs-foot"><button class="btn secondary" onclick="parent.GS && parent.GS.card('motor', ${r.sr})">⚙ Motor card</button>
+      ${ex ? '<button class="btn" onclick="closeModal()">Close</button>' : `<button class="btn secondary" onclick="openShiftDateModal(${attr(pmId)})">Change date</button><button class="btn" onclick="markDone(${attr(pmId)})">✓ Mark Done</button>`}</div>`;
+}
+function panelIn(st, g){
+  const list = st.panels || []; const byId = list.find(x => x.id === g.pid);
+  if(byId && (!g.name || byId.panel === g.name)) return byId;
+  return list.find(x => x.panel === g.name && (!g.area || x.area === g.area)) || list.find(x => x.panel === g.name) || null;
+}
+function panelCardHtml(w, g){
+  const st = ev(w, 'STATE') || {}; const p = panelIn(st, g); if(!p) return '';
+  const pid = p.id;
+  const ex = (st.panelExecutions || {})[pid]; const s = typeof w.getPanelStatus === 'function' ? w.getPanelStatus(p) : panelStatus(p, ex);
+  return `<div class="modal-head"><div><div class="modal-eyebrow">▍ Panel PM · ID ${pad3(p.id)}</div><div class="modal-title">${esc(p.panel)}</div></div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="info-strip"><div class="ttl">${esc(p.panel)}</div><div class="meta">${esc(unitShort(p.area))} · yearly PM</div></div>
+      <div class="gs-kv">
+        <div><div class="k">Planned date</div><div class="v">${dmy(p.pm_date)}</div></div>
+        <div><div class="k">Status</div><div class="v"><span class="pill ${s.toLowerCase()}">${s}</span></div></div>
+        ${ex && ex.actualDate ? `<div><div class="k">Done on</div><div class="v">${dmy(ex.actualDate)}</div></div><div><div class="k">Duration</div><div class="v">${fmtMin(ex.mttrMin)}</div></div>
+        <div class="full"><div class="k">Done by</div><div class="v">${esc(ex.submittedBy || '—')}</div></div>` : ''}
+      </div>
+    </div>
+    <div class="modal-foot gs-foot"><button class="btn ghost" onclick="parent.GS && parent.GS.jump('panelList', ${attr({ pid: p.id, name: p.panel, area: p.area })})">Show in Panel Master</button>
+      ${ex && ex.actualDate ? '<button class="btn" onclick="closeModal()">Close</button>' : `<button class="btn ghost" onclick="openShiftDate(${p.id})">Change date</button><button class="btn" onclick="markDone(${p.id})">✓ Mark Done</button>`}</div>`;
+}
+
+/* ─── in-page highlighter + the yellow strip ─── */
+let FIND = null;
+function scopeFor(w, tab, target){
+  const d = w.document; const mh = modalHost(w); if(mh) return mh;
+  if(tab === 'motor' || tab === 'panel') return d.querySelector('.page.active') || d.body;
+  if(tab === 'aic' || tab === 'passport') return d.getElementById('view') || d.body;
+  return (target && target.closest && target.closest('.card')) ? d.body : d.body;
+}
+function clearMarks(){
+  if(!FIND) return;
+  try{
+    const d = FIND.w.document; d.querySelectorAll('mark.gs-hit').forEach(m => { const p = m.parentNode; if(!p) return; p.replaceChild(d.createTextNode(m.textContent), m); p.normalize(); });
+  }catch(e){}
+  FIND.marks = [];
+}
+function markAll(){
+  const F = FIND; if(!F || !F.src) return 0;
+  clearMarks();
+  const scope = scopeFor(F.w, F.tab, F.target); if(!scope) return 0;
+  const d = F.w.document; const re = mkRe(F.src);
+  const walker = d.createTreeWalker(scope, 4, { acceptNode(n){
+    const p = n.parentElement; if(!p || !n.nodeValue.trim()) return 2;
+    if(p.closest('script,style,textarea,select,option,noscript,svg,canvas,input,[contenteditable]')) return 2;
+    if(!p.getClientRects().length) return 2;
+    return 1; } });
+  const nodes = []; while(walker.nextNode()) nodes.push(walker.currentNode);
+  const marks = [];
+  for(const n of nodes){
+    const t = n.nodeValue; re.lastIndex = 0; let m, last = 0; const parts = [];
+    while((m = re.exec(t))){ if(!m[0]){ re.lastIndex++; continue; } parts.push([m.index, m[0].length]); }
+    if(!parts.length) continue;
+    const frag = d.createDocumentFragment();
+    parts.forEach(([i, len]) => { if(i > last) frag.appendChild(d.createTextNode(t.slice(last, i))); const mk = d.createElement('mark'); mk.className = 'gs-hit'; mk.textContent = t.slice(i, i + len); frag.appendChild(mk); marks.push(mk); last = i + len; });
+    if(last < t.length) frag.appendChild(d.createTextNode(t.slice(last)));
+    n.parentNode.replaceChild(frag, n);
+    if(marks.length > 400) break;
+  }
+  F.marks = marks; return marks.length;
+}
+function startFind(w, tab, target, e, src, Q){
+  FIND = { w, tab, target, src, marks: [], i: -1, title: e.title, q: Q ? Q.raw : '' };
+  const n = markAll();
+  if(n){
+    let i = 0;
+    if(target && target.contains){ const k = FIND.marks.findIndex(m => target.contains(m)); if(k >= 0) i = k; }
+    setCur(i, !(target && target.contains && target.contains(FIND.marks[i])));
+  }
+  renderStrip();
+  const mine = FIND;                                   // a tab that just loaded may re-draw once → highlight again
+  [1200, 3000].forEach(ms => setTimeout(() => { if(FIND === mine && FIND.src && staleMarks(FIND) && markAll()){ FIND.i = -1; setCur(0, false); } }, ms));
+}
+const staleMarks = F => !F.marks.length || !F.marks[0].isConnected || !F.marks[0].getClientRects().length;
+function setCur(i, scroll){
+  const F = FIND; if(!F || !F.marks.length) return;
+  if(staleMarks(F)){ if(!markAll()){ renderStrip(); return; } }
+  F.marks.forEach(m => m.classList.remove('gs-cur'));
+  F.i = (i + F.marks.length) % F.marks.length;
+  const m = F.marks[F.i]; m.classList.add('gs-cur');
+  if(scroll !== false){ try{ m.scrollIntoView({ block: 'center', behavior: 'smooth' }); }catch(e){ m.scrollIntoView(); } }
+  renderStrip();
+}
+function renderStrip(){
+  const el = $('gs-strip'); if(!el) return;
+  if(!FIND){ el.hidden = true; return; }
+  const n = FIND.marks.length;
+  el.hidden = false;
+  el.innerHTML = `<span class="q">🔎 <b>${esc(FIND.q || FIND.title)}</b> · ${esc(TABS[FIND.tab].name)}</span>
+    <span class="n">${n ? `${FIND.i + 1} / ${n}${n > 400 ? '+' : ''}` : 'jumped here'}</span>
+    <button type="button" data-a="prev" aria-label="Previous match" ${n > 1 ? '' : 'disabled'}>▲</button>
+    <button type="button" data-a="next" aria-label="Next match" ${n > 1 ? '' : 'disabled'}>▼</button>
+    <button type="button" data-a="edit" aria-label="Back to search">🔍</button>
+    <button type="button" data-a="x" aria-label="Clear highlights">✕</button>`;
+  el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+    const a = b.dataset.a;
+    if(a === 'prev' || a === 'next'){
+      if(staleMarks(FIND)){ markAll(); FIND.i = -1; }                          // page re-drew itself or the popup closed → mark again
+      if(FIND.marks.length) setCur(FIND.i + (a === 'next' ? 1 : -1));
+      return; }
+    if(a === 'edit'){ const q = FIND.q; open(q); return; }
+    clearFind();
+  });
+}
+function clearFind(){ clearMarks(); FIND = null; renderStrip(); }
+
+/* ─── wiring ─── */
+function init(){
+  const inp = $('gs-q'); if(!inp) return;
+  inp.addEventListener('input', () => { clearTimeout(TIMER); TIMER = setTimeout(run, 110); });
+  inp.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ e.preventDefault(); close(); return; }
+    if(!CUR.flat.length) return;
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); CUR.act = (CUR.act + (e.key === 'ArrowDown' ? 1 : -1) + CUR.flat.length) % CUR.flat.length;
+      document.querySelectorAll('#gs-body .gs-item').forEach(b => { const on = +b.dataset.i === CUR.act; b.classList.toggle('act', on); if(on) b.scrollIntoView({ block: 'nearest' }); }); }
+    if(e.key === 'Enter'){ e.preventDefault(); clearTimeout(TIMER); run(); go(CUR.flat[Math.min(CUR.act, CUR.flat.length - 1)]); }
+  });
+  $('gs-clear').onclick = () => { inp.value = ''; run(); inp.focus(); };
+  $('gs-close').onclick = () => close();
+  $('gs').addEventListener('click', e => { if(e.target === $('gs')) close(); });
+  const btn = $('gs-open'); if(btn) btn.onclick = () => open();
+  document.addEventListener('keydown', e => {
+    if(isOpen()) return;
+    const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+    if((e.key === '/' && !typing) || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k')){ e.preventDefault(); open(); }
+  });
+  window.addEventListener('popstate', () => { if(isOpen()) close(true); });
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => { if(!PROG && FIND) clearFind(); }));
+}
+window.GS = {
+  open, close, run, buildIndex, fetchMissing, parseQuery,
+  card(kind, id){ const w = frameWin('motor'); if(!w) return; injectCss(w); const h = kind === 'pm' ? pmCardHtml(w, id) : motorCardHtml(w, id);
+    if(!h){ toast('That PM is no longer in the plan.'); return; } w.openModal(h); if(FIND && FIND.w === w) setTimeout(() => { FIND.target = modalHost(w); markAll(); renderStrip(); }, 60); },
+  async jump(t, g){ const tab = t.startsWith('panel') ? 'panel' : 'motor'; const w = frameWin(tab); if(!w) return; try{ w.closeModal(); }catch(e){} const el = await GO[t](w, g); if(FIND && FIND.w === w){ FIND.target = el; setTimeout(() => { markAll(); renderStrip(); }, 80); } },
+  _state: () => ({ IX, INFO, CUR, FIND, SRC }),
+  _search: q => { buildIndex(); const Q = parseQuery(q); const r = search(Q); return r.res.map(x => ({ mod: x.e.mod, kind: x.e.kind, title: x.e.title, sub: x.e.sub, s: Math.round(x.s), st: x.e.st || '', dates: x.e.dates, flags: [...x.e.flags] })); },
+};
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
 </script>
 </body>
 </html>
