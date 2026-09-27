@@ -421,11 +421,35 @@ body.role-user #mng-tbody .btn.danger{display:none}
 </style>
 </head>
 <body>
+<div id="motor-errors" style="position:fixed;top:0;left:0;right:0;z-index:9999;padding:0 8px"></div>
+<script>
+/* Phase 3.11 — phones have no console: show script errors on screen and warn if the
+   page never finishes loading (old cached copy, or file cut short on GitHub). */
+window.__motorBuild = '3.11 · 27-09-2026';
+window.__motorErrors = [];
+(function(){
+  function show(msg){
+    window.__motorErrors.push(String(msg));
+    var box = document.getElementById('motor-errors'); if(!box || box.childElementCount >= 3) return;
+    var d = document.createElement('div');
+    d.style.cssText = 'margin-top:8px;padding:10px 12px;border-radius:6px;background:#3a0d16;border:1px solid #ff3b6b;color:#ffd0da;font:12px/1.45 Segoe UI,Arial,sans-serif';
+    d.innerHTML = '<b>Motor PM error:</b> ' + String(msg).replace(/[<>&]/g, '') + ' <span style="opacity:.8">— tap 🩺 (top bar) and send a screenshot.</span> <a href="#" style="color:#fff" onclick="this.parentNode.remove();return false">✕</a>';
+    box.appendChild(d);
+  }
+  window.__motorShowError = show;
+  window.addEventListener('error', function(e){ show((e && e.message) || 'script error'); });
+  window.addEventListener('unhandledrejection', function(e){ var r = e && e.reason; show((r && (r.code ? r.code + ' — ' : '') + (r.message || r)) || 'request failed'); });
+  setTimeout(function(){
+    if(window.__motorBooted) return;
+    show('This page did not finish loading. The motor-pm.html on GitHub is probably cut short or an old copy is cached. Re-upload it with Add file → Upload files (GitHub must show 5,133 lines ending with &lt;/html&gt;) and clear the browser cache.');
+  }, 15000);
+})();
+</script>
 <div class="app">
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">ITC <span>HARIDWAR</span></div>
-      <div class="brand-sub">COT PM Module</div>
+      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.11 · 27-09-2026</span></div>
     </div>
     <nav class="nav" id="nav">
       <div class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</div>
@@ -446,8 +470,8 @@ body.role-user #mng-tbody .btn.danger{display:none}
     </div>
     <div class="fy-tag">
       <div class="fy-tag-label">Capacity</div>
-      <div class="fy-tag-val" id="cap-val">20<span style="font-size:11px;color:var(--text-dim);margin-left:4px">/ wk</span></div>
-      <div class="fy-tag-meta">Planning rate · 4 motors / day</div>
+      <div class="fy-tag-val" id="cap-val">28<span style="font-size:11px;color:var(--text-dim);margin-left:4px">/ wk</span></div>
+      <div class="fy-tag-meta">Max 4 motors / day · 7-day week · 340 PM days</div>
     </div>
     <div class="fy-tag">
       <div class="fy-tag-label">Your Access</div>
@@ -466,6 +490,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
         <span><span class="live-dot"></span>&nbsp;LIVE</span>
         <span>Today<b id="topbar-date">—</b></span>
         <span>Week<b id="topbar-week">—</b></span>
+        <span class="notif-icon" onclick="motorDiagnostics()" title="Check version &amp; connection" style="font-size:15px">🩺</span>
         <span class="notif-icon" id="notif-bell" onclick="toggleNotifPanel()" title="Pending PM confirmations">
           🔔
           <span class="notif-badge" id="notif-count" style="display:none">0</span>
@@ -488,7 +513,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
           <div class="kpi"><div class="kpi-label">Total Motors</div><div class="kpi-value" id="kpi-motors">—</div><div class="kpi-meta">across <b id="kpi-areas-n">—</b> areas</div></div>
           <div class="kpi violet"><div class="kpi-label">Annual PMs</div><div class="kpi-value" id="kpi-pms">—</div><div class="kpi-meta">in scope</div></div>
           <div class="kpi good"><div class="kpi-label">Compliance YTD</div><div class="kpi-value" id="kpi-compl">—</div><div class="kpi-meta"><span id="kpi-compl-meta">—</span></div></div>
-          <div class="kpi warn"><div class="kpi-label">Due This Week</div><div class="kpi-value" id="kpi-week">—</div><div class="kpi-meta">cap <b>20</b></div></div>
+          <div class="kpi warn"><div class="kpi-label">Due This Week</div><div class="kpi-value" id="kpi-week">—</div><div class="kpi-meta">cap <b>28</b></div></div>
           <div class="kpi danger"><div class="kpi-label">Overdue</div><div class="kpi-value" id="kpi-overdue">—</div><div class="kpi-meta">action required</div></div>
         </div>
         <div class="grid grid-2-1" style="margin-bottom:20px">
@@ -780,7 +805,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
 
           <!-- Forward year planning -->
           <div class="card">
-            <div class="card-header"><div><div class="card-title">Forward Year Planning</div><div class="card-subtitle">Generate the schedule for any future FY</div></div></div>
+            <div class="card-header"><div><div class="card-title">Forward Year Planning</div><div class="card-subtitle">The rolling plan renews itself every year — add a FY here only to open it early</div></div></div>
             <div class="form-grid" style="grid-template-columns:1fr">
               <div>
                 <label>Add Financial Year</label>
@@ -790,7 +815,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
                 </div>
               </div>
             </div>
-            <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px">All FYs share the same motor master. Schedule is regenerated from category (A → BM · B → Q · C → HY), one area per day, every PM on or before its due date.</div>
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px">All FYs share the same motor master. Rolling plan: category decides frequency (A → BM 60 d · B → Q 90 d · C → HY 180 d), 7-day week, 340 PM days, max 4 motors a day from one area, next PM counted from the last one done — never overdue.</div>
             <div id="fy-list" style="display:flex;flex-direction:column;gap:8px"></div>
           </div>
         </div>
@@ -798,10 +823,18 @@ body.role-user #mng-tbody .btn.danger{display:none}
         <!-- Phase 3.10: Schedule Health -->
         <div class="card" style="margin-bottom:24px" id="sched-health-card">
           <div class="card-header">
-            <div><div class="card-title">Schedule Health Check</div><div class="card-subtitle">Live audit of the active FY · category → frequency · PM count · due dates · same area per day</div></div>
+            <div><div class="card-title">Schedule Health Check</div><div class="card-subtitle">Live audit of the rolling plan from today · due dates · max 4 a day · same area per day · holidays</div></div>
             <div class="btn-row"><button class="btn secondary" onclick="regenerateSchedule()">↻ Rebuild schedule</button></div>
           </div>
           <div id="sched-health"></div>
+        </div>
+
+        <!-- Phase 3.11: PM Calendar -->
+        <div class="card" style="margin-bottom:24px" id="pm-cal-card">
+          <div class="card-header">
+            <div><div class="card-title">PM Calendar · holidays &amp; buffer days</div><div class="card-subtitle">7-day working · no motor PM is planned on these days · 15 holidays + 10 buffer days = 340 PM days a year</div></div>
+          </div>
+          <div id="pm-cal"></div>
         </div>
 
         <!-- Motor master CRUD -->
@@ -831,7 +864,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
 
           <div class="tbl-wrap" style="max-height:500px;overflow-y:auto;margin-top:14px"><div class="tbl-inner">
             <table>
-              <thead><tr><th>#</th><th>Area</th><th>Motor / Pump</th><th>Category</th><th>Freq</th><th>Action</th></tr></thead>
+              <thead><tr><th>#</th><th>Area</th><th>Motor / Pump</th><th>Category</th><th>Freq</th><th>Last PM done</th><th>Next PM</th><th>Action</th></tr></thead>
               <tbody id="mng-tbody"></tbody>
             </table>
           </div></div>
@@ -841,7 +874,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
         <div class="grid grid-3">
           <div class="action-tile" onclick="exportFullState()"><div class="action-tile-icon">⤓</div><div class="action-tile-text"><div class="action-tile-title">Backup Everything</div><div class="action-tile-sub">Download motors + executions + FY data as JSON</div></div></div>
           <div class="action-tile destructive-only" onclick="document.getElementById('restore-input').click()"><div class="action-tile-icon">⤒</div><div class="action-tile-text"><div class="action-tile-title">Restore Backup</div><div class="action-tile-sub">Load previously exported JSON state</div></div><input type="file" id="restore-input" accept=".json" style="display:none"></div>
-          <div class="action-tile destructive-only" onclick="resetEverything()" style="border-color:rgba(255,59,107,0.3)"><div class="action-tile-icon" style="color:var(--accent-3)">⊘</div><div class="action-tile-text"><div class="action-tile-title">Factory Reset</div><div class="action-tile-sub">Restore default 274-motor master & re-create FY26-27</div></div></div>
+          <div class="action-tile destructive-only" onclick="resetEverything()" style="border-color:rgba(255,59,107,0.3)"><div class="action-tile-icon" style="color:var(--accent-3)">⊘</div><div class="action-tile-text"><div class="action-tile-title">Factory Reset</div><div class="action-tile-sub">Restore the default 346-motor master & rebuild the rolling plan</div></div></div>
         </div>
       </section>
     </div>
@@ -860,6 +893,468 @@ const DEFAULT_PAYLOAD = {"fyStart":"2026-04-01","fyLabel":"FY2026-27","weekCap":
 /* ===================================================================
    STATE & PERSISTENCE
    =================================================================== */
+// ════════ PHASE 3.11 — ROLLING 7-DAY MOTOR PM PLANNER ════════
+// Rules (locked with the user, Sep 2026):
+//   · Category decides frequency: A → BM every 60 d · B → Q every 90 d · C → HY every 180 d
+//   · NEVER OVERDUE: next due = last actual (or planned) PM + cycle; every PM on/before it
+//   · 7-day working; holidays + buffer days are off days (365 − 25 = 340 PM days)
+//   · Max 4 motors a day, all from ONE area
+//   · Rolling chain per motor — no April reset; the plan renews itself every year
+// Method: crews of ≤4 same-area/same-category motors · first PM of each crew placed
+// on a balanced 180-day pattern (even monthly load) · every later PM on the latest
+// free day of its own area ≤ due · clashes resolved only by moving a PM EARLIER.
+const RP = {
+  CAP: 4,
+  CYC: { A: 60, B: 90, C: 180 },
+  FREQ: { A: 'BM', B: 'Q', C: 'HY' },
+  JOIN: { A: 7, B: 12, C: 25 },      // how early a motor may join a visit already planned for its area
+  LEVEL: { A: 59, B: 89, C: 179 },   // how early a FIRST PM may be pulled to balance the monthly load
+  REPAIR_LEVEL: { A: 15, B: 20, C: 40 }, // small re-balance allowed when the plan is repaired
+  MINFRAC: 0.5,                      // never closer than half a cycle to the previous PM
+  MARGIN: 0,                         // plan this many days before due when possible
+  PATTERN: 180, WIN: 30, SEEDS: 12, PASSES: 40, TAIL: 400
+};
+function rpDn(iso){ const p = String(iso).slice(0,10).split('-').map(Number); return Math.round(Date.UTC(p[0], p[1]-1, p[2]) / 864e5); }
+function rpIso(dn){ return new Date(dn * 864e5).toISOString().slice(0, 10); }
+function rpCat(c){ c = (c || 'C').toString().trim().toUpperCase(); return (c === 'A' || c === 'B') ? c : 'C'; }
+function rpAreaKey(a){ return String(a || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
+function rpRng(seed){ let t = seed >>> 0; return ()=>{ t += 0x6D2B79F5; let r = Math.imul(t ^ t >>> 15, 1 | t); r ^= r + Math.imul(r ^ r >>> 7, 61 | r); return ((r ^ r >>> 14) >>> 0) / 4294967296; }; }
+
+// Heap ordered by (due, area, sr)
+function rpHeap(){
+  const a = [];
+  const less = (x, y)=> x[0] !== y[0] ? x[0] < y[0] : (x[1] !== y[1] ? x[1] < y[1] : x[2] < y[2]);
+  return {
+    size: ()=>a.length,
+    push(v){ a.push(v); let i = a.length - 1; while(i > 0){ const p = (i - 1) >> 1; if(less(a[i], a[p])){ [a[i], a[p]] = [a[p], a[i]]; i = p; } else break; } },
+    pop(){ const top = a[0], last = a.pop(); if(a.length){ a[0] = last; let i = 0; for(;;){ const l = 2*i+1, r = l+1; let m = i; if(l < a.length && less(a[l], a[m])) m = l; if(r < a.length && less(a[r], a[m])) m = r; if(m === i) break; [a[i], a[m]] = [a[m], a[i]]; i = m; } } return top; }
+  };
+}
+
+// Balanced 180-day pattern for the first PM of each crew (local search, deterministic)
+function rpTemplate(units, start, LV){
+  LV = LV || RP.LEVEL;
+  const P = RP.PATTERN, WIN = RP.WIN, CAP = RP.CAP;
+  let best = null;
+  for(let seed = 1; seed <= RP.SEEDS; seed++){
+    const rnd = rpRng(seed * 7919);
+    const load = new Array(P).fill(0), W = new Array(P).fill(0);
+    const own = Array.from({length: P}, ()=>new Map());
+    const owner = p=>{ for(const k of own[p].keys()) return k; return null; };
+    units.forEach(u=>{
+      u.cur = null; u.opts = [];
+      for(let e = 0; e <= LV[u.cat]; e++){
+        const d = u.due - e; if(d < start || d < (u.lo || start)) break;
+        const phi = ((d - start) % u.C + u.C) % u.C, pos = [];
+        for(let k = 0; k < P / u.C; k++) pos.push((phi + k * u.C) % P);
+        u.opts.push({ e, d, pos });
+      }
+    });
+    const add = (u, pos, sg)=>{
+      const s = u.srs.length * sg;
+      for(const p of pos){
+        load[p] += s;
+        const m = own[p]; m.set(u.akey, (m.get(u.akey) || 0) + sg); if(m.get(u.akey) <= 0) m.delete(u.akey);
+        for(let q = p - WIN + 1; q <= p; q++) W[((q % P) + P) % P] += s;
+      }
+    };
+    let order = units.slice().sort((a, b)=>(a.C - b.C) || (b.srs.length - a.srs.length) || (a.due - b.due));
+    for(let it = 0; it < RP.PASSES; it++){
+      if(it > 0){ for(let i = order.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; } }
+      for(const u of order){
+        if(u.cur) add(u, u.cur.pos, -1);
+        const s = u.srs.length; let bo = null, bc = Infinity;
+        for(const o of u.opts){
+          let ok = true;
+          for(const p of o.pos){ const ow = owner(p); if((ow !== null && ow !== u.akey) || load[p] + s > CAP){ ok = false; break; } }
+          if(!ok) continue;
+          let c = o.e * 0.02 * s * 20;
+          for(const p of o.pos) for(let q = p - WIN + 1; q <= p; q++) c += 2 * W[((q % P) + P) % P] * s + s * s;
+          if(c < bc){ bc = c; bo = o; }
+        }
+        if(bo){ u.cur = bo; add(u, bo.pos, +1); } else if(u.cur){ add(u, u.cur.pos, +1); }
+      }
+    }
+    const wins = []; for(let q = 0; q < P; q++){ let t = 0; for(let i = 0; i < WIN; i++) t += load[(q + i) % P]; wins.push(t); }
+    const mean = wins.reduce((a, b)=>a + b, 0) / P;
+    const score = [Math.max(...wins) - Math.min(...wins), wins.reduce((a, w)=>a + (w - mean) * (w - mean), 0)];
+    if(!best || score[0] < best.score[0] || (score[0] === best.score[0] && score[1] < best.score[1]))
+      best = { score, first: new Map(units.map(u=>[u, u.cur ? u.cur.d : null])) };
+  }
+  units.forEach(u=>{ u.first = best.first.get(u); delete u.opts; delete u.cur; });
+}
+
+/* rpPlan — o = { motors:[{sr,area,cat}], prev:{sr:dn}, start:dn, end:dn, off:Set<dn>,
+                  preset:[{sr,dn,area}], level:bool }
+   returns [{sr, dn}] for every PM from start to end (inclusive).                         */
+function rpPlanOnce(o, V){
+  const CAP = RP.CAP, tail = o.end + RP.TAIL;
+  const JOIN = V.JOIN, MINFRAC = V.MINFRAC;
+  const PD = []; for(let d = o.start; d <= tail; d++) if(!o.off.has(d)) PD.push(d);
+  const bisectR = x=>{ let lo = 0, hi = PD.length; while(lo < hi){ const m = (lo + hi) >> 1; if(PD[m] <= x) lo = m + 1; else hi = m; } return lo; };
+  const M = new Map(o.motors.map(m=>[m.sr, { sr: m.sr, area: m.area, akey: rpAreaKey(m.area), cat: rpCat(m.cat), C: RP.CYC[rpCat(m.cat)] }]));
+  const owner = new Map(), fixedN = new Map(), mine = new Map();   // day → area key / preset count / [sr] placed here
+  (o.preset || []).forEach(p=>{ owner.set(p.dn, rpAreaKey(p.area)); fixedN.set(p.dn, (fixedN.get(p.dn) || 0) + 1); });
+  const n = d=>(fixedN.get(d) || 0) + ((mine.get(d) || []).length);
+  const ok = (d, ak, k = 1)=>{ const w = owner.get(d); return (w === undefined || w === ak) && n(d) + k <= CAP; };
+  const latest = (lo, hi, pred)=>{ for(let j = bisectR(hi) - 1; j >= 0 && PD[j] >= lo; j--) if(pred(PD[j])) return PD[j]; return null; };
+  const prev = {}; M.forEach((m, sr)=>{ prev[sr] = o.prev[sr]; });
+  // crews + balanced first PMs
+  const firstDay = {};
+  if(o.level){
+    const groups = new Map();
+    M.forEach(m=>{ const k = m.akey + '|' + m.cat; if(!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
+    const units = [];
+    [...groups.keys()].sort().forEach(k=>{
+      const ms = groups.get(k).sort((a, b)=>((prev[a.sr] + a.C) - (prev[b.sr] + b.C)) || (a.sr - b.sr));
+      const cnt = ms.length, parts = Math.ceil(cnt / CAP); let i = 0;
+      for(let p = 0; p < parts; p++){
+        const sz = Math.floor(cnt / parts) + (p < cnt % parts ? 1 : 0);
+        const srs = ms.slice(i, i + sz).map(m=>m.sr); i += sz;
+        const m0 = ms[i - sz];
+        units.push({ akey: m0.akey, cat: m0.cat, C: m0.C, srs, due: Math.min(...srs.map(s=>prev[s] + m0.C)),
+                     lo: Math.max(o.start, ...srs.map(s=>prev[s] + Math.floor(m0.C * RP.MINFRAC))) });
+      }
+    });
+    rpTemplate(units, o.start, o.levelWin);
+    units.forEach(u=>u.srs.forEach(s=>{ firstDay[s] = u.first; }));
+  }
+  const heap = rpHeap(), ver = {}, lastE = {}, out = [];
+  M.forEach((m, sr)=>{ ver[sr] = 0; heap.push([prev[sr] + m.C, m.akey, sr, 0]); });
+  const place = (sr, d, due, lo)=>{
+    const e = { sr, dn: d, due, lo }; out.push(e); lastE[sr] = e;
+    if(!mine.has(d)) mine.set(d, []); mine.get(d).push(sr); owner.set(d, M.get(sr).akey); prev[sr] = d;
+    ver[sr]++; heap.push([d + M.get(sr).C, M.get(sr).akey, sr, ver[sr]]);
+  };
+  const evict = (lo, hi, ak)=>{
+    for(let j = bisectR(hi) - 1; j >= 0 && PD[j] >= lo; j--){
+      const D = PD[j], G = mine.get(D) || [], w = owner.get(D);
+      if(w === undefined || w === ak || !G.length || fixedN.get(D) || !G.every(x=>lastE[x].dn === D)) continue;
+      const glo = Math.max(...G.map(x=>lastE[x].lo)), ghi = Math.min(...G.map(x=>lastE[x].due));
+      let D2 = latest(glo, ghi, d=>d !== D && ok(d, w, G.length));
+      if(D2 === null){
+        // split the visit: move each motor on its own to a day that still suits it
+        const moves = [], tmp = new Map();
+        for(const x of G){
+          const e = lastE[x];
+          const dx = latest(e.lo, e.due, d=>d !== D && (()=>{ const ww = owner.get(d); const extra = tmp.get(d) || 0;
+            return (ww === undefined || ww === w) && n(d) + extra + 1 <= CAP && (ww !== undefined || !tmp.has(d) || true); })());
+          if(dx === null){ moves.length = 0; break; }
+          moves.push([x, dx]); tmp.set(dx, (tmp.get(dx) || 0) + 1);
+        }
+        if(moves.length !== G.length) continue;
+        moves.forEach(([x, dx])=>{ lastE[x].dn = dx; if(!mine.has(dx)) mine.set(dx, []); mine.get(dx).push(x); owner.set(dx, w); prev[x] = dx; ver[x]++; heap.push([dx + M.get(x).C, w, x, ver[x]]); });
+        mine.set(D, []); owner.delete(D);
+        return D;
+      }
+      G.forEach(x=>{ lastE[x].dn = D2; if(!mine.has(D2)) mine.set(D2, []); mine.get(D2).push(x); prev[x] = D2; ver[x]++; heap.push([D2 + M.get(x).C, w, x, ver[x]]); });
+      owner.set(D2, w); mine.set(D, []); owner.delete(D);
+      return D;
+    }
+    return null;
+  };
+  const first = {}; M.forEach((m, sr)=>{ first[sr] = true; });
+  let late = 0;
+  while(heap.size()){
+    const [due, ak, sr, v] = heap.pop();
+    if(v !== ver[sr] || due > tail) continue;
+    const m = M.get(sr);
+    const lo = Math.max(o.start, prev[sr] + Math.floor(m.C * MINFRAC));
+    let d = null;
+    if(first[sr]){
+      first[sr] = false;
+      const f = firstDay[sr];
+      if(f !== undefined && f !== null) d = latest(Math.max(lo, f - 3), Math.min(f, due), x=>ok(x, ak));
+    }
+    // aim MARGIN days before due (absorbs a PM done a little early), fall back to the due date itself
+    const soft = due - RP.MARGIN;
+    if(d === null) d = latest(Math.max(lo, soft - JOIN[m.cat]), soft, x=>owner.get(x) === ak && n(x) < CAP);
+    if(d === null) d = latest(lo, soft, x=>ok(x, ak));
+    if(d === null) d = latest(Math.max(lo, due - JOIN[m.cat]), due, x=>owner.get(x) === ak && n(x) < CAP);
+    if(d === null && V.PACK) d = latest(lo, due, x=>owner.get(x) === ak && n(x) < CAP);   // tight calendar: fill own-area visits first
+    if(d === null) d = latest(lo, due, x=>ok(x, ak));
+    if(d === null) d = evict(lo, due, ak);
+    if(d === null){                                   // no room before due — keep the PM, as early after due as possible
+      let j = bisectR(due); while(j < PD.length && !ok(PD[j], ak)) j++;
+      if(j >= PD.length) continue; d = PD[j];
+      if(d <= o.end) late++;
+    }
+    place(sr, d, due, lo);
+  }
+  const res = out.filter(e=>e.dn <= o.end).map(e=>({ sr: e.sr, dn: e.dn })).sort((a, b)=>(a.dn - b.dn) || (a.sr - b.sr));
+  res.late = late; return res;
+}
+// Try a few variants and keep the first plan with no PM after its due date
+// (or the one with the fewest). Variants only change how early a PM may be pulled.
+function rpPlan(o){
+  const V = [
+    { JOIN: RP.JOIN, MINFRAC: RP.MINFRAC },
+    { JOIN: { A: 10, B: 15, C: 35 }, MINFRAC: RP.MINFRAC },
+    { JOIN: { A: 5, B: 8, C: 15 }, MINFRAC: RP.MINFRAC },
+    { JOIN: RP.JOIN, MINFRAC: 0.4 },
+    { JOIN: { A: 14, B: 21, C: 45 }, MINFRAC: 0.4 },
+    { JOIN: RP.JOIN, MINFRAC: RP.MINFRAC, PACK: true },
+    { JOIN: RP.JOIN, MINFRAC: 0.4, PACK: true }
+  ];
+  let best = null;
+  for(const v of V){
+    const r = rpPlanOnce(o, v);
+    if(!best || r.late < best.late) best = r;
+    if(r.late === 0) break;
+  }
+  return best;
+}
+
+
+// ════════ Rolling plan ⇄ module state (Phase 3.11) ════════
+// Storage stays compatible with every screen: each PM is a normal schedule entry
+// inside STATE.fys[FY].schedule with its PM ID  M###-##-FY####-## , plus an exact
+// date (entry.date). Past entries and executed PMs are never touched.
+function defaultPmCalendar(){
+  // 15 holidays per FY (festival dates indicative — edit in Manage Data → PM Calendar)
+  // + 10 team-off / buffer days per FY (1st Sunday of 10 months) = 340 PM days a year.
+  const H = [
+    ['2026-04-14','Dr. Ambedkar Jayanti'],['2026-05-01','Labour Day'],['2026-08-15','Independence Day'],['2026-08-28','Raksha Bandhan*'],['2026-09-04','Janmashtami*'],
+    ['2026-10-02','Gandhi Jayanti'],['2026-10-20','Dussehra*'],['2026-11-08','Diwali*'],['2026-11-09','Govardhan Puja*'],['2026-11-11','Bhai Dooj*'],
+    ['2026-11-24','Guru Nanak Jayanti*'],['2026-12-25','Christmas'],['2027-01-26','Republic Day'],['2027-03-06','Maha Shivratri*'],['2027-03-22','Holi*'],
+    ['2027-04-14','Dr. Ambedkar Jayanti'],['2027-05-01','Labour Day'],['2027-08-15','Independence Day'],['2027-08-17','Raksha Bandhan*'],['2027-08-25','Janmashtami*'],
+    ['2027-10-02','Gandhi Jayanti'],['2027-10-09','Dussehra*'],['2027-10-29','Diwali*'],['2027-10-30','Govardhan Puja*'],['2027-10-31','Bhai Dooj*'],
+    ['2027-11-14','Guru Nanak Jayanti*'],['2027-12-25','Christmas'],['2028-01-26','Republic Day'],['2028-02-23','Maha Shivratri*'],['2028-03-11','Holi*'],
+    ['2028-04-14','Dr. Ambedkar Jayanti'],['2028-05-01','Labour Day'],['2028-08-05','Raksha Bandhan*'],['2028-08-13','Janmashtami*'],['2028-08-15','Independence Day'],
+    ['2028-09-27','Dussehra*'],['2028-10-02','Gandhi Jayanti'],['2028-10-17','Diwali*'],['2028-10-18','Govardhan Puja*'],['2028-10-19','Bhai Dooj*'],
+    ['2028-11-02','Guru Nanak Jayanti*'],['2028-12-25','Christmas'],['2029-01-26','Republic Day'],['2029-02-11','Maha Shivratri*'],['2029-03-01','Holi*']
+  ].map(([date, name])=>({ date, name }));
+  const B = [];
+  for(let y = 2026; y <= 2028; y++){
+    [[y,4],[y,5],[y,6],[y,7],[y,8],[y,9],[y,12],[y+1,1],[y+1,2],[y+1,3]].forEach(([yy, mm])=>{
+      const d = new Date(Date.UTC(yy, mm - 1, 1)); while(d.getUTCDay() !== 0) d.setUTCDate(d.getUTCDate() + 1);
+      B.push({ date: d.toISOString().slice(0, 10), name: 'Team off / buffer (1st Sunday)' });
+    });
+  }
+  return { holidays: H, buffers: B, note: '* festival date indicative — replace with the plant holiday list' };
+}
+const rp3 = n=>String(n).padStart(3, '0'), rp2 = n=>String(n).padStart(2, '0');
+function rollPmId(sr, occ, fk){ return `M${rp3(sr)}-${rp2(occ)}-${fk}`; }
+function rollFyOf(dn){ const d = new Date(dn * 864e5); const y = d.getUTCMonth() >= 3 ? d.getUTCFullYear() : d.getUTCFullYear() - 1; return `FY${y}-${rp2((y + 1) % 100)}`; }
+function rollFyStartDn(fk){ const m = String(fk).match(/^FY(\d{4}|\d{2})-(\d{2})$/); const y = m ? (m[1].length === 4 ? +m[1] : 2000 + +m[1]) : 2026; return rpDn(`${y}-04-01`); }
+function rollTodayDn(){ if(typeof globalThis.__rollTodayDn === 'number') return globalThis.__rollTodayDn; const t = new Date(); t.setHours(0,0,0,0); return rpDn(`${t.getFullYear()}-${rp2(t.getMonth()+1)}-${rp2(t.getDate())}`); }
+function rollHorizonEnd(todayDn){ const fk = rollFyOf(todayDn); const y = +fk.slice(2, 6) + 2; return rpDn(`${y}-03-31`); }   // end of NEXT FY
+function rollOff(s){
+  const c = s.pmCalendar || defaultPmCalendar(), off = new Set();
+  (c.holidays || []).concat(c.buffers || []).forEach(h=>{ if(h && /^\d{4}-\d{2}-\d{2}$/.test(h.date)) off.add(rpDn(h.date)); });
+  return off;
+}
+function rollEntryDn(fy, e){
+  if(e.customDate) return rpDn(e.customDate);
+  if(e.date) return rpDn(e.date);
+  return rpDn(fy.fyStart) + (e.week - 1) * 7 + ((e.day || 1) - 1);
+}
+function rollEnsureFY(s, fk){
+  if(!s.fys[fk]) s.fys[fk] = { fyStart: rpIso(rollFyStartDn(fk)), schedule: [] };
+  if(!s.fys[fk].occSeq) s.fys[fk].occSeq = {};
+  return s.fys[fk];
+}
+function rollAdd(s, sr, dn, freq){
+  const fk = rollFyOf(dn), fy = rollEnsureFY(s, fk);
+  let mx = fy.occSeq[sr] || 0;
+  fy.schedule.forEach(e=>{ if(e.sr === sr && e.occ > mx) mx = e.occ; });
+  const occ = mx + 1; fy.occSeq[sr] = occ;
+  const off = dn - rpDn(fy.fyStart);
+  fy.schedule.push({ sr, occ, freq, date: rpIso(dn), week: Math.min(52, Math.floor(off / 7) + 1), day: (off % 7) + 1, rolling: 1 });
+  return rollPmId(sr, occ, fk);
+}
+// Every PM of every FY as one list: {fk, fy, e, dn, pmId, exec, fixed}
+function rollAllEntries(s){
+  const out = [];
+  Object.keys(s.fys || {}).forEach(fk=>{
+    const fy = s.fys[fk]; if(!fy || !Array.isArray(fy.schedule)) return;
+    fy.schedule.forEach(e=>{
+      if(!e || !Number.isFinite(rollEntryDn(fy, e))) return;          // skip malformed legacy entries
+      const pmId = rollPmId(e.sr, e.occ, fk), ex = s.executions && s.executions[pmId];
+      out.push({ fk, fy, e, dn: rollEntryDn(fy, e), pmId, exec: ex || null, adn: ex && /^\d{4}-\d{2}-\d{2}/.test(String(ex.actualDate || '')) ? rpDn(ex.actualDate) : null });
+    });
+  });
+  return out;
+}
+function rollMotors(s){ return (s.motors || []).map(m=>({ sr: +m.sr, area: m.area, cat: rpCat(m.cat) })); }
+// Last actual PM date per motor: logged executions + admin "last PM done" overrides
+function rollLastActual(s, all){
+  const last = {};
+  all.forEach(x=>{ if(x.adn !== null && !isNaN(x.adn)) last[x.e.sr] = Math.max(last[x.e.sr] ?? -1e9, x.adn); });
+  Object.entries(s.lastPmOverride || {}).forEach(([sr, iso])=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(iso)) last[+sr] = Math.max(last[+sr] ?? -1e9, rpDn(iso)); });
+  return last;
+}
+function rollRemove(list){ list.forEach(x=>{ const i = x.fy.schedule.indexOf(x.e); if(i >= 0) x.fy.schedule.splice(i, 1); }); }
+
+/* FULL BUILD — re-plans every future PM that is not done yet (used once at the
+   Phase 3.11 upgrade, and by "Rebuild schedule", motor-master and calendar changes). */
+function rollFullBuild(s, startDn, reason){
+  const t0 = Date.now();
+  const all = rollAllEntries(s), motors = rollMotors(s), srs = new Set(motors.map(m=>m.sr));
+  const lastAct = rollLastActual(s, all);
+  const removable = all.filter(x=>!x.exec && x.dn >= startDn);
+  const before = removable.length;
+  rollRemove(removable);
+  const kept = all.filter(x=>removable.indexOf(x) < 0);
+  // prev: last actual; if a motor has no logged PM, the latest planned PM before today is assumed done
+  const prev = {}, assumed = [];
+  motors.forEach(m=>{
+    // chain anchor = the later of: last logged PM, or last PM planned before today (treated as done)
+    const past = kept.filter(x=>x.e.sr === m.sr && !x.exec && x.dn < startDn).map(x=>x.dn);
+    const pastMax = past.length ? Math.max(...past) : null;
+    if(lastAct[m.sr] !== undefined && (pastMax === null || lastAct[m.sr] >= pastMax)){ prev[m.sr] = lastAct[m.sr]; return; }
+    if(pastMax !== null){ prev[m.sr] = Math.max(pastMax, lastAct[m.sr] ?? -1e9); assumed.push(m.sr); return; }
+    prev[m.sr] = startDn - 1;                  // new motor with no history → first PM within one cycle
+  });
+  const preset = kept.filter(x=>x.dn >= startDn && srs.has(x.e.sr)).map(x=>{ const m = motors.find(k=>k.sr === x.e.sr); return { sr: x.e.sr, dn: x.adn ?? x.dn, area: m.area }; });
+  const end = rollHorizonEnd(startDn), off = rollOff(s);
+  const plan = rpPlan({ motors, prev, start: startDn, end, off, preset, level: true });
+  plan.forEach(p=>{ const m = motors.find(k=>k.sr === p.sr); rollAdd(s, p.sr, p.dn, RP.FREQ[m.cat]); });
+  s.rolling = { v: 1, start: rpIso(startDn), end: rpIso(end), builtAt: new Date().toISOString(), reason: reason || 'rebuild',
+                replaced: before, planned: plan.length, assumedDone: assumed.length, ms: Date.now() - t0 };
+  return s.rolling;
+}
+// Chain check for one motor → {fixedDn, violation, lastDn}
+function rollChain(s, sr, all, lastAct){
+  const m = (s.motors || []).find(x=>+x.sr === sr); if(!m) return null;
+  const C = RP.CYC[rpCat(m.cat)], today = rollTodayDn();
+  const ev = all.filter(x=>x.e.sr === sr).map(x=>({ dn: x.adn ?? x.dn, fixed: !!x.exec || !!x.e.customDate || x.dn < today, x }))
+                .sort((a, b)=>a.dn - b.dn);
+  const ov = s.lastPmOverride && s.lastPmOverride[sr];
+  if(ov) ev.push({ dn: rpDn(ov), fixed: true, x: null });
+  ev.sort((a, b)=>a.dn - b.dn);
+  let prev = null, violation = false, fixedDn = null;
+  ev.forEach(v=>{
+    if(prev !== null && !v.fixed && v.dn - prev > C) violation = true;
+    if(v.fixed) fixedDn = v.dn;
+    prev = (prev === null) ? v.dn : Math.max(prev, v.dn);
+  });
+  return { C, ev, fixedDn, violation, lastDn: prev };
+}
+/* REPAIR — keeps the PMs of the next RP_FREEZE days exactly as they are (the team's
+   current week), and re-plans every later PM that is not done yet from each motor's
+   latest fixed point (done / rescheduled / past). Uses the same latest-fit rules as
+   the full build but WITHOUT re-balancing, so most future dates stay where they were. */
+const RP_FREEZE = 7;
+function rollNeedsRepair(s){
+  const all = rollAllEntries(s), lastAct = rollLastActual(s, all);
+  const end = s.rolling ? rpDn(s.rolling.end) : rollHorizonEnd(rollTodayDn());
+  return (s.motors || []).some(m=>{ const ch = rollChain(s, +m.sr, all, lastAct); return ch && (ch.violation || ch.lastDn === null || ch.lastDn + ch.C < end); });
+}
+function rollRepairMotor(s, sr, force){ return rollRepair(s, force); }
+function rollRepair(s, force){
+  if(!force && !rollNeedsRepair(s)) return false;
+  // 1) try the small repair first: only the areas whose motors would go overdue
+  if(!force){
+    const keep = JSON.stringify(s.fys);
+    const all = rollAllEntries(s), lastAct = rollLastActual(s, all), end = s.rolling ? rpDn(s.rolling.end) : rollHorizonEnd(rollTodayDn());
+    const bad = new Set();
+    (s.motors || []).forEach(m=>{ const ch = rollChain(s, +m.sr, all, lastAct); if(ch && (ch.violation || ch.lastDn === null || ch.lastDn + ch.C < end)) bad.add(rpAreaKey(m.area)); });
+    bad.forEach(ak=>rollRepairArea(s, ak));
+    if(!rollNeedsRepair(s)){ if(s.rolling){ s.rolling.repairedAt = new Date().toISOString(); s.rolling.repairs = (s.rolling.repairs || 0) + 1; } return true; }
+    s.fys = JSON.parse(keep);                       // 2) not enough room → re-plan everything after the frozen week
+    if(s.rolling) s.rolling.globalRepairs = (s.rolling.globalRepairs || 0) + 1;
+  }
+  const today = rollTodayDn(), end = s.rolling ? rpDn(s.rolling.end) : rollHorizonEnd(today);
+  const freezeEnd = today + RP_FREEZE - 1;
+  const all = rollAllEntries(s), lastAct = rollLastActual(s, all);
+  const motors = rollMotors(s), prev = {}, drop = [];
+  motors.forEach(m=>{
+    const ch = rollChain(s, m.sr, all, lastAct);
+    // fixed = done / rescheduled / past / inside the frozen week
+    let anchor = null;
+    ch.ev.forEach(v=>{ if(v.fixed || (v.x && v.dn <= freezeEnd)) anchor = anchor === null ? v.dn : Math.max(anchor, v.dn); });
+    // no history yet → keep the phase of its first planned PM (due stays where it was)
+    if(anchor === null){ const f = ch.ev.find(v=>v.x); anchor = f ? f.dn - ch.C : today - 1; }
+    prev[m.sr] = anchor;
+    ch.ev.forEach(v=>{ if(v.x && !v.fixed && v.dn > freezeEnd) drop.push(v.x); });
+  });
+  rollRemove(drop);
+  const areaOf = new Map(motors.map(m=>[m.sr, m.area]));
+  const preset = rollAllEntries(s).filter(x=>x.dn >= today && areaOf.has(x.e.sr)).map(x=>({ sr: x.e.sr, dn: x.adn ?? x.dn, area: areaOf.get(x.e.sr) }));
+  const plan = rpPlan({ motors, prev, start: today, end, off: rollOff(s), preset, level: true, levelWin: RP.REPAIR_LEVEL });
+  plan.forEach(p=>rollAdd(s, p.sr, p.dn, RP.FREQ[motors.find(k=>k.sr === p.sr).cat]));
+  if(s.rolling){ s.rolling.repairedAt = new Date().toISOString(); s.rolling.repairs = (s.rolling.repairs || 0) + 1; }
+  return true;
+}
+function rollRepairArea(s, akey){
+  const today = rollTodayDn(), end = s.rolling ? rpDn(s.rolling.end) : rollHorizonEnd(today);
+  const freezeEnd = today + RP_FREEZE - 1;
+  const all = rollAllEntries(s), lastAct = rollLastActual(s, all);
+  const ms = (s.motors || []).filter(m=>rpAreaKey(m.area) === akey);
+  const prev = {}, drop = [];
+  ms.forEach(m=>{
+    const ch = rollChain(s, +m.sr, all, lastAct);
+    let anchor = null;
+    ch.ev.forEach(v=>{ if(v.fixed || (v.x && v.dn <= freezeEnd)) anchor = anchor === null ? v.dn : Math.max(anchor, v.dn); });
+    if(anchor === null){ const f = ch.ev.find(v=>v.x); anchor = f ? f.dn - ch.C : today - 1; }
+    prev[+m.sr] = anchor;
+    ch.ev.forEach(v=>{ if(v.x && !v.fixed && v.dn > freezeEnd) drop.push(v.x); });
+  });
+  rollRemove(drop);
+  const areaOf = new Map((s.motors || []).map(k=>[+k.sr, k.area]));
+  const preset = rollAllEntries(s).filter(x=>x.dn >= today && areaOf.has(x.e.sr)).map(x=>({ sr: x.e.sr, dn: x.adn ?? x.dn, area: areaOf.get(x.e.sr) }));
+  const motors = ms.map(m=>({ sr: +m.sr, area: m.area, cat: rpCat(m.cat) }));
+  rpPlan({ motors, prev, start: today, end, off: rollOff(s), preset, level: false })
+    .forEach(p=>rollAdd(s, p.sr, p.dn, RP.FREQ[motors.find(k=>k.sr === p.sr).cat]));
+  return true;
+}
+/* MAINTAIN — runs on every load: extends the plan each year (rolling renewal),
+   drops future PMs of deleted motors, repairs any motor whose chain would go overdue. */
+function rollMaintain(s){
+  const today = rollTodayDn(), res = { extended: false, repaired: 0, dropped: 0 };
+  if(!s.rolling) return res;
+  const srs = new Set((s.motors || []).map(m=>+m.sr));
+  const orphans = rollAllEntries(s).filter(x=>!srs.has(x.e.sr) && !x.exec && x.dn >= today);
+  if(orphans.length){ rollRemove(orphans); res.dropped = orphans.length; }
+  const want = Math.max(rollHorizonEnd(today), s.rolling.wantEnd ? rpDn(s.rolling.wantEnd) : 0), oldEnd = rpDn(s.rolling.end);
+  if(oldEnd < want){
+    // Yearly renewal: continue every motor's chain from its last PM, all motors together
+    const all0 = rollAllEntries(s), la0 = rollLastActual(s, all0), motors = rollMotors(s), prev = {};
+    motors.forEach(m=>{ const ch = rollChain(s, m.sr, all0, la0); prev[m.sr] = (ch && ch.lastDn !== null) ? ch.lastDn : today - 1; });
+    const start = oldEnd + 1;
+    const areaOf = new Map(motors.map(m=>[m.sr, m.area]));
+    const preset = all0.filter(x=>x.dn >= start && areaOf.has(x.e.sr)).map(x=>({ sr: x.e.sr, dn: x.adn ?? x.dn, area: areaOf.get(x.e.sr) }));
+    const plan = rpPlan({ motors, prev, start, end: want, off: rollOff(s), preset, level: true, levelWin: RP.REPAIR_LEVEL });
+    plan.forEach(p=>rollAdd(s, p.sr, p.dn, RP.FREQ[motors.find(k=>k.sr === p.sr).cat]));
+    s.rolling.end = rpIso(want); s.rolling.extendedAt = new Date().toISOString(); res.extended = plan.length;
+  }
+  if(rollRepair(s)) res.repaired = 1;
+  return res;
+}
+// Audit (Health card + Checks)
+function rollAudit(s){
+  const today = rollTodayDn(), all = rollAllEntries(s), lastAct = rollLastActual(s, all), off = rollOff(s);
+  const areaOf = new Map((s.motors || []).map(m=>[+m.sr, rpAreaKey(m.area)]));
+  const fut = all.filter(x=>!x.exec && x.dn >= today && areaOf.has(x.e.sr));
+  const day = new Map();
+  fut.forEach(x=>{ if(!day.has(x.dn)) day.set(x.dn, []); day.get(x.dn).push(areaOf.get(x.e.sr)); });
+  let mixed = 0, maxDay = 0, offDay = 0;
+  day.forEach((a, d)=>{ if(new Set(a).size > 1) mixed++; maxDay = Math.max(maxDay, a.length); if(off.has(d)) offDay += a.length; });
+  let late = 0, catchUp = 0, uncovered = 0, lateManual = 0; const gaps = { BM: [], Q: [], HY: [] };
+  const end = s.rolling ? rpDn(s.rolling.end) : rollHorizonEnd(today);
+  (s.motors || []).forEach(m=>{
+    const ch = rollChain(s, +m.sr, all, lastAct); if(!ch) return;
+    let prev = null;
+    ch.ev.forEach(v=>{
+      if(prev !== null && v.dn >= today && v.x && !v.x.exec){
+        const g = v.dn - prev; gaps[RP.FREQ[rpCat(m.cat)]].push(g);
+        if(g > ch.C){ if(v.x.e.customDate) lateManual++; else if(prev + ch.C < today) catchUp++; else late++; }
+      }
+      prev = prev === null ? v.dn : Math.max(prev, v.dn);
+    });
+    if(prev === null || prev + ch.C < end) uncovered++;
+  });
+  const y1 = today + 365, next = fut.filter(x=>x.dn < y1);
+  const pmDays = (()=>{ let n = 0; for(let d = today; d < y1; d++) if(!off.has(d)) n++; return n; })();
+  const mon = {}; next.forEach(x=>{ const k = rpIso(x.dn).slice(0, 7); mon[k] = (mon[k] || 0) + 1; });
+  const mk = Object.keys(mon).sort().slice(1, -1).map(k=>mon[k]);   // full months only
+  return { today, end, late, lateManual, catchUp, uncovered, mixed, maxDay, offDay, gaps,
+           next365: next.length, pmDays, avg: pmDays ? next.length / pmDays : 0,
+           monMin: mk.length ? Math.min(...mk) : 0, monMax: mk.length ? Math.max(...mk) : 0,
+           offDays: off.size, future: fut.length };
+}
+
 const LS_KEY = 'itc_pm_state_v3';
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 
@@ -941,13 +1436,18 @@ async function saveStateToCloud(){
   const { db, doc, setDoc } = window.__pmFirebase;
   try{
     const ref = doc(db, FIRESTORE_DOC_PATH[0], FIRESTORE_DOC_PATH[1]);
+    const payloadStr = JSON.stringify(STATE);
+    window.__lastCloudSave = { at: new Date().toISOString(), bytes: payloadStr.length, ok: null };
+    if(payloadStr.length > 950000) toast('Data almost full', `Shared data is ${Math.round(payloadStr.length/1024)} KB of the 1 MB Firestore limit — tell your admin (archive old years).`, 'warn');
     await setDoc(ref, {
-      payload: JSON.stringify(STATE),
+      payload: payloadStr,
       updatedAt: new Date().toISOString(),
       updatedBy: window.__pmCurrentUser ? (window.__pmCurrentUser.email || window.__pmCurrentUser.uid) : 'unknown'
     });
+    window.__lastCloudSave.ok = true;
   } catch(e){
     console.error('Cloud save failed:', e);
+    if(window.__lastCloudSave) { window.__lastCloudSave.ok = false; window.__lastCloudSave.err = (e.code ? e.code + ' — ' : '') + (e.message || e); }
     toast('Cloud sync error', 'Local copy saved. ' + (e.message||''), 'warn');
   }
 }
@@ -1000,8 +1500,10 @@ function initCloudStorage(){
         }
         if(typeof renderAll === 'function') renderAll();
       } else {
-        // First time — push current STATE to cloud
+        // First time — build the plan, then push current STATE to cloud
+        try{ STATE = migrateState(STATE); }catch(e){}
         saveStateToCloud();
+        if(typeof renderAll === 'function') renderAll();
       }
       setupCloudSync();
     });
@@ -1028,7 +1530,10 @@ function buildDefaultState(){
   // category-based schedule (A→BM ×6 · B→Q ×4 · C→HY ×2) straight away.
   let fullSched = sched;
   try{ fullSched = generateSchedule(motors); }catch(e){ console.warn('default schedule build failed', e); }
-  return {
+  // Phase 3.11: the default data ALSO carries the rolling plan, so the module shows the
+  // full schedule even before (or without) the cloud data — e.g. a phone preview.
+  // The FY2026-27 plan above is kept as history; PMs from today are re-planned.
+  const st = {
     motors,
     fys: {[fyKey]: {fyStart: DEFAULT_PAYLOAD.fyStart, schedule: fullSched}},
     executions: {},
@@ -1038,6 +1543,12 @@ function buildDefaultState(){
     confirmations: {},        // pmId -> {status:'pending'|'confirmed'|'rescheduled', confirmedBy, confirmedAt, rescheduledTo, reason, reasonNote, count}
     reschedules: [],          // log of all reschedule events
   };
+  try{
+    st.pmCalendar = defaultPmCalendar(); st.lastPmOverride = {};
+    rollFullBuild(st, rollTodayDn(), 'default master');
+    st._stateVersion = 8;
+  }catch(e){ console.warn('[rolling] default plan failed', e); }
+  return st;
 }
 
 
@@ -1106,11 +1617,11 @@ function migrateState(s){
   // ───────── STATE VERSION ─────────
   // Bump this version when default motors/panels/schedule logic changes.
   // Older state will be force-migrated.
-  const STATE_VERSION = 7; // v7: Option A scheduler — same area every day, PM always on/before due date
+  const STATE_VERSION = 8; // v8 (Phase 3.11): rolling 7-day plan — 340 PM days, max 4/day same area, never overdue, renews every year
   const currentVersion = s._stateVersion || 0;
 
   // Phase 2: Seed panels if missing
-  if(!s.panels) s.panels = (typeof DEFAULT_PANELS !== 'undefined') ? DEFAULT_PANELS.slice() : [];
+  if(!s.panels){ try{ s.panels = DEFAULT_PANELS.slice(); }catch(e){ /* seeded on the next (cloud) load */ } }
   if(!s.panelExecutions) s.panelExecutions = {};
   if(!s.panelConfirmations) s.panelConfirmations = {};
   if(!s.areaOwners) s.areaOwners = [];
@@ -1142,66 +1653,34 @@ function migrateState(s){
     }
   }
 
-  // FORCE REGEN if state version mismatch (covers any future logic changes)
-  if(currentVersion < STATE_VERSION){
-    console.log(`[migrate] State version ${currentVersion} → ${STATE_VERSION} — forcing schedule regen`);
-    needsRegen = true;
-  }
-
-  // Detect stale schedule: if any schedule entry lacks 'day' field, regenerate
-  // (old Phase-1 schedules had only week, causing all motors to fall on April 1)
-  if(s.fys && s.activeFY && s.fys[s.activeFY] && s.fys[s.activeFY].schedule){
-    const sched = s.fys[s.activeFY].schedule;
-    if(sched.length > 0 && (sched[0].day === undefined || sched[0].day === null)){
-      console.log('[migrate] Stale schedule detected (no day field) — regenerating');
-      needsRegen = true;
-    }
-  }
-
   // Phase 3.10 — duplicate motor numbers break PM IDs; give later duplicates a new number
   if(Array.isArray(s.motors)){
     const seen = new Set(); let mx = s.motors.reduce((a,m)=>Math.max(a, +m.sr||0), 0);
-    s.motors.forEach(m=>{ m.sr = +m.sr; if(seen.has(m.sr)){ m.sr = ++mx; needsRegen = true; } seen.add(m.sr); });
+    s.motors.forEach(m=>{ m.sr = +m.sr; if(seen.has(m.sr)){ m.sr = ++mx; } seen.add(m.sr); });
   }
 
-  // Phase 3.10 — EXACT completeness check on every FY (was: "within 5").
-  // Every A motor must have exactly 6 BM PMs, B 4 Q PMs, C 2 HY PMs — no more,
-  // no less, no wrong frequency. Any FY that fails is rebuilt.
-  const repairedFYs = {};
-  if(s.fys && s.motors){
-    Object.keys(s.fys).forEach(fk=>{
-      const fy = s.fys[fk]; if(!fy || !Array.isArray(fy.schedule)) return;
-      const h = scheduleCheck(fy.schedule, s.motors);
-      if(!h.ok){
-        console.log(`[migrate] ${fk}: schedule has ${h.placed} PMs, needs ${h.expected} (wrong count ${h.wrongCount}, wrong freq ${h.wrongFreq}) — rebuilding`);
-        repairedFYs[fk] = h.placed;
-      }
-    });
-  }
-  if(Object.keys(repairedFYs).length && s.fys){
-    Object.keys(repairedFYs).forEach(fk=>{
-      if(fk === s.activeFY) return;                   // active FY is rebuilt below
-      try{ s.fys[fk].schedule = generateSchedule(s.motors); }catch(e){ console.warn('FY repair failed', fk, e); }
-    });
-    if(repairedFYs[s.activeFY] === undefined){
-      s._migrationStamp = new Date().toISOString();
-      s._migrationInfo = { mergedMotors: 0, versionFrom: currentVersion, versionTo: STATE_VERSION, at: s._migrationStamp,
-                           repairedFrom: Object.values(repairedFYs)[0], repairedTo: s.fys[Object.keys(repairedFYs)[0]].schedule.length };
-    }
-    if(repairedFYs[s.activeFY] !== undefined) needsRegen = true;
-  }
-
-  if(needsRegen && s.fys && s.activeFY && s.fys[s.activeFY]){
+  // Phase 3.11 — ROLLING PLAN. The first load after the upgrade re-plans every PM from
+  // today that is not done yet; every later load only renews / repairs it.
+  if(!s.pmCalendar) s.pmCalendar = defaultPmCalendar();
+  if(!s.lastPmOverride) s.lastPmOverride = {};
+  if(s.fys && Array.isArray(s.motors) && s.motors.length){
     try{
-      s.fys[s.activeFY].schedule = generateSchedule(s.motors);
-      console.log('[migrate] Schedule regenerated · ' + s.fys[s.activeFY].schedule.length + ' occurrences');
-      s._migrationStamp = new Date().toISOString();
-      s._migrationInfo = { mergedMotors: mergedCount, versionFrom: currentVersion, versionTo: STATE_VERSION, at: s._migrationStamp };
-      if(repairedFYs[s.activeFY] !== undefined){
-        s._migrationInfo.repairedFrom = repairedFYs[s.activeFY];
-        s._migrationInfo.repairedTo = s.fys[s.activeFY].schedule.length;
+      if(currentVersion < STATE_VERSION || !s.rolling){
+        const downgraded = currentVersion < STATE_VERSION && !!s.rolling;   // an OLD motor-pm.html on some phone rewrote the plan
+        const r = rollFullBuild(s, rollTodayDn(), downgraded ? 'repair after an old app copy rewrote the plan' : currentVersion < 8 ? 'upgrade to the rolling 340-day plan' : 'rebuild');
+        s._migrationStamp = new Date().toISOString();
+        s._migrationInfo = { rolling: true, mergedMotors: mergedCount, versionFrom: currentVersion, versionTo: STATE_VERSION, at: s._migrationStamp,
+                             planned: r.planned, replaced: r.replaced, assumedDone: r.assumedDone, downgraded };
+        console.log('[rolling] built', r);
+      } else {
+        const res = rollMaintain(s);
+        if(res.extended){
+          s._migrationStamp = new Date().toISOString();
+          s._migrationInfo = { rolling: true, extended: res.extended, versionFrom: currentVersion, versionTo: STATE_VERSION, at: s._migrationStamp };
+        }
+        if(res.extended || res.repaired || res.dropped) console.log('[rolling] maintained', res);
       }
-    }catch(e){ console.warn('Schedule regen failed:', e); }
+    }catch(e){ console.warn('[rolling] plan update failed', e); }
   }
   s._stateVersion = STATE_VERSION;
   return s;
@@ -1603,15 +2082,16 @@ function buildRows(fyKey){
   fy.schedule.forEach(s=>{
     const m = motorMap[s.sr]; if(!m) return;
     // Specific date = start + (week-1)*7 + (day-1) — day defaults to 1 if missing
-    const dayOfWeek = (s.day || 1) - 1;  // 0..4 for Mon-Fri
-    const d = new Date(start);
+    const dayOfWeek = (s.day || 1) - 1;
+    let d = new Date(start);
     d.setDate(d.getDate() + (s.week-1)*7 + dayOfWeek);
+    if(s.date){ const dd = isoToDate(s.date); if(dd) d = dd; }            // Phase 3.11 rolling plan: exact date
     // If schedule entry has a customDate override (admin shifted it), use that
     if(s.customDate){
       const cd = new Date(s.customDate);
       if(!isNaN(cd)) { d.setTime(cd.getTime()); }
     }
-    const monthLabel = d.toLocaleString('en-US',{month:'short'}) + '-' + d.getFullYear();
+    const monthLabel = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + '-' + d.getFullYear();
     const monthIdx = (d.getFullYear() - start.getFullYear())*12 + (d.getMonth() - start.getMonth());
     const pmId = `M${String(s.sr).padStart(3,'0')}-${String(s.occ).padStart(2,'0')}-${fyKey}`;
     const exec = STATE.executions[pmId];
@@ -1803,8 +2283,13 @@ function addFY(){
   const fyKey = sel.value;
   if(!fyKey){ toast('No FY selected','','warn'); return; }
   if(STATE.fys[fyKey]){ toast('Already exists',`${fyKey} already generated`,'warn'); return; }
-  const start = fyStartDate(fyKey);
-  STATE.fys[fyKey] = { fyStart: isoDate(start), schedule: generateSchedule(STATE.motors) };
+  // Phase 3.11: FYs are filled by the rolling plan — extend it to the end of this FY
+  rollEnsureFY(STATE, fyKey);
+  if(STATE.rolling){
+    const fyEnd = rpDn(`${+fyKey.slice(2, 6) + 1}-03-31`);
+    if(!STATE.rolling.wantEnd || rpDn(STATE.rolling.wantEnd) < fyEnd) STATE.rolling.wantEnd = rpIso(fyEnd);
+    rollMaintain(STATE);
+  }
   STATE.activeFY = fyKey;
   saveState();
   renderAll();
@@ -1819,6 +2304,7 @@ function deleteFY(fyKey){
   if(STATE.activeFY === fyKey){
     STATE.activeFY = Object.keys(STATE.fys)[0];
   }
+  rollAfterExecutions();
   saveState();
   renderAll();
   toast('FY deleted', fyKey);
@@ -2007,6 +2493,7 @@ function commitExecutionImport(items){
     };
     saved++;
   });
+  rollAfterExecutions();
   saveState();
   document.getElementById('import-preview').innerHTML = '';
   renderAll();
@@ -2129,7 +2616,7 @@ function resetEverything(){
   if(!requireAdmin('Factory reset')) return;
   if(!confirm('Reset to factory defaults? This wipes all motors, executions, and FYs added.')) return;
   localStorage.removeItem(LS_KEY);
-  STATE = buildDefaultState();
+  STATE = migrateState(buildDefaultState());
   saveState();
   renderAll();
   toast('Reset complete', 'Default ' + STATE.motors.length + '-motor master restored');
@@ -2244,58 +2731,156 @@ function updateMotor(sr, field, value){
   const m = STATE.motors.find(x=>x.sr===sr); if(!m) return;
   m[field] = value;
   saveState();
-  // schedule freq depends on cat & area — regen when those change
-  if(field==='cat'||field==='area') regenerateSchedule(true);
+  // schedule freq depends on cat & area — re-plan this motor's future PMs when those change
+  if(field==='cat'||field==='area'){ rollDropMotorFuture(STATE, sr); regenerateSchedule(true); }
   else renderAll();
 }
 
 function regenerateSchedule(silent){
-  Object.keys(STATE.fys).forEach(fyKey=>{
-    STATE.fys[fyKey].schedule = generateSchedule(STATE.motors);
-  });
+  // Phase 3.11 — silent = after a motor / calendar change: renew + repair only.
+  // Button = full re-plan of every future PM that is not done yet (balanced again).
+  if(!silent){
+    if(!requireSignedIn('Rebuild schedule')) return;
+    if(!confirm('Re-plan every future PM that is not done yet, starting today?\n\nDone PMs and the history stay as they are. Rescheduled future dates are re-planned too.')) return;
+    rollFullBuild(STATE, rollTodayDn(), 'manual rebuild');
+  } else {
+    rollMaintain(STATE);
+  }
   saveState();
   renderAll();
-  if(!silent) toast('Schedule regenerated', `All ${Object.keys(STATE.fys).length} FY(s) updated`);
+  if(!silent) toast('Schedule rebuilt', `${STATE.rolling ? STATE.rolling.planned : 0} future PMs planned · 340-day rolling plan`);
 }
+// Phase 3.11 — 🩺 version & connection check (screenshot this if something is wrong)
+async function motorDiagnostics(){
+  const rows = [];
+  const esc2 = s=>String(s).replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const put = (k, v, cls)=>{ rows.push([k, v, cls]); draw(); };
+  function draw(){ const t = document.getElementById('diag-t'); if(t) t.innerHTML = rows.map(r=>`<tr><td style="color:var(--text-dim);padding:7px 6px;border-bottom:1px solid var(--border);width:44%">${esc2(r[0])}</td><td style="padding:7px 6px;border-bottom:1px solid var(--border);font-weight:600;color:${r[2]==='ok'?'var(--accent-4)':r[2]==='no'?'var(--accent-3)':'var(--text)'}">${r[1]}</td></tr>`).join(''); }
+  openModal(`<div class="modal-head"><div><div class="modal-title">🩺 Motor PM — version &amp; connection</div><div class="modal-subtitle">Screenshot this and send it if something looks wrong</div></div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><table style="width:100%;border-collapse:collapse;font-size:12px"><tbody id="diag-t"></tbody></table></div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Close</button></div>`);
+  const tmo = (p, ms)=>Promise.race([p, new Promise((_, r)=>setTimeout(()=>r(Object.assign(new Error('no answer in ' + ms/1000 + ' s'), {code:'timeout'})), ms))]);
+  put('Page version', esc2(window.__motorBuild || 'OLD FILE (no version)'), window.__motorBuild ? 'ok' : 'no');
+  put('Opened', window.parent === window ? 'directly' : 'inside the app tab', '');
+  put('Internet', navigator.onLine ? '✓ online' : '✗ offline', navigator.onLine ? 'ok' : 'no');
+  put('Firebase', window.__pmFirebaseReady ? '✓ connected' : '✗ not connected', window.__pmFirebaseReady ? 'ok' : 'no');
+  const u = window.__pmCurrentUser; put('Signed in', u ? '✓ ' + esc2(u.email || u.uid) + ' · ' + (isAdmin() ? 'ADMIN' : 'USER') : '✗ not signed in', u ? 'ok' : 'no');
+  put('Data version', 'v' + (STATE._stateVersion || '?') + (STATE._stateVersion >= 8 ? ' ✓ rolling plan' : ' ✗ old — reload the page'), STATE._stateVersion >= 8 ? 'ok' : 'no');
+  if(STATE.rolling){
+    const R = STATE.rolling;
+    put('Rolling plan', `built ${esc2(dateTimeFmt(new Date(R.builtAt)))} · ${R.planned} PMs · to ${dateFmt(isoToDate(R.end))}${R.repairs ? ' · repaired ' + R.repairs + '×' : ''}`, 'ok');
+    try{ const a = rollAudit(STATE); put('Plan check', `late ${a.late} · mixed days ${a.mixed} · max/day ${a.maxDay} · on holidays ${a.offDay} · avg ${a.avg.toFixed(2)}/day`, (a.late || a.mixed || a.maxDay > 4 || a.offDay) ? 'no' : 'ok'); }catch(e){ put('Plan check', '✗ ' + esc2(e.message), 'no'); }
+  } else put('Rolling plan', '✗ not built', 'no');
+  const ls = window.__lastCloudSave;
+  put('Last cloud save', ls ? (ls.ok ? `✓ ${esc2(dateTimeFmt(new Date(ls.at)))} · ${Math.round(ls.bytes/1024)} KB of 1024 KB` : ls.ok === false ? '✗ ' + esc2(ls.err || 'failed') : 'in progress…') : 'no save yet in this session', ls ? (ls.ok ? 'ok' : ls.ok === false ? 'no' : '') : '');
+  if(window.__pmFirebase && u){
+    const f = window.__pmFirebase;
+    try{
+      const snap = await tmo(f.getDoc(f.doc(f.db, FIRESTORE_DOC_PATH[0], FIRESTORE_DOC_PATH[1])), 10000);
+      const d = snap.exists() ? snap.data() : null; let v = '?';
+      try{ v = JSON.parse(d.payload)._stateVersion; }catch(_){}
+      put('Cloud copy', d ? `v${v} · ${Math.round((d.payload||'').length/1024)} KB · saved by ${esc2(d.updatedBy||'?')} ${d.updatedAt ? esc2(dateTimeFmt(new Date(d.updatedAt))) : ''}` : '✗ not found', d && v >= 8 ? 'ok' : 'no');
+    }catch(e){ put('Cloud copy', '✗ ' + esc2((e.code ? e.code + ' — ' : '') + e.message), 'no'); }
+  }
+  const errs = window.__motorErrors || [];
+  put('Script errors', errs.length ? '✗ ' + esc2(errs.slice(-3).join(' | ')) : '✓ none', errs.length ? 'no' : 'ok');
+}
+// Drop a motor's future PMs that are not done / rescheduled (category, area or last-PM change)
+function rollDropMotorFuture(s, sr){
+  const today = rollTodayDn();
+  rollRemove(rollAllEntries(s).filter(x=>x.e.sr === sr && !x.exec && !x.e.customDate && x.dn >= today));
+}
+function setLastPmDone(sr, iso){
+  if(!requireAdmin('Set last PM done')) return;
+  if(iso && isoToDate(iso) > TODAY){ toast('Future date', 'Last PM done cannot be in the future', 'warn'); renderManageMotors(); return; }
+  if(!STATE.lastPmOverride) STATE.lastPmOverride = {};
+  if(iso) STATE.lastPmOverride[sr] = iso; else delete STATE.lastPmOverride[sr];
+  rollDropMotorFuture(STATE, sr);
+  regenerateSchedule(true);
+  toast('Last PM done updated', `M${String(sr).padStart(3,'0')} · next PMs re-planned from ${iso ? dateFmt(isoToDate(iso)) : 'its logged history'}`);
+}
+// After any PM is marked done / undone / imported: keep every motor never-overdue
+function rollAfterExecutions(){ try{ rollMaintain(STATE); }catch(e){ console.warn('[rolling] repair failed', e); } }
 
 /* ===================================================================
    PAGE: Manage motor table
    =================================================================== */
 function renderScheduleHealth(){
   const host = document.getElementById('sched-health'); if(!host) return;
-  const fy = STATE.fys && STATE.fys[STATE.activeFY];
-  if(!fy){ host.innerHTML = '<div style="color:var(--text-muted)">No active FY.</div>'; return; }
-  const h = scheduleCheck(fy.schedule || [], STATE.motors || []);
+  if(!STATE.rolling){ host.innerHTML = '<div style="color:var(--text-muted)">Rolling plan not built yet — tap ↻ Rebuild schedule.</div>'; return; }
+  const a = rollAudit(STATE);
   const ok = v => v ? '<span style="color:var(--accent-4);font-weight:700">✓ OK</span>' : '<span style="color:var(--accent-3);font-weight:700">✗ CHECK</span>';
-  const g = (f, due) => { const G = h.gaps[f]; return G[0]===null ? '—' : `${G[0]}–${G[1]} days (due ≤ ${due})`; };
-  const moved = (fy.schedule||[]).filter(e=>e.customDate).length;
-  // near-duplicate area names ("CETP" vs "CETP ") split one area into two
-  const byNorm = {};
-  (STATE.motors||[]).forEach(m=>{ const k = String(m.area||'').trim().replace(/\s+/g,' ').toLowerCase(); (byNorm[k] = byNorm[k] || new Set()).add(m.area); });
-  const dupAreas = Object.values(byNorm).filter(s=>s.size>1).map(s=>[...s].map(a=>'"'+a+'"').join(' = '));
-  const rep = (typeof generateSchedule !== 'undefined' && generateSchedule.lastReport) || null;
-  const relaxedN = rep ? (rep.relaxed.cap8 + rep.relaxed.single + rep.relaxed.mixed) : 0;
+  const g = (f, due) => { const G = a.gaps[f]; return G.length ? `${Math.min(...G)}–${Math.max(...G)} days (due ≤ ${due})` : '—'; };
+  const cats = {A:0,B:0,C:0}; STATE.motors.forEach(m=>{ cats[rpCat(m.cat)]++; });
+  const nominal = cats.A*6 + cats.B*4 + cats.C*2;
+  const R = STATE.rolling;
   const rows = [
-    ['Motors', `A ${h.cats.A} · B ${h.cats.B} · C ${h.cats.C} = <b>${STATE.motors.length}</b>`, ''],
-    ['PMs required', `A ${h.cats.A}×6 + B ${h.cats.B}×4 + C ${h.cats.C}×2 = <b>${h.expected}</b>`, ''],
-    ['PMs in schedule', `<b>${h.placed}</b> (BM ${h.byFreq.BM||0} · Q ${h.byFreq.Q||0} · HY ${h.byFreq.HY||0})`, ok(h.placed===h.expected)],
-    ['Wrong frequency entries', `${h.wrongFreq} (A must be BM · B must be Q · C must be HY)`, ok(h.wrongFreq===0)],
-    ['Motors with wrong PM count', `${h.wrongCount}`, ok(h.wrongCount===0)],
-    ['PMs after due date', `${h.late}`, ok(h.late===0)],
-    ['BM gap between PMs', g('BM',60), ok(h.gaps.BM[1]===null || h.gaps.BM[1]<=60)],
-    ['Q gap between PMs', g('Q',90), ok(h.gaps.Q[1]===null || h.gaps.Q[1]<=90)],
-    ['HY gap between PMs', g('HY',180), ok(h.gaps.HY[1]===null || h.gaps.HY[1]<=180)],
-    ['Days mixing two areas', `${h.mixedDays}`, h.mixedDays===0 ? ok(true) : '<span style="color:var(--accent-2);font-weight:700">! RELAXED</span>'],
-    ['Max motors on one day', `${h.maxPerDay} · ${h.daysUsed} working days used`, h.maxPerDay<=8 ? ok(true) : ok(false)],
-    ['PMs moved by reschedule', `${moved}`, ''],
+    ['Motors', `A ${cats.A} · B ${cats.B} · C ${cats.C} = <b>${STATE.motors.length}</b>`, ''],
+    ['Plan window', `${dateFmt(isoToDate(rpIso(a.today)))} → ${dateFmt(isoToDate(R.end))} · renews every year`, ''],
+    ['PM days in the next 365', `<b>${a.pmDays}</b> (7-day week · ${(STATE.pmCalendar.holidays||[]).length} holidays + ${(STATE.pmCalendar.buffers||[]).length} buffer days listed)`, ''],
+    ['PMs in the next 365 days', `<b>${a.next365}</b> (nominal A×6 + B×4 + C×2 = ${nominal})`, ''],
+    ['Average motors per PM day', `<b>${a.avg.toFixed(2)}</b>`, ok(a.avg <= RP.CAP)],
+    ['Max motors on one day', `${a.maxDay} (limit ${RP.CAP})`, ok(a.maxDay <= RP.CAP)],
+    ['Monthly load (full months)', a.monMax ? `${a.monMin} – ${a.monMax} PMs` : '—', ''],
+    ['Future PMs after their due date', `${a.late}`, ok(a.late === 0)],
+    ['Rescheduled by hand past the due date', `${a.lateManual}`, a.lateManual ? '<span style="color:var(--accent-2);font-weight:700">! MANUAL</span>' : ok(true)],
+    ['Motors already overdue (catch-up planned ASAP)', `${a.catchUp}`, a.catchUp ? '<span style="color:var(--accent-2);font-weight:700">! CATCH-UP</span>' : ok(true)],
+    ['Days mixing two areas', `${a.mixed}`, ok(a.mixed === 0)],
+    ['PMs planned on a holiday / buffer day', `${a.offDay}`, ok(a.offDay === 0)],
+    ['Motors not covered to the plan end', `${a.uncovered}`, ok(a.uncovered === 0)],
+    ['BM gap between PMs', g('BM', 60), ok(!a.gaps.BM.length || Math.max(...a.gaps.BM) <= 60)],
+    ['Q gap between PMs', g('Q', 90), ok(!a.gaps.Q.length || Math.max(...a.gaps.Q) <= 90)],
+    ['HY gap between PMs', g('HY', 180), ok(!a.gaps.HY.length || Math.max(...a.gaps.HY) <= 180)],
   ];
-  let notes = '';
-  if(dupAreas.length) notes += `<div style="margin-top:10px;color:var(--accent-2);font-size:11px">⚠ Area names that differ only by spaces/capitals: ${dupAreas.join(' · ')} — the scheduler treats them as one area; rename them in Motor Master to keep reports clean.</div>`;
-  if(rep && relaxedN) notes += `<div style="margin-top:10px;color:var(--accent-2);font-size:11px">⚠ Last rebuild could not fit ${relaxedN} motors with the strict rules (4–6/day, one area/day). They were still scheduled on time: ${rep.relaxed.cap8} at up to 8/day, ${rep.relaxed.single} one-by-one, ${rep.relaxed.mixed} sharing a day with another area. No PM was dropped.</div>`;
+  const assumed = R.assumedDone ? `<div style="margin-top:10px;color:var(--accent-2);font-size:11px">⚠ ${R.assumedDone} motors had no PM logged in the app, so their last planned PM before ${dateFmt(isoToDate(R.start))} was taken as done. Set the real date in Motor Master → <b>Last PM done</b> (admin) and their next PMs re-plan at once.</div>` : '';
   host.innerHTML = `<div class="tbl-wrap"><div class="tbl-inner"><table><thead><tr><th>Check</th><th>Result</th><th>Status</th></tr></thead><tbody>` +
     rows.map(r=>`<tr><td style="color:var(--text-dim)">${r[0]}</td><td style="color:var(--text)">${r[1]}</td><td>${r[2]}</td></tr>`).join('') +
-    `</tbody></table></div></div>` + notes +
-    (h.ok ? '' : `<div style="margin-top:10px;color:var(--accent-3);font-size:12px">Schedule is incomplete — tap <b>↻ Rebuild schedule</b> (it also repairs itself on next reload).</div>`);
+    `</tbody></table></div></div>` + assumed +
+    `<div style="margin-top:10px;color:var(--text-muted);font-size:11px">Built ${dateTimeFmt(new Date(R.builtAt))}${R.repairs ? ` · auto-repaired ${R.repairs}× since (PMs done early)` : ''} · the current week (${RP_FREEZE} days) is never moved by an automatic repair.</div>`;
+}
+
+// ── PM Calendar (holidays + buffer days) — Phase 3.11 ──
+function renderPmCalendar(){
+  const host = document.getElementById('pm-cal'); if(!host) return;
+  const c = STATE.pmCalendar || defaultPmCalendar();
+  const list = [...(c.holidays||[]).map(h=>({...h, type:'Holiday'})), ...(c.buffers||[]).map(h=>({...h, type:'Buffer'}))]
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  const fyOfIso = iso => rollFyOf(rpDn(iso));
+  const byFy = {}; list.forEach(x=>{ const k = fyOfIso(x.date); (byFy[k] = byFy[k] || {Holiday:0, Buffer:0})[x.type]++; });
+  const adm = isAdmin();
+  host.innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">${Object.keys(byFy).sort().map(k=>`<span class="card-tag">${k}: ${byFy[k].Holiday} holidays + ${byFy[k].Buffer} buffer = ${365 - byFy[k].Holiday - byFy[k].Buffer} PM days</span>`).join('')}</div>
+    ${adm ? `<div class="form-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px">
+      <div><label>Date</label><input type="date" id="pc-date"></div>
+      <div><label>Type</label><select id="pc-type"><option>Holiday</option><option>Buffer</option></select></div>
+      <div style="grid-column:1/-1"><label>Name</label><input id="pc-name" placeholder="e.g. Diwali"></div>
+      <div style="grid-column:1/-1"><button class="btn" style="width:100%" onclick="pmCalAdd()">+ Add to PM calendar</button></div></div>` : ''}
+    <div class="tbl-wrap" style="max-height:320px;overflow-y:auto"><div class="tbl-inner"><table>
+      <thead><tr><th>Date</th><th>Day</th><th>Name</th><th>Type</th><th>FY</th>${adm ? '<th></th>' : ''}</tr></thead>
+      <tbody>${list.map(x=>`<tr${isoToDate(x.date) < TODAY ? ' style="opacity:.45"' : ''}><td style="font-family:'JetBrains Mono',monospace">${dateFmt(isoToDate(x.date))}</td><td>${isoToDate(x.date).toLocaleDateString('en-US',{weekday:'short'})}</td><td>${x.name||''}</td><td>${x.type}</td><td>${fyOfIso(x.date)}</td>${adm ? `<td><button class="btn danger" style="padding:4px 9px;font-size:10px" onclick="pmCalRemove('${x.date}','${x.type}')">×</button></td>` : ''}</tr>`).join('')}</tbody>
+    </table></div></div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-muted)">${c.note || ''} · Changing the calendar re-plans PMs after the current week so none falls on an off day.</div>`;
+}
+function pmCalAdd(){
+  if(!requireAdmin('Edit PM calendar')) return;
+  const date = document.getElementById('pc-date').value, name = document.getElementById('pc-name').value.trim(), type = document.getElementById('pc-type').value;
+  if(!date){ toast('Missing date','','warn'); return; }
+  const c = STATE.pmCalendar || (STATE.pmCalendar = defaultPmCalendar());
+  const key = type === 'Holiday' ? 'holidays' : 'buffers';
+  if((c.holidays||[]).concat(c.buffers||[]).some(x=>x.date === date)){ toast('Already listed', dateFmt(isoToDate(date)), 'warn'); return; }
+  c[key].push({ date, name: name || type });
+  pmCalApply(`${type} added · ${dateFmt(isoToDate(date))}`);
+}
+function pmCalRemove(date, type){
+  if(!requireAdmin('Edit PM calendar')) return;
+  if(!confirm(`Remove ${type.toLowerCase()} ${dateFmt(isoToDate(date))}?`)) return;
+  const c = STATE.pmCalendar; const key = type === 'Holiday' ? 'holidays' : 'buffers';
+  c[key] = c[key].filter(x=>x.date !== date);
+  pmCalApply(`${type} removed · ${dateFmt(isoToDate(date))}`);
+}
+function pmCalApply(msg){
+  try{ rollRepair(STATE, true); }catch(e){ console.warn(e); }
+  saveState(); renderAll(); toast('PM calendar updated', msg + ' · plan after this week re-planned');
 }
 
 function renderManageMotors(){
@@ -2306,8 +2891,17 @@ function renderManageMotors(){
   if(area) rows = rows.filter(m => m.area === area);
 
   const tbody = document.getElementById('mng-tbody');
+  // Phase 3.11: last PM done (logged or admin-set) and next planned PM per motor
+  const lastDone = {}, nextPm = {};
+  (cachedRowsAll || cachedRows || []).forEach(r=>{
+    if(r.actualDate){ if(!lastDone[r.sr] || r.actualDate > lastDone[r.sr]) lastDone[r.sr] = r.actualDate; }
+    else if(isoToDate(r.date) >= TODAY){ if(!nextPm[r.sr] || r.date < nextPm[r.sr]) nextPm[r.sr] = r.date; }
+  });
+  const ovr = STATE.lastPmOverride || {};
+  const adm = isAdmin();
   tbody.innerHTML = rows.map(m=>{
     const f = freqFor(m.area, m.cat);
+    const ld = [lastDone[m.sr], ovr[m.sr]].filter(Boolean).sort().pop() || '';
     return `
       <tr>
         <td style="font-family:'JetBrains Mono',monospace;color:var(--text-muted)">${m.sr}</td>
@@ -2319,6 +2913,8 @@ function renderManageMotors(){
           <option value="C"${m.cat==='C'?' selected':''}>C</option>
         </select></td>
         <td><span class="freq-pill freq-${f}">${f}</span></td>
+        <td>${adm ? `<input type="date" value="${ld}" max="${isoDate(TODAY)}" onchange="setLastPmDone(${m.sr},this.value)" title="${ovr[m.sr] ? 'Set by admin' : (lastDone[m.sr] ? 'From the execution log' : 'No PM logged yet')}" style="background:var(--bg-panel-2);border:1px solid ${ovr[m.sr] ? 'var(--accent-2)' : 'var(--border)'};color:var(--text);padding:5px 6px;border-radius:3px;font-size:11px;font-family:inherit">` : `<span style="font-family:'JetBrains Mono',monospace;font-size:11px">${ld ? dateFmt(isoToDate(ld)) : '—'}</span>`}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)">${nextPm[m.sr] ? dateFmt(isoToDate(nextPm[m.sr])) : '—'}</td>
         <td><button class="btn danger" style="padding:5px 10px;font-size:10px" onclick="deleteMotor(${m.sr})">×</button></td>
       </tr>
     `;
@@ -2348,7 +2944,20 @@ function closeModal(){
 }
 
 function getMotorByRow(pmRow){ return STATE.motors.find(m=>m.sr===pmRow.sr); }
-function pmRowById(pmId){ return cachedRows.find(r=>r.pmId===pmId); }
+function pmRowById(pmId){ return (cachedRowsAll || cachedRows).find(r=>r.pmId===pmId); }
+// Warn when a manual date is later than the motor's due date (previous PM + cycle)
+function rollWarnIfOverdue(sr, iso, pmId, fromIso){
+  try{
+    const all = rollAllEntries(STATE), m = STATE.motors.find(x=>+x.sr===+sr); if(!m) return;
+    const C = RP.CYC[rpCat(m.cat)], dn = rpDn(iso), ref = fromIso ? rpDn(fromIso) : dn;
+    // previous PM of this motor before the PM's original date → its due date
+    const before = all.filter(x=>x.e.sr===+sr && x.pmId !== pmId).map(x=>x.adn ?? x.dn).filter(d=>d < Math.min(ref, dn));
+    const ov = STATE.lastPmOverride && STATE.lastPmOverride[sr]; if(ov) before.push(rpDn(ov));
+    if(!before.length) return;
+    const due = Math.max(...before) + C;
+    if(dn > due) toast('After due date', `Due ${dateFmt(isoToDate(rpIso(due)))} — this date makes the motor ${dn-due} day(s) overdue.`, 'warn');
+  }catch(e){}
+}
 
 function nowForInput(){
   const d = new Date();
@@ -2551,6 +3160,7 @@ function commitMarkDone(pmId, data){
     submittedAt: data.submittedAt,
     remarks: (data.checklist && data.checklist.observation) || ''
   };
+  rollAfterExecutions();
   saveState();
   renderAll();
   toast('PM Logged', `${pmId.split('-FY')[0]} · MTTR ${data.mttrMin || 0} min`);
@@ -2677,12 +3287,13 @@ function submitReschedule(pmId){
 
   const row = pmRowById(pmId);
   if(!row){ toast('PM not found','','error'); return; }
-  const fy = STATE.fys[STATE.activeFY];
+  const fyKeyOfPm = pmId.split('-').slice(2).join('-');
+  const fy = STATE.fys[fyKeyOfPm] || STATE.fys[STATE.activeFY];
   if(!fy){ toast('FY not found','','error'); return; }
-  const newD = new Date(newDate);
-  const startD = new Date(fy.fyStart);
+  const newD = isoToDate(newDate);
+  const startD = isoToDate(fy.fyStart);
   const newWeek = Math.floor((newD - startD)/(7*86400000)) + 1;
-  if(newWeek < 1 || newWeek > 52){ toast('Date out of FY','New date must be in active FY range','warn'); return; }
+  if(newWeek < 1 || newWeek > 53){ toast('Date out of FY','New date must be inside the PM\'s financial year','warn'); return; }
 
   const m = pmId.match(/^M(\d+)-(\d+)-/);
   if(!m){ toast('Bad PM ID','','error'); return; }
@@ -2690,7 +3301,11 @@ function submitReschedule(pmId){
   const occ = parseInt(m[2]);
   const entry = fy.schedule.find(s=>s.sr===sr && s.occ===occ);
   if(!entry){ toast('Schedule entry not found','','error'); return; }
-  entry.week = newWeek;
+  entry.week = Math.min(52, newWeek);
+  const fromDate = entry.customDate || entry.date || row.date;
+  entry.customDate = newDate;                       // Phase 3.11: exact rescheduled date
+  rollWarnIfOverdue(sr, newDate, pmId, fromDate);
+  rollAfterExecutions();
 
   const prevCount = (STATE.confirmations[pmId] && STATE.confirmations[pmId].count) || 0;
   STATE.confirmations[pmId] = {
@@ -2762,18 +3377,21 @@ function submitShiftDate(pmId){
   if(!m){ toast('Bad PM ID','','error'); return; }
   const sr = parseInt(m[1]);
   const occ = parseInt(m[2]);
-  const fy = STATE.fys[STATE.activeFY];
+  const fy = STATE.fys[pmId.split('-').slice(2).join('-')] || STATE.fys[STATE.activeFY];
   if(!fy){ toast('FY not found','','error'); return; }
   const entry = fy.schedule.find(s=>s.sr===sr && s.occ===occ);
   if(!entry){ toast('Schedule entry not found','','error'); return; }
   // Compute week based on new date
-  const fyStart = new Date(fy.fyStart);
-  const newD = new Date(newDate);
-  const dayDiff = Math.floor((newD - fyStart)/86400000);
-  if(dayDiff < 0 || dayDiff >= 365){ toast('Date out of FY','Pick a date within the active FY range','warn'); return; }
-  entry.week = Math.floor(dayDiff/7) + 1;
+  const fyStart = isoToDate(fy.fyStart);
+  const newD = isoToDate(newDate);
+  const dayDiff = Math.round((newD - fyStart)/86400000);
+  if(dayDiff < 0 || dayDiff >= 366){ toast('Date out of FY','Pick a date inside the PM\'s financial year','warn'); return; }
+  entry.week = Math.min(52, Math.floor(dayDiff/7) + 1);
   entry.day = (dayDiff % 7) + 1;
+  const fromDate0 = (pmRowById(pmId) || {}).date;
   entry.customDate = newDate;
+  rollWarnIfOverdue(sr, newDate, pmId, fromDate0);
+  rollAfterExecutions();
   // Log the shift
   if(!STATE.reschedules) STATE.reschedules = [];
   STATE.reschedules.push({
@@ -2809,7 +3427,7 @@ function getOwnerName(area){
 function getPendingConfirmations(){
   const horizon = new Date(TODAY); horizon.setDate(horizon.getDate()+3);
   const out = [];
-  cachedRows.forEach(r=>{
+  (cachedRowsAll || cachedRows).forEach(r=>{
     if(r.actualDate) return; // already done
     const d = isoToDate(r.date);
     if(d > horizon) return;  // not within window
@@ -3124,9 +3742,11 @@ function setAllChecklistRequired(flag){
 /* ===================================================================
    RENDER PAGES
    =================================================================== */
-let cachedRows, cachedAreas, cachedMonths, cachedWorkload;
+let cachedRows, cachedAreas, cachedMonths, cachedWorkload, cachedRowsAll;
 function recomputeCache(){
   cachedRows = buildRows(STATE.activeFY);
+  // Phase 3.11: the rolling plan runs across financial years — Daily View, bell and popups see every FY
+  cachedRowsAll = Object.keys(STATE.fys).sort().flatMap(k=>k === STATE.activeFY ? cachedRows : buildRows(k));
   cachedAreas = buildAreas(STATE.activeFY);
   cachedMonths = buildMonths(STATE.activeFY);
   cachedWorkload = buildWorkload(STATE.activeFY);
@@ -3154,6 +3774,7 @@ function renderAll(){
   renderMotors();
   renderManageMotors();
   renderScheduleHealth();
+  renderPmCalendar();
   renderReliability();
   renderOwners();
   renderChecklist();
@@ -3201,7 +3822,13 @@ function renderOverview(){
     mb.className = 'notify-banner';
     mb.style.background = 'linear-gradient(90deg,rgba(124,242,139,0.18),rgba(0,217,255,0.06))';
     mb.style.borderColor = 'var(--accent-4)';
-    const msg = (mig.repairedFrom !== undefined)
+    const msg = mig.rolling
+      ? (mig.downgraded
+          ? `<b>An older copy of the Motor PM page</b> (still cached on someone's phone) rewrote the plan. It has been rebuilt. Ask everyone to close the app and reopen it — the menu must show <b>v3.11</b>.`
+        : mig.extended
+          ? `Rolling plan renewed for the next financial year — <b>${mig.extended}</b> PMs added. Every motor stays on its 60 / 90 / 180-day chain.`
+          : `New <b>rolling 340-day plan</b>: 7-day week · max <b>4 motors a day from one area</b> · every PM on or before its due date (A 60 d · B 90 d · C 180 d) · renews itself every year. <b>${mig.planned}</b> future PMs planned from today; done PMs and history unchanged. Check: Manage Data → Schedule Health · PM Calendar.`)
+      : (mig.repairedFrom !== undefined)
       ? `Schedule repaired: it had <b>${mig.repairedFrom}</b> PMs, now <b>${mig.repairedTo}</b> — every motor has its full year (A → 6 BM · B → 4 Q · C → 2 HY). Check: Manage Data → Schedule Health.`
       : mig.versionFrom < 7
       ? `New Option A schedule: <b>same area every day · every PM on or before its due date</b> (A 58-60d · B ≤90d · C ≤180d). Days flex 1-6 motors as the area needs.`
@@ -3274,8 +3901,8 @@ function renderOverview(){
   if(chartRefs.ovWeek) chartRefs.ovWeek.destroy();
   chartRefs.ovWeek = new Chart(document.getElementById('ch-week'),{
     type:'bar',
-    data:{labels:Array.from({length:52},(_,i)=>'W'+(i+1)),datasets:[{label:'PMs Scheduled',data:Object.values(wlByWeek),backgroundColor:Object.values(wlByWeek).map(v=>v>20?COLORS.coral:v>=17?COLORS.amber:COLORS.q),borderRadius:2}]},
-    options:{maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:COLORS.border},suggestedMax:25}},plugins:{legend:{display:false}}}
+    data:{labels:Array.from({length:52},(_,i)=>'W'+(i+1)),datasets:[{label:'PMs Scheduled',data:Object.values(wlByWeek),backgroundColor:Object.values(wlByWeek).map(v=>v>28?COLORS.coral:v>=25?COLORS.amber:COLORS.q),borderRadius:2}]},
+    options:{maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:COLORS.border},suggestedMax:30}},plugins:{legend:{display:false}}}
   });
 
   // ─── Overdue & Pending motors — by name & location ─────
@@ -3535,7 +4162,7 @@ function renderDaily(){
   const win = parseInt(document.getElementById('daily-window').value);
   const status = document.getElementById('daily-status').value;
   const area = document.getElementById('daily-area').value;
-  let rows = cachedRows.map(r=>({...r,_st:getStatus(r)}));
+  let rows = (cachedRowsAll || cachedRows).map(r=>({...r,_st:getStatus(r)}));
   if(area) rows = rows.filter(r=>r.area===area);
 
   const overdue = rows.filter(r=>r._st==='OVERDUE').length;
@@ -3615,12 +4242,13 @@ function commitMarkDone(pmId, data){
     loggedBy: (window.__pmCurrentUser ? (window.__pmCurrentUser.email || window.__pmCurrentUser.uid) : 'unknown'),
     loggedAt: new Date().toISOString(),
   };
+  rollAfterExecutions();
   saveState(); closeModal(); renderAll();
   toast('PM logged', `${pmId} · MTTR ${mttrMin ?? '—'} min`);
 }
 function markUndo(pmId){
   if(!requireAdmin('Undo PM completion')) return;
-  delete STATE.executions[pmId]; saveState(); renderAll(); toast('Undone', pmId);
+  delete STATE.executions[pmId]; rollAfterExecutions(); saveState(); renderAll(); toast('Undone', pmId);
 }
 
 function renderMotors(){
@@ -3638,7 +4266,7 @@ function renderMotors(){
 
   const tbody = document.getElementById('m-tbody');
   tbody.innerHTML = rows.slice(0,500).map(m=>{
-    const futures = cachedRows.filter(r=>r.sr===m.sr && isoToDate(r.date) >= TODAY).map(r=>r.date).sort();
+    const futures = (cachedRowsAll || cachedRows).filter(r=>r.sr===m.sr && !r.actualDate && isoToDate(r.date) >= TODAY).map(r=>r.date).sort();
     const next = futures.length ? dateFmt(isoToDate(futures[0])) : '—';
     return `<tr>
       <td style="color:var(--text-muted);font-family:'JetBrains Mono',monospace">${m.sr}</td>
@@ -3895,7 +4523,7 @@ function maybeShowDailyPopup(){
     if(localStorage.getItem(todayKey)) return; // already shown today
     if(!cachedRows || !cachedRows.length) return;
     const todayStr = isoDate(TODAY);
-    const todayItems = cachedRows.filter(r => r.date === todayStr && !r.actualDate);
+    const todayItems = (cachedRowsAll || cachedRows).filter(r => r.date === todayStr && !r.actualDate);
     if(todayItems.length === 0) return; // nothing planned today
 
     const list = todayItems.slice(0, 30).map(r=>{
@@ -3941,8 +4569,8 @@ function maybeShowWeeklyPopup(){
     if(!cachedRows || !cachedRows.length) return;
 
     const eow = new Date(sow); eow.setDate(eow.getDate()+6);
-    const dueRows = cachedRows.filter(r=>{ const d=isoToDate(r.date); return d>=sow && d<=eow && !r.actualDate; });
-    const overdueRows = cachedRows.filter(r=>isoToDate(r.date) < sow && !r.actualDate);
+    const dueRows = (cachedRowsAll || cachedRows).filter(r=>{ const d=isoToDate(r.date); return d>=sow && d<=eow && !r.actualDate; });
+    const overdueRows = (cachedRowsAll || cachedRows).filter(r=>isoToDate(r.date) < sow && !r.actualDate);
 
     if(dueRows.length === 0 && overdueRows.length === 0) return;
 
@@ -4500,5 +5128,6 @@ import { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot } from "https:/
 window.__pmScanFs = { doc, getDoc, setDoc, deleteDoc, deleteField, onSnapshot };
 document.dispatchEvent(new CustomEvent('pm-scanfs-ready'));
 </script>
+<script>window.__motorBooted = true;</script>
 </body>
 </html>
