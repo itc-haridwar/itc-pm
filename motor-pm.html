@@ -425,7 +425,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
 <script>
 /* Phase 3.11 — phones have no console: show script errors on screen and warn if the
    page never finishes loading (old cached copy, or file cut short on GitHub). */
-window.__motorBuild = '3.12d · 27-09-2026';
+window.__motorBuild = '3.12e · 27-09-2026';
 window.__motorErrors = [];
 (function(){
   function show(msg){
@@ -449,7 +449,7 @@ window.__motorErrors = [];
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">ITC <span>HARIDWAR</span></div>
-      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.12d · 27-09-2026</span></div>
+      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.12e · 27-09-2026</span></div>
     </div>
     <nav class="nav" id="nav">
       <div class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</div>
@@ -5451,9 +5451,19 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:700;color:var
 .ed-audit-list .r{padding:7px 0;border-top:1px solid var(--border)}
 .ed-audit-list .r b{color:var(--text)}
 .ed-audit-list .u{color:var(--accent-3);font-weight:700} .ed-audit-list .e{color:var(--accent);font-weight:700}
-/* 3.12d · phones: same Daily View row layout as Panel PM —
+/* 3.12e · the old 7-column row (≈600 px) was wider than its card on many screens (phones with
+   "Desktop site" on, tablets) → buttons hung outside the row background and the list scrolled sideways.
+   ≥ 761 px: compact grid that always fits and keeps the columns aligned. */
+@media (min-width:761px){
+  .daily-item{grid-template-columns:92px minmax(0,1fr) 46px 34px 38px 104px 128px;gap:10px}
+  .daily-item>*{min-width:0}
+  .daily-item .daily-mark{white-space:nowrap}
+  .daily-item .ed-acts{align-items:stretch}
+  #page-daily .daily-list{overflow-x:hidden}
+}
+/* ≤ 760 px (phones): same row layout as Panel PM —
    line 1: date | status · line 2: motor + 📎 scans · line 3: pills | Mark Done / Edit / Undo / View */
-@media (max-width:600px){
+@media (max-width:760px){
   #page-daily .kpi-row{grid-template-columns:repeat(2,1fr) !important;gap:10px}
   #page-daily .kpi{padding:12px 14px}
   #page-daily .kpi-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -5640,6 +5650,67 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:700;color:var
   window.pmAuditToggle = function(d){ if(d.open) loadAudit(d.querySelector('.ed-audit-list')); };
   window.pmEditOpen = pmEditOpen; window.pmEditSave = pmEditSave; window.pmCanEdit = canEdit; window.pmEditWindowEnd = pmId => { const e = (STATE.executions || {})[pmId]; return e ? lastDay(e) : ''; };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
+<script>
+/* ═══ Phase 3.12e · Daily View keeps the PMs done in the window on the same page (✎ Edit / ↶ Undo),
+   the same way Panel PM does. Same row markup as before — only the window rule changes:
+     Today      = planned today  + done today
+     This Week  = overdue + due  + done this week
+     14 / 30 d  = open PMs up to the window end + PMs done in the last 14 / 30 days ═══ */
+function renderDaily312e(){
+  const win = parseInt(document.getElementById('daily-window').value);
+  const status = document.getElementById('daily-status').value;
+  const area = document.getElementById('daily-area').value;
+  let rows = (cachedRowsAll || cachedRows).map(r=>({...r,_st:getStatus(r)}));
+  if(area) rows = rows.filter(r=>r.area===area);
+
+  const overdue = rows.filter(r=>r._st==='OVERDUE').length;
+  const due = rows.filter(r=>r._st==='DUE').length;
+  const upc = rows.filter(r=>r._st==='UPCOMING').length;
+  document.getElementById('d-overdue').textContent = fmt(overdue);
+  document.getElementById('d-due').textContent = fmt(due);
+  document.getElementById('d-upcoming').textContent = fmt(upc);
+
+  const upper = new Date(TODAY); upper.setDate(upper.getDate()+win);
+  // 3.12e: PMs done in the window stay on this page (with ✎ Edit / ↶ Undo), like Panel PM
+  const T0 = isoDate(TODAY), U0 = isoDate(upper);
+  const sow = startOfWeek(TODAY), eowD = new Date(sow); eowD.setDate(eowD.getDate()+6);
+  const SOW = isoDate(sow), EOW = isoDate(eowD);
+  const lowD = new Date(TODAY); lowD.setDate(lowD.getDate()-win); const L0 = isoDate(lowD);
+  let inWindow;
+  if(win===0) inWindow = rows.filter(r=>r.date===T0 || r.actualDate===T0);
+  else if(win===7) inWindow = rows.filter(r=>r._st==='OVERDUE'||r._st==='DUE'||(r.actualDate && r.actualDate>=SOW && r.actualDate<=EOW));
+  else inWindow = rows.filter(r=>r.actualDate ? (r.actualDate>=L0 || (r.date>=T0 && r.date<=U0)) : r.date<=U0);
+  if(status) inWindow = inWindow.filter(r=>r._st===status);
+
+  const doneInWin = inWindow.filter(r=>r._st==='DONE').length;
+  document.getElementById('d-done').textContent = fmt(doneInWin);
+
+  inWindow.sort((a,b)=>a.date.localeCompare(b.date));
+  const list = document.getElementById('daily-list');
+  if(inWindow.length===0){ list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">No PMs in this window. ✓</div>'; return; }
+  list.innerHTML = inWindow.slice(0,300).map(r=>{
+    const st = r._st;
+    const cls = st==='OVERDUE'?'overdue':st==='DUE'?'due':st==='UPCOMING'?'upcoming':st==='DONE'?'done':'scheduled';
+    const stPill = `status-${st.toLowerCase()}`;
+    const isDone = !!r.actualDate;
+    return `<div class="daily-item ${cls}">
+      <div class="daily-date" style="cursor:pointer;text-decoration:underline dotted" onclick="openShiftDateModal('${r.pmId}')" title="Click to change planned date">${dateFmt(isoToDate(r.date))}</div>
+      <div><div class="daily-area">${r.area}</div><div class="daily-motor">${r.motor}</div></div>
+      <div><span class="freq-pill freq-${r.freq}">${r.freq}</span></div>
+      <div><span class="cat-pill cat-${r.cat}">${r.cat}</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);font-size:11px">W${r.week}</div>
+      <div><span class="status-pill ${stPill}">${st}</span>${isDone?`<div style="font-size:9px;color:var(--text-muted);margin-top:3px">${dateFmt(isoToDate(r.actualDate))}</div>`:''}</div>
+      ${isDone ? `<button class="daily-mark undo" onclick="markUndo('${r.pmId}')">Undo</button>` : `<button class="daily-mark" onclick="markDone('${r.pmId}')">Mark Done</button>`}
+    </div>`;
+  }).join('');
+}
+(function(){
+  const orig = renderDaily, ids = ['daily-window', 'daily-status', 'daily-area'];
+  ids.forEach(id => { const e = document.getElementById(id); if(e){ e.removeEventListener('change', orig); e.addEventListener('change', renderDaily312e); } });
+  renderDaily = renderDaily312e;
+  try{ if(document.getElementById('page-daily')) renderDaily312e(); }catch(err){ console.warn('[daily]', err); }
 })();
 </script>
 <script>window.__motorBooted = true;</script>
