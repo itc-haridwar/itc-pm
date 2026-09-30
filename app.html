@@ -549,7 +549,7 @@ function verdictPanel(planned, actual){ if(!actual || !planned) return ''; retur
 function clPairs(cl, defs, fallback){
   const out = []; cl = cl || {}; const has = v => v !== undefined && v !== null && String(v).trim() !== '';
   (defs || []).forEach(d => { if(d && has(cl[d.id])) out.push([d.label, String(cl[d.id]) + (d.unit ? ' ' + d.unit : '')]); });
-  Object.keys(cl).forEach(k => { if(!(defs || []).some(d => d && d.id === k) && has(cl[k])) out.push([(fallback && fallback[k]) || k, String(cl[k])]); });
+  Object.keys(cl).forEach(k => { if(!(defs || []).some(d => d && d.id === k) && has(cl[k])) out.push([(fallback && fallback[k]) || k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()), String(cl[k])]); });
   return out;
 }
 function indexMotor(st, out, info){

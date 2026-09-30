@@ -425,7 +425,7 @@ body.role-user #mng-tbody .btn.danger{display:none}
 <script>
 /* Phase 3.11 — phones have no console: show script errors on screen and warn if the
    page never finishes loading (old cached copy, or file cut short on GitHub). */
-window.__motorBuild = '3.12e · 27-09-2026';
+window.__motorBuild = '3.12f · 30-09-2026';
 window.__motorErrors = [];
 (function(){
   function show(msg){
@@ -449,7 +449,7 @@ window.__motorErrors = [];
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-logo">ITC <span>HARIDWAR</span></div>
-      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.12e · 27-09-2026</span></div>
+      <div class="brand-sub">COT PM Module · <span id="motor-build" style="color:var(--accent)">v3.12f · 30-09-2026</span></div>
     </div>
     <nav class="nav" id="nav">
       <div class="nav-item active" data-page="overview"><span class="nav-icon">▦</span> Overview</div>
@@ -3810,19 +3810,12 @@ function renderAll(){
   document.getElementById('ov-fy-tag').textContent = STATE.activeFY;
   document.getElementById('exec-count-tag').textContent = Object.keys(STATE.executions).length + ' logged';
 
-  renderOverview();
-  renderHeatmap();
-  renderCompliance();
-  renderAreas();
-  renderDaily();
-  renderMotors();
-  renderManageMotors();
-  renderScheduleHealth();
-  renderPmCalendar();
-  renderReliability();
-  renderOwners();
-  renderChecklist();
-  renderNotifPanel();
+  // 3.12f: each section refreshes on its own — one failing section can no longer stop the others
+  ['renderOverview','renderHeatmap','renderCompliance','renderAreas','renderDaily','renderMotors','renderManageMotors',
+   'renderScheduleHealth','renderPmCalendar','renderReliability','renderOwners','renderChecklist','renderNotifPanel'].forEach(n=>{
+    try{ const f = window[n]; if(typeof f === 'function') f(); }
+    catch(e){ console.error('[renderAll] ' + n, e); if(typeof window.__motorShowError === 'function') window.__motorShowError(n + ': ' + ((e && e.message) || e)); }
+  });
 }
 
 function renderOverview(){
@@ -4134,7 +4127,7 @@ function renderCompliance(){
 ['cmp-month','cmp-area'].forEach(id=>document.getElementById(id).addEventListener('change',renderCompliance));
 
 function renderRescheduleCharts(){
-  if(!STATE.reschedules || STATE.reschedules.length === 0){
+  if(!(STATE.reschedules || []).some(r => r && typeof r.pmId === 'string' && r.type !== 'panel')){
     // Show empty state
     if(chartRefs.reschReasons){ chartRefs.reschReasons.destroy(); chartRefs.reschReasons=null; }
     if(chartRefs.reschArea){ chartRefs.reschArea.destroy(); chartRefs.reschArea=null; }
@@ -4145,7 +4138,8 @@ function renderRescheduleCharts(){
   }
   // By reason
   const byReason = {};
-  STATE.reschedules.forEach(r=>{ byReason[r.reason] = (byReason[r.reason]||0)+1; });
+  const RS = (STATE.reschedules || []).filter(r => r && typeof r.pmId === 'string' && r.type !== 'panel');   // 3.12f: motor entries only
+  RS.forEach(r=>{ byReason[r.reason] = (byReason[r.reason]||0)+1; });
   const reasonLabels = Object.keys(byReason);
   const reasonCounts = reasonLabels.map(k=>byReason[k]);
   if(chartRefs.reschReasons) chartRefs.reschReasons.destroy();
@@ -4156,7 +4150,7 @@ function renderRescheduleCharts(){
   });
   // By area — derive area from pmId via motors lookup
   const byArea = {};
-  STATE.reschedules.forEach(r=>{
+  RS.forEach(r=>{
     const m = r.pmId.match(/^M(\d+)-/);
     if(!m) return;
     const sr = parseInt(m[1]);
@@ -5285,7 +5279,7 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
     const defs = STATE.checklistFields || []; const cl = (e && e.checklist) || {}; const out = [];
     const has = v => v !== undefined && v !== null && String(v).trim() !== '';
     defs.forEach(d => { if(has(cl[d.id])) out.push({ l: d.label, v: String(cl[d.id]), u: d.unit || '' }); });
-    Object.keys(cl).forEach(k => { if(!defs.some(d => d.id === k) && has(cl[k])) out.push({ l: k, v: String(cl[k]), u: '' }); });
+    Object.keys(cl).forEach(k => { if(!defs.some(d => d.id === k) && has(cl[k])) out.push({ l: k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()), v: String(cl[k]), u: '' }); });
     return out;
   }
   function files(pmId){ const fy = fyOfPm(pmId); if(!fy || !window.ScanKit) return undefined; ScanKit.ensure('motor', fy); return ScanKit.list('motor', fy, pmId); }

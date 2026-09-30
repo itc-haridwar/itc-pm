@@ -665,6 +665,7 @@ body.role-user .admin-only{display:none !important}
             <div class="ctrl"><div class="ctrl-label">Options (dropdown)</div><input type="text" id="ck-opts" class="txt" placeholder="Pass,Fail"/></div>
             <button class="btn success" onclick="addChecklistField()">+ Add</button>
           </div>
+          <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn ghost sm" onclick="resetPanelChecklist()">↺ Reset to standard checklist</button><span style="font-size:11px;color:var(--text-3)">Same as Motor PM · removes custom fields (you are asked first) · values already saved in done PMs are kept</span></div>
         </div>
       </div>
       <div class="card">
@@ -1740,15 +1741,10 @@ function resetExecutions(){
 }
 
 function renderAll(){
-  try{
-    renderOverview();
-    renderDaily();
-    renderSchedule();
-    renderCompliance();
-    renderMaster();
-    renderExecutions();
-    renderChecklist();
-  }catch(e){ console.error('render error',e); }
+  // 3.12f: each section refreshes on its own — one failing section can no longer stop the others
+  ['renderOverview','renderDaily','renderSchedule','renderCompliance','renderMaster','renderExecutions','renderChecklist'].forEach(n=>{
+    try{ const f = window[n]; if(typeof f === 'function') f(); }catch(e){ console.error('render error · ' + n, e); }
+  });
 }
 
 document.addEventListener('pm-firebase-ready', loadFromFirebase);
@@ -2654,7 +2650,7 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
     const cl = (e && e.checklist) || {}; const out = [];
     const has = v => v !== undefined && v !== null && String(v).trim() !== '';
     defs.forEach(d => { if(has(cl[d.id])) out.push({ l: d.label, v: String(cl[d.id]), u: d.unit || '' }); });
-    Object.keys(cl).forEach(k => { if(!defs.some(d => d.id === k) && has(cl[k])) out.push({ l: k, v: String(cl[k]), u: '' }); });
+    Object.keys(cl).forEach(k => { if(!defs.some(d => d.id === k) && has(cl[k])) out.push({ l: k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()), v: String(cl[k]), u: '' }); });
     return out;
   }
   function files(p){ const fy = fyOf(p.pm_date), key = scanKey(p); if(!fy || !key || !window.ScanKit) return undefined; ScanKit.ensure('panel', fy); return ScanKit.list('panel', fy, key); }
@@ -3052,6 +3048,16 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:600;color:var
     const ra = window.renderAll; if(typeof ra === 'function') window.renderAll = function(){ const out = ra.apply(this, arguments); try{ ensureAudit(); }catch(err){} return out; };
     ensureAudit();
   }
+  /* 3.12f · Reset the panel checklist to the standard fields (same as Motor PM's "Reset to Default") */
+  window.resetPanelChecklist = function(){
+    if(!requireAdmin('Reset checklist')) return;
+    const std = defaultPanelChecklist(); const cur = STATE.panelChecklistFields || [];
+    const custom = cur.filter(f => f && !std.some(d => d.id === f.id)).map(f => f.label);
+    if(!confirm('Reset the panel checklist to the ' + std.length + ' standard fields?' + (custom.length ? '\n\nThese custom fields will be removed from the Mark Done form: ' + custom.join(', ') : '') + '\n\nValues already saved in done PMs are kept.')) return;
+    STATE.panelChecklistFields = std;
+    saveToFirebase(); renderChecklist();
+    toast('Checklist reset', std.length + ' standard fields' + (custom.length ? ' · removed: ' + custom.join(', ') : ''), 'good');
+  };
   window.panelAuditLoad = loadAudit;
   window.panelEditOpen = panelEditOpen; window.panelEditSave = panelEditSave; window.panelCanEdit = canEdit;
   window.panelEditWindowEnd = pid => { const e = ex(+pid); return e ? lastDay(e) : ''; };
