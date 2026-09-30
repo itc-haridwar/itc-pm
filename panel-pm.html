@@ -431,6 +431,7 @@ body.role-user .admin-only{display:none !important}
       <div class="nav-section">Operations</div>
       <div class="nav-item" data-page="daily"><span>Daily View</span><span class="nav-num" id="n-daily">—</span></div>
       <div class="nav-item" data-page="done"><span>✓ Done PMs</span><span class="nav-num" id="n-done">—</span></div>
+      <div class="nav-item" data-page="reports"><span>📄 Reports</span><span class="nav-num">PDF</span></div>
       <div class="nav-item" data-page="schedule"><span>Schedule</span><span class="nav-num">12mo</span></div>
       <div class="nav-item" data-page="executions"><span>Execution Log</span><span class="nav-num" id="n-exec">0</span></div>
       <div class="nav-section">Configuration</div>
@@ -570,6 +571,9 @@ body.role-user .admin-only{display:none !important}
       </div>
       <details class="ed-audit" id="pd-audit" hidden ontoggle="if(this.open && window.panelAuditLoad) panelAuditLoad(this.querySelector('.ed-audit-list'))"><summary>🕘 Edit &amp; undo history (admin)</summary><div class="ed-audit-list"></div></details>
     </section>
+
+    <!-- ─── REPORTS (3.13) — PM history · Excel · PDF with photos ─── -->
+    <section class="page" id="page-reports"></section>
 
     <!-- ─── SCHEDULE ─── -->
     <section class="page" id="page-schedule">
@@ -875,7 +879,7 @@ async function saveToFirebase(){
       try{ basePayload = JSON.parse(snap.data().payload); }catch(e){ basePayload = {}; }
     }
     // Preserve motor module's data; only update panel-related fields
-    basePayload.panels = STATE.panels;
+    basePayload.panels = (typeof window.panelMasters === 'function') ? window.panelMasters() : STATE.panels;   // 3.13: masters only — extra PMs are rebuilt
     basePayload.panelExecutions = STATE.panelExecutions;
     basePayload.panelChecklistFields = STATE.panelChecklistFields;
     basePayload.panelOwners = STATE.panelOwners;
@@ -1040,19 +1044,20 @@ function renderOverview(){
     nh.innerHTML = html;
   }
 
-  document.getElementById('k-total').textContent = total.toLocaleString();
+  document.getElementById('k-total').textContent = panels.filter(p=>!p.parent).length.toLocaleString();   // 3.13: panels, not extra PM rows
   document.getElementById('k-units').textContent = units;
   document.getElementById('k-done').textContent = done.toLocaleString();
   document.getElementById('k-done-pct').textContent = `${executedYTD}/${plannedYTD} YTD`;
   document.getElementById('k-due').textContent = due.toLocaleString();
   document.getElementById('k-over').textContent = overdue.toLocaleString();
   document.getElementById('k-comp').firstChild.textContent = compl;
-  document.getElementById('tb-count').textContent = total;
+  const _masters = STATE.panels.filter(p=>!p.parent).length;
+  document.getElementById('tb-count').textContent = _masters;
   document.getElementById('tb-date').textContent = dateFmt(TODAY);
 
   // Sidebar nav numbers
-  document.getElementById('n-overview').textContent = total;
-  document.getElementById('n-master').textContent = total;
+  document.getElementById('n-overview').textContent = _masters;
+  document.getElementById('n-master').textContent = _masters;
   document.getElementById('n-comp').textContent = compl + '%';
   document.getElementById('n-daily').textContent = due + overdue;
   document.getElementById('n-exec').textContent = Object.keys(STATE.panelExecutions).length;
@@ -1223,7 +1228,7 @@ function renderDaily(){
     return `<div class="daily-row ${cls}">
       <div class="dr-date" onclick="openShiftDate(${p.id})" title="Click to shift">${dateFmt(d)}<span class="day">${dayName(d)}</span></div>
       <div><div class="dr-name">${p.panel}</div><div class="dr-unit">${unitShort(p.area)}</div></div>
-      <div class="dr-freq">YEARLY</div>
+      <div class="dr-freq">${typeof panelFreqLabel === 'function' ? panelFreqLabel(p) : 'YEARLY'}</div>
       <div><span class="pill ${cls}">${st}</span>${isDone?`<div class="mono" style="font-size:10px;color:var(--text-3);margin-top:3px">${dateFmt(isoToDate(exec.actualDate))}</div>`:''}</div>
       <div>${isDone ? `<button class="btn ghost sm" onclick="markUndo(${p.id})">↶ Undo</button>` : `<button class="btn sm" onclick="markDone(${p.id})">✓ Mark Done</button>`}</div>
     </div>`;
@@ -1257,7 +1262,7 @@ function renderSchedule(){
        `<td class="num" style="font-weight:700;color:var(--accent)">${grandTotal}</td></tr>`;
   h += '</tbody>';
   document.getElementById('sch-table').innerHTML = h;
-  document.getElementById('sch-meta').innerHTML = `${units.length} units · <b>${grandTotal}</b> panels`;
+  document.getElementById('sch-meta').innerHTML = `${units.length} units · <b>${grandTotal}</b> panel PMs`;
 }
 
 // ─── Compliance ─────────
@@ -1352,13 +1357,13 @@ function renderMaster(){
     const units = [...new Set(STATE.panels.map(p=>p.area))].sort();
     uSel.innerHTML = '<option value="">All units</option>' + units.map(u=>`<option value="${u}">${unitShort(u)}</option>`).join('');
   }
-  let rows = STATE.panels.slice();
+  let rows = STATE.panels.filter(p=>!p.parent);   // 3.13: extra PM rows are listed in Daily View, not here
   if(q) rows = rows.filter(p=>p.panel.toLowerCase().includes(q) || p.area.toLowerCase().includes(q));
   if(uf) rows = rows.filter(p=>p.area===uf);
   document.getElementById('m-count').textContent = rows.length + ' panels';
-  let h = '<thead><tr><th class="num">ID</th><th>Unit</th><th>Panel</th><th class="num">PM Date</th><th>Status</th>' + (isAdmin()?'<th>Action</th>':'') + '</tr></thead><tbody>';
+  let h = '<thead><tr><th class="num">ID</th><th>Unit</th><th>Panel</th><th>Freq</th><th class="num">PM Date</th><th>Status</th>' + (isAdmin()?'<th>Action</th>':'') + '</tr></thead><tbody>';
   if(!rows.length){
-    h += `<tr><td colspan="${isAdmin()?6:5}" style="text-align:center;padding:40px;color:var(--text-3)">No panels match filter</td></tr>`;
+    h += `<tr><td colspan="${isAdmin()?7:6}" style="text-align:center;padding:40px;color:var(--text-3)">No panels match filter</td></tr>`;
   } else {
     rows.forEach(p=>{
       const st = getPanelStatus(p);
@@ -1366,6 +1371,7 @@ function renderMaster(){
         <td class="num" style="color:var(--text-3)">${String(p.id).padStart(3,'0')}</td>
         <td class="unit-name">${unitShort(p.area)}</td>
         <td>${p.panel}</td>
+        <td>${typeof panelFreqBadge === 'function' ? panelFreqBadge(p) : 'Y'}</td>
         <td class="num">${dateFmt(isoToDate(p.pm_date))}</td>
         <td><span class="pill ${st.toLowerCase()}">${st}</span></td>` +
         (isAdmin()?`<td><button class="btn ghost sm" onclick="deletePanel(${p.id})" style="color:var(--red)">× Delete</button></td>`:'') +
@@ -1684,11 +1690,12 @@ function processUpload(){
         }
       }
       let added=0, updated=0;
-      const maxId = STATE.panels.length ? Math.max(...STATE.panels.map(p=>p.id)) : 0;
+      const _ms = STATE.panels.filter(p=>!p.parent);   // 3.13: extra PM rows are not panels
+      const maxId = _ms.length ? Math.max(..._ms.map(p=>p.id)) : 0;
       let nextId = maxId + 1;
       rows.forEach(r=>{
         const area = r.unit.startsWith('PANEL · ') ? r.unit : 'PANEL · ' + r.unit.trim();
-        const existing = STATE.panels.find(p=>p.area===area && p.panel===r.panel.trim());
+        const existing = STATE.panels.find(p=>!p.parent && p.area===area && p.panel===r.panel.trim());
         if(existing){ existing.pm_date = r.date.trim(); updated++; }
         else { STATE.panels.push({id:nextId++, area, panel:r.panel.trim(), pm_date:r.date.trim()}); added++; }
       });
@@ -2710,7 +2717,7 @@ mark.dn-mk{background:#FFD84D;color:#111;border-radius:2px;padding:0 1px}
     set('dn-k-done', base.length); set('dn-k-on', on); set('dn-k-late', late); set('dn-k-pct', (on + late) ? Math.round(on * 100 / (on + late)) + '%' : '—');
     const list = (F.show ? base.filter(x => x.v && x.v.k === F.show) : base).sort((a, b) => (b.e.actualDate || '').localeCompare(a.e.actualDate || '') || (b.e.submittedAt || '').localeCompare(a.e.submittedAt || ''));
     set('e-count', `${list.length} of ${all.length} executions`);
-    const adm = true;                                           // 3.12c: Edit / Undo column for everyone (users inside their 3-day window)
+    const adm = true;                                           // 3.12c: Edit / Undo column for everyone (users inside their edit window — 7 days since 3.13)
     const canE = pid => typeof panelCanEdit === 'function' ? panelCanEdit(pid) : isAdmin();
     let h = '<thead><tr><th>Unit</th><th>Panel</th><th>Result</th><th class="num">Actual</th><th class="num">Planned</th><th>📎</th><th class="num">MTTR</th><th>By</th>' + (adm ? '<th>Action</th>' : '') + '</tr></thead><tbody>';
     if(!list.length){
@@ -2896,8 +2903,8 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:600;color:var
 /* ═══════════════════════════════════════════════════════════════════════
    Phase 3.12c · EDIT / UNDO A MARK DONE — Panel PM
    • Daily View + Execution Log + panel PM record: ✎ Edit and ↶ Undo.
-   • USER  : while the done date is within 3 days of today (±3 days); a
-             corrected done date must be within the last 3 days.
+   • USER  : while the done date is within 7 days of today (±7 days); a
+             corrected done date must be within the last 7 days.
    • ADMIN : always — any past date, every field.
    • Edit opens the module's own Mark Done form, filled with what was saved
      (date, start/stop, done by, every checklist field incl. Permit No); the
@@ -2908,7 +2915,7 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:600;color:var
   'use strict';
   const $ = id => document.getElementById(id);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const WINDOW = 3;
+  const WINDOW = 7;
   const todayIso = () => isoDate(new Date());
   const dayDiff = (a, b) => Math.round((isoToDate(a) - isoToDate(b)) / 86400000);
   const me = () => { const u = window.__pmCurrentUser; return u ? (u.email || u.uid) : 'unknown'; };
@@ -3061,6 +3068,1382 @@ details.ed-audit summary{cursor:pointer;font-size:12px;font-weight:600;color:var
   window.panelAuditLoad = loadAudit;
   window.panelEditOpen = panelEditOpen; window.panelEditSave = panelEditSave; window.panelCanEdit = canEdit;
   window.panelEditWindowEnd = pid => { const e = ex(+pid); return e ? lastDay(e) : ''; };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
+<script>window.__panelBuild = '3.13 · 30-09-2026';</script>
+<style>
+/* ═══ 3.13 shared add-on styles (Motor + Panel) ═══ */
+.x13-card{margin:0 0 16px;border:1px solid var(--border-bright, var(--line-2));border-radius:6px;background:var(--bg-panel, var(--bg-1));overflow:hidden}
+.x13-card > summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.x13-card > summary::-webkit-details-marker{display:none}
+.x13-card > summary .x13-t{font-weight:700;font-size:14px;color:var(--text)}
+.x13-card > summary .x13-s{font-size:11.5px;color:var(--text-dim, var(--text-2));flex-basis:100%}
+.x13-card > summary .x13-tag{margin-left:auto;font-size:10px;letter-spacing:1px;font-weight:700;padding:3px 8px;border-radius:3px;border:1px solid var(--accent);color:var(--accent);text-transform:uppercase}
+.x13-card > summary .x13-caret{font-size:12px;color:var(--text-muted, var(--text-3));transition:transform .15s}
+.x13-card[open] > summary .x13-caret{transform:rotate(90deg)}
+.x13-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+.x13-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.x13-row > label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted, var(--text-3));font-weight:700;min-width:84px}
+.x13-in{background:var(--bg-panel-2, var(--bg-2));border:1px solid var(--border-bright, var(--line-2));color:var(--text);padding:8px 10px;border-radius:4px;font-size:12.5px;font-family:inherit;min-width:0;max-width:100%}
+select.x13-in{padding-right:24px}
+.x13-grow{flex:1 1 180px}
+.x13-btn{background:var(--accent);color:#111;border:0;border-radius:4px;padding:9px 14px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.x13-btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border-bright, var(--line-2));font-weight:600}
+.x13-btn.warn{background:var(--accent-2, var(--amber));}
+.x13-btn:disabled{opacity:.45;cursor:not-allowed}
+.x13-list{max-height:340px;overflow:auto;border:1px solid var(--border, var(--line));border-radius:4px;background:var(--bg-deep, var(--bg-0))}
+.x13-item{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border, var(--line));font-size:12.5px;cursor:pointer}
+.x13-item:last-child{border-bottom:0}
+.x13-item:hover{background:var(--bg-panel-2, var(--bg-2))}
+.x13-item input{width:17px;height:17px;accent-color:var(--accent)}
+.x13-item .n{font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.x13-item .m{font-size:11px;color:var(--text-dim, var(--text-2));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.x13-item .r{text-align:right;font-size:11px;color:var(--text-dim, var(--text-2));white-space:nowrap;font-family:'JetBrains Mono','IBM Plex Mono',monospace}
+.x13-pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.5px;padding:1px 6px;border-radius:3px;border:1px solid currentColor;margin-left:4px}
+.x13-pill.BM{color:var(--bm, #ff8a3d)} .x13-pill.Q{color:var(--q, #3d8bff)} .x13-pill.HY{color:var(--hy, #7cf28b)} .x13-pill.Y{color:var(--violet, #a78bfa)}
+.x13-pill.set{background:rgba(255,176,0,.12)}
+.x13-note{font-size:11.5px;color:var(--text-dim, var(--text-2));line-height:1.55}
+.x13-note b{color:var(--text)}
+.x13-act{border:1px dashed var(--border-bright, var(--line-2));border-radius:5px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.x13-act h4{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin:0}
+.x13-hist{font-size:11.5px;color:var(--text-dim, var(--text-2));max-height:200px;overflow:auto;line-height:1.6}
+.x13-hist b{color:var(--text)}
+.x13-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.x13-kpi{border:1px solid var(--border, var(--line));border-radius:5px;padding:10px;background:var(--bg-panel-2, var(--bg-2))}
+.x13-kpi .l{font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted, var(--text-3));font-weight:700}
+.x13-kpi .v{font-size:20px;font-weight:700;color:var(--text);margin-top:2px;font-family:'JetBrains Mono','IBM Plex Mono',monospace}
+.x13-kpi .v.ok{color:var(--accent-4, var(--green))} .x13-kpi .v.bad{color:var(--accent-3, var(--red))} .x13-kpi .v.warn{color:var(--accent-2, var(--amber))}
+.x13-kpi .s{font-size:10.5px;color:var(--text-dim, var(--text-2));margin-top:2px}
+.x13-tbl-wrap{overflow-x:auto;border:1px solid var(--border, var(--line));border-radius:5px}
+.x13-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.x13-tbl th{position:sticky;top:0;background:var(--bg-panel-2, var(--bg-2));color:var(--text-muted, var(--text-3));font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:8px;border-bottom:1px solid var(--border-bright, var(--line-2));white-space:nowrap}
+.x13-tbl td{padding:8px;border-bottom:1px solid var(--border, var(--line));vertical-align:top;color:var(--text)}
+.x13-tbl td.x13-mono{white-space:nowrap}
+.x13-tbl tr.click{cursor:pointer} .x13-tbl tr.click:hover td{background:var(--bg-panel-2, var(--bg-2))}
+.x13-v{font-size:10px;font-weight:800;letter-spacing:.8px;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.x13-v.ontime{color:var(--accent-4, var(--green));background:rgba(34,197,94,.12)}
+.x13-v.late{color:var(--accent-3, var(--red));background:rgba(239,68,68,.12)}
+.x13-v.open{color:var(--accent-2, var(--amber));background:rgba(245,158,11,.12)}
+.x13-v.over{color:#fff;background:var(--accent-3, var(--red))}
+.x13-v.next{color:var(--accent);border:1px solid var(--accent)}
+.x13-mono{font-family:'JetBrains Mono','IBM Plex Mono',monospace}
+.x13-status{font-size:11.5px;min-height:16px;color:var(--text-dim, var(--text-2))}
+.x13-status.err{color:var(--accent-3, var(--red))} .x13-status.ok{color:var(--accent-4, var(--green))}
+.x13-prev{max-height:300px;overflow:auto;border:1px solid var(--border, var(--line));border-radius:4px}
+.x13-prev table{width:100%;border-collapse:collapse;font-size:11.5px}
+.x13-prev th,.x13-prev td{padding:6px 8px;border-bottom:1px solid var(--border, var(--line));text-align:left;white-space:nowrap}
+.x13-prev th{background:var(--bg-panel-2, var(--bg-2));color:var(--text-muted, var(--text-3));font-size:10px;letter-spacing:1px;text-transform:uppercase;position:sticky;top:0}
+.x13-prev .ok{color:var(--accent-4, var(--green))} .x13-prev .warn{color:var(--accent-2, var(--amber))} .x13-prev .err{color:var(--accent-3, var(--red))}
+@media (max-width:600px){
+  .x13-row > label{min-width:0;flex-basis:100%}
+  .x13-row .x13-in{flex:1 1 100%}
+  .x13-row .x13-btn{flex:1 1 auto}
+  .x13-item{grid-template-columns:24px minmax(0,1fr)}
+  .x13-item .r{grid-column:2;text-align:left}
+  .x13-kpi .v{font-size:17px}
+}
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   3.13 · PMX — built-in Excel (.xlsx) writer + reader and PDF writer.
+   No internet library is needed, so Excel / PDF reports also work on a
+   weak phone connection.
+     PMX.xlsx(sheets)            → Uint8Array (.xlsx, styled)
+     PMX.readSheet(file)         → Promise<rows[][]>  (.xlsx / .csv; .xls via SheetJS if loaded)
+     PMX.pdf()                   → PDF builder (A4, Helvetica, JPEG photos)
+     PMX.save(name, bytes, mime) → download
+     PMX.jpeg(blobOrB64, mime)   → Promise<{bytes,w,h}> (photo re-encoded for the PDF)
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if(window.PMX) return;
+  const enc = new TextEncoder();
+
+  /* ─── ZIP (store) ─── */
+  const CRC = (()=>{ const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(u8){ let c = 0xFFFFFFFF; for(let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function concat(arrs){ const n = arrs.reduce((a, b)=>a + b.length, 0), out = new Uint8Array(n); let o = 0; arrs.forEach(a=>{ out.set(a, o); o += a.length; }); return out; }
+  function zipStore(files){
+    const parts = [], central = []; let off = 0;
+    const d = new Date(), dtime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), ddate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    files.forEach(f=>{
+      const name = enc.encode(f.name), data = typeof f.data === 'string' ? enc.encode(f.data) : f.data, crc = crc32(data);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, dtime, true); h.setUint16(12, ddate, true); h.setUint32(14, crc, true);
+      h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+      parts.push(new Uint8Array(h.buffer), name, data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+      c.setUint16(12, dtime, true); c.setUint16(14, ddate, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true);
+      c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+      central.push(new Uint8Array(c.buffer), name);
+      off += 30 + name.length + data.length;
+    });
+    const cd = concat(central), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+    e.setUint32(12, cd.length, true); e.setUint32(16, off, true);
+    return concat(parts.concat([cd, new Uint8Array(e.buffer)]));
+  }
+
+  /* ─── XLSX writer ─── */
+  const xe = s=>String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '').replace(/[&<>"]/g, c=>({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const FONTS = [
+    '<font><sz val="10"/><color rgb="FF101828"/><name val="Calibri"/><family val="2"/></font>',             // 0 cell
+    '<font><b/><sz val="15"/><color rgb="FF1F2A44"/><name val="Calibri"/><family val="2"/></font>',         // 1 title
+    '<font><i/><sz val="9"/><color rgb="FF667085"/><name val="Calibri"/><family val="2"/></font>',          // 2 sub / note
+    '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>',         // 3 header
+    '<font><b/><sz val="10"/><color rgb="FF1E7B34"/><name val="Calibri"/><family val="2"/></font>',         // 4 ok
+    '<font><b/><sz val="10"/><color rgb="FFB42318"/><name val="Calibri"/><family val="2"/></font>',         // 5 late
+    '<font><b/><sz val="10"/><color rgb="FF344054"/><name val="Calibri"/><family val="2"/></font>',         // 6 label / bold
+    '<font><b/><sz val="10"/><color rgb="FF5A3A00"/><name val="Calibri"/><family val="2"/></font>',         // 7 input header
+    '<font><b/><sz val="10"/><color rgb="FFB54708"/><name val="Calibri"/><family val="2"/></font>',         // 8 open / amber
+    '<font><b/><sz val="11"/><color rgb="FF1F2A44"/><name val="Calibri"/><family val="2"/></font>'];        // 9 section
+  const FILLS = ['none', 'gray125', '2D3D65', 'E6F4EA', 'FDECEC', 'FFF7DA', 'F2F4F8', 'FFF4E0', 'EDEFF3', 'F5C542', 'E8EEFB'];
+  const fillXml = f=>f === 'none' || f === 'gray125' ? `<fill><patternFill patternType="${f}"/></fill>` : `<fill><patternFill patternType="solid"><fgColor rgb="FF${f}"/><bgColor indexed="64"/></patternFill></fill>`;
+  // name: [font, fill, border, numFmt, align]
+  const ST = {
+    default: [0, 0, 0, 0, ''], title: [1, 0, 0, 0, ''], sub: [2, 0, 0, 0, ''], note: [2, 0, 0, 0, 'wrap'],
+    hdr: [3, 2, 1, 0, 'hdr'], hdrInput: [7, 9, 1, 0, 'hdr'],
+    cell: [0, 0, 1, 0, 'top'], wrap: [0, 0, 1, 0, 'wrap'], num: [0, 0, 1, 0, 'right'], date: [0, 0, 1, 164, 'center'],
+    ok: [4, 3, 1, 0, 'center'], late: [5, 4, 1, 0, 'center'], open: [8, 7, 1, 0, 'center'],
+    grey: [0, 8, 1, 0, 'top'], greyDate: [0, 8, 1, 164, 'center'],
+    input: [0, 5, 1, 49, 'top'], inputNum: [0, 5, 1, 0, 'right'],
+    label: [6, 6, 1, 0, 'top'], keyval: [0, 0, 1, 0, 'wrapl'], bold: [6, 0, 0, 0, ''], section: [9, 10, 1, 0, 'top'],
+    okPlain: [4, 0, 1, 0, 'top'], latePlain: [5, 0, 1, 0, 'top'], openPlain: [8, 0, 1, 0, 'top'] };
+  const ST_NAMES = Object.keys(ST);
+  const ALIGN = { '': '', top: '<alignment vertical="top"/>', wrap: '<alignment vertical="top" wrapText="1"/>', wrapl: '<alignment horizontal="left" vertical="top" wrapText="1"/>',
+                  right: '<alignment horizontal="right" vertical="top"/>', center: '<alignment horizontal="center" vertical="top"/>',
+                  hdr: '<alignment horizontal="center" vertical="center" wrapText="1"/>' };
+  function stylesXml(){
+    const xfs = ST_NAMES.map(n=>{ const [fo, fi, bo, nf, al] = ST[n];
+      return `<xf numFmtId="${nf}" fontId="${fo}" fillId="${fi}" borderId="${bo}" xfId="0"${nf ? ' applyNumberFormat="1"' : ''} applyFont="1"${fi ? ' applyFill="1"' : ''}${bo ? ' applyBorder="1"' : ''}${al ? ' applyAlignment="1">' + ALIGN[al] + '</xf>' : '/>'}`; });
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<numFmts count="1"><numFmt numFmtId="164" formatCode="dd\\-mm\\-yyyy"/></numFmts>'
+      + `<fonts count="${FONTS.length}">${FONTS.join('')}</fonts>`
+      + `<fills count="${FILLS.length}">${FILLS.map(fillXml).join('')}</fills>`
+      + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'
+      + '<border><left style="thin"><color rgb="FFD0D5DD"/></left><right style="thin"><color rgb="FFD0D5DD"/></right><top style="thin"><color rgb="FFD0D5DD"/></top><bottom style="thin"><color rgb="FFD0D5DD"/></bottom><diagonal/></border></borders>'
+      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+      + `<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>`
+      + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  }
+  function colName(i){ let s = ''; i++; while(i > 0){ const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  const serial = iso=>{ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? (Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 86400000 : null; };
+  function cellXml(ref, c){
+    if(c === null || c === undefined || c === '') return '';
+    let v = c, s = 'cell';
+    if(typeof c === 'object' && !(c instanceof Date)){ v = c.v; s = c.s || (c.d ? 'date' : 'cell'); if(c.d){ const n = serial(c.d); v = n === null ? c.d : n; } }
+    const si = Math.max(0, ST_NAMES.indexOf(s));
+    if(v === null || v === undefined || v === ''){ return si ? `<c r="${ref}" s="${si}"/>` : ''; }
+    if(typeof v === 'number' && isFinite(v)) return `<c r="${ref}" s="${si}"><v>${v}</v></c>`;
+    if(typeof v === 'boolean') return `<c r="${ref}" s="${si}" t="b"><v>${v ? 1 : 0}</v></c>`;
+    return `<c r="${ref}" s="${si}" t="inlineStr"><is><t xml:space="preserve">${xe(v)}</t></is></c>`;
+  }
+  function sheetXml(sh, idx){
+    const rows = sh.rows || [], ncol = Math.max(1, (sh.cols || []).length, ...rows.map(r=>(r || []).length));
+    const dim = `A1:${colName(ncol - 1)}${Math.max(1, rows.length)}`;
+    let pane = '';
+    if(sh.freeze && (sh.freeze.r || sh.freeze.c)){
+      const r = sh.freeze.r || 0, c = sh.freeze.c || 0, tl = colName(c) + (r + 1);
+      const ap = r && c ? 'bottomRight' : r ? 'bottomLeft' : 'topRight';
+      pane = `<pane${c ? ` xSplit="${c}"` : ''}${r ? ` ySplit="${r}"` : ''} topLeftCell="${tl}" activePane="${ap}" state="frozen"/><selection pane="${ap}" activeCell="${tl}" sqref="${tl}"/>`;
+    }
+    const cols = (sh.cols || []).length ? '<cols>' + sh.cols.map((w, i)=>`<col min="${i + 1}" max="${i + 1}" width="${+w || 10}" customWidth="1"/>`).join('') + '</cols>' : '';
+    const hts = sh.heights || {};
+    const data = rows.map((r, i)=>{
+      const cells = (r || []).map((c, j)=>cellXml(colName(j) + (i + 1), c)).join('');
+      const ht = hts[i] ? ` ht="${hts[i]}" customHeight="1"` : '';
+      return cells || ht ? `<row r="${i + 1}"${ht}>${cells}</row>` : '';
+    }).join('');
+    const merges = (sh.merges || []).length ? `<mergeCells count="${sh.merges.length}">${sh.merges.map(m=>`<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '';
+    const dv = (sh.lists || []).filter(x=>x.options && x.options.length && x.options.join(',').length < 250);
+    const dvx = dv.length ? `<dataValidations count="${dv.length}">${dv.map(x=>`<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Pick from the list" error="Choose one of: ${xe(x.options.join(', ').slice(0, 200))}" sqref="${x.ref}"><formula1>"${xe(x.options.map(o=>String(o).replace(/"/g, "'")).join(','))}"</formula1></dataValidation>`).join('')}</dataValidations>` : '';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+      + (sh.tab ? `<sheetPr><tabColor rgb="FF${sh.tab}"/><pageSetUpPr fitToPage="1"/></sheetPr>` : '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>')
+      + `<dimension ref="${dim}"/><sheetViews><sheetView${idx === 0 ? ' tabSelected="1"' : ''} zoomScaleNormal="100" workbookViewId="0">${pane}</sheetView></sheetViews>`
+      + '<sheetFormatPr defaultRowHeight="15"/>' + cols + `<sheetData>${data}</sheetData>`
+      + (sh.filter ? `<autoFilter ref="${sh.filter}"/>` : '') + merges + dvx
+      + '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>'
+      + `<pageSetup paperSize="9" orientation="${sh.portrait ? 'portrait' : 'landscape'}" fitToWidth="1" fitToHeight="0"/></worksheet>`;
+  }
+  function safeSheet(n, used){ let s = String(n || 'Sheet').replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31).trim() || 'Sheet'; let k = 2, b = s; while(used.has(s.toLowerCase())){ s = (b.slice(0, 28) + ' ' + k++); } used.add(s.toLowerCase()); return s; }
+  function xlsx(sheets){
+    const used = new Set(); sheets.forEach(s=>{ s._name = safeSheet(s.name, used); });
+    const q = n=>`'${n.replace(/'/g, "''")}'`;
+    const names = [];
+    sheets.forEach((s, i)=>{
+      if(s.filter){ const [a, b] = s.filter.split(':'); const abs = r=>r.replace(/^([A-Z]+)(\d+)$/, '$$$1$$$2'); names.push(`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">${q(s._name)}!${abs(a)}:${abs(b)}</definedName>`); }
+      if(s.printTitle) names.push(`<definedName name="_xlnm.Print_Titles" localSheetId="${i}">${q(s._name)}!$${s.printTitle}:$${s.printTitle}</definedName>`);
+    });
+    const files = [
+      { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+          + sheets.map((s, i)=>`<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+          + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
+      { name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>' },
+      { name: 'docProps/core.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+          + `<dc:title>${xe(sheets[0] && sheets[0].title || 'ITC Haridwar PM')}</dc:title><dc:creator>ITC Haridwar · COT PM</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().replace(/\.\d+Z$/, 'Z')}</dcterms:created></cp:coreProperties>` },
+      { name: 'xl/workbook.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets>'
+          + sheets.map((s, i)=>`<sheet name="${xe(s._name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets>'
+          + (names.length ? `<definedNames>${names.join('')}</definedNames>` : '') + '</workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+          + sheets.map((s, i)=>`<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')
+          + `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { name: 'xl/styles.xml', data: stylesXml() }]
+      .concat(sheets.map((s, i)=>({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(s, i) })));
+    return zipStore(files);
+  }
+
+  /* ─── XLSX / CSV reader → rows[][] (first sheet) ─── */
+  async function inflateRaw(u8){
+    if(typeof DecompressionStream === 'undefined') throw new Error('this browser cannot open .xlsx here — update the browser, or save the sheet as CSV');
+    const ds = new DecompressionStream('deflate-raw');
+    const buf = await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+    return new Uint8Array(buf);
+  }
+  async function unzip(u8){
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    let eo = -1; for(let i = u8.length - 22; i >= Math.max(0, u8.length - 70000); i--){ if(dv.getUint32(i, true) === 0x06054b50){ eo = i; break; } }
+    if(eo < 0) throw new Error('not an Excel .xlsx file');
+    const n = dv.getUint16(eo + 10, true); let p = dv.getUint32(eo + 16, true);
+    const dec = new TextDecoder(), out = {};
+    for(let k = 0; k < n; k++){
+      if(dv.getUint32(p, true) !== 0x02014b50) break;
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+      const name = dec.decode(u8.subarray(p + 46, p + 46 + nl));
+      out[name] = { method, csize, lo };
+      p += 46 + nl + xl + cl;
+    }
+    return async name=>{
+      const e = out[name] || out[Object.keys(out).find(k=>k.toLowerCase() === String(name).toLowerCase())];
+      if(!e) return null;
+      const lnl = dv.getUint16(e.lo + 26, true), lxl = dv.getUint16(e.lo + 28, true), st = e.lo + 30 + lnl + lxl;
+      const raw = u8.subarray(st, st + e.csize);
+      const data = e.method === 8 ? await inflateRaw(raw) : raw;
+      return dec.decode(data);
+    };
+  }
+  const tags = (doc, t)=>Array.from(doc.getElementsByTagNameNS('*', t));
+  function refRC(ref){ const m = /^([A-Z]+)(\d+)$/.exec(ref || ''); if(!m) return null; let c = 0; for(const ch of m[1]) c = c * 26 + ch.charCodeAt(0) - 64; return [+m[2] - 1, c - 1]; }
+  async function readXlsx(u8){
+    const get = await unzip(u8), P = new DOMParser();
+    const wbx = await get('xl/workbook.xml'); if(!wbx) throw new Error('not an Excel .xlsx file');
+    const wb = P.parseFromString(wbx, 'application/xml');
+    const first = tags(wb, 'sheet')[0]; if(!first) throw new Error('the workbook has no sheet');
+    const rid = first.getAttribute('r:id') || first.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+    let target = 'worksheets/sheet1.xml';
+    const relx = await get('xl/_rels/workbook.xml.rels');
+    if(relx){ const rel = tags(P.parseFromString(relx, 'application/xml'), 'Relationship').find(r=>r.getAttribute('Id') === rid); if(rel) target = rel.getAttribute('Target'); }
+    const path = target.startsWith('/') ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
+    const ssx = await get('xl/sharedStrings.xml');
+    const SS = ssx ? tags(P.parseFromString(ssx, 'application/xml'), 'si').map(si=>tags(si, 't').filter(t=>!(t.parentNode && t.parentNode.localName === 'rPh')).map(t=>t.textContent).join('')) : [];
+    const shx = await get(path); if(!shx) throw new Error('could not open the first sheet');
+    const sh = P.parseFromString(shx, 'application/xml'), rows = [];
+    tags(sh, 'row').forEach((row, ri)=>{
+      const rn = (+row.getAttribute('r') || ri + 1) - 1, arr = rows[rn] = rows[rn] || [];
+      let ci = 0;
+      tags(row, 'c').forEach(c=>{
+        const rc = refRC(c.getAttribute('r')); if(rc) ci = rc[1];
+        const t = c.getAttribute('t') || 'n', vEl = tags(c, 'v')[0], v = vEl ? vEl.textContent : '';
+        let val = '';
+        if(t === 's') val = SS[+v] || '';
+        else if(t === 'inlineStr') val = tags(c, 't').map(x=>x.textContent).join('');
+        else if(t === 'b') val = v === '1';
+        else if(t === 'str' || t === 'e' || t === 'd') val = v;
+        else val = v === '' ? '' : +v;
+        arr[ci++] = val;
+      });
+    });
+    for(let i = 0; i < rows.length; i++) if(!rows[i]) rows[i] = [];
+    return rows;
+  }
+  function parseCsv(text){
+    text = String(text).replace(/^﻿/, ''); const rows = []; let row = [], cur = '', q = false;
+    const sep = (text.split('\n')[0].match(/;/g) || []).length > (text.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
+    for(let i = 0; i < text.length; i++){
+      const c = text[i];
+      if(q){ if(c === '"'){ if(text[i + 1] === '"'){ cur += '"'; i++; } else q = false; } else cur += c; }
+      else if(c === '"') q = true;
+      else if(c === sep){ row.push(cur); cur = ''; }
+      else if(c === '\n' || c === '\r'){ if(c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if(cur !== '' || row.length){ row.push(cur); rows.push(row); }
+    return rows;
+  }
+  function readSheet(file){
+    return new Promise((res, rej)=>{
+      const name = String(file && file.name || '').toLowerCase(), r = new FileReader();
+      r.onerror = ()=>rej(new Error('could not read the file'));
+      if(/\.csv$|\.txt$/.test(name)){ r.onload = ()=>res(parseCsv(r.result)); r.readAsText(file); return; }
+      r.onload = async ()=>{
+        const u8 = new Uint8Array(r.result);
+        try{ res(await readXlsx(u8)); }
+        catch(e){
+          try{
+            if(window.XLSX && XLSX.read && XLSX.utils && XLSX.utils.sheet_to_json){
+              const wb = XLSX.read(u8, { type: 'array' });
+              return res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' }));
+            }
+          }catch(e2){ /* fall through */ }
+          rej(e);
+        }
+      };
+      r.readAsArrayBuffer(file);
+    });
+  }
+  // Cell helpers for imports: dates in any common form → ISO; times → HH:MM
+  const pad = n=>String(n).padStart(2, '0');
+  const MONS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+  function toIsoDate(v){
+    if(v === null || v === undefined || v === '') return '';
+    if(v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())}`;
+    if(typeof v === 'number' || /^\d{5}(\.\d+)?$/.test(String(v).trim())){
+      const n = Math.floor(+v); if(n < 20000 || n > 80000) return null;
+      const d = new Date(Date.UTC(1899, 11, 30) + n * 86400000); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+    }
+    const s = String(v).trim().replace(/T\d{2}:\d{2}.*$/, '').replace(/\s+\d{1,2}[:.]\d{2}(:\d{2})?(\s*[AaPp][Mm])?$/, '').trim(); let m, y, mo, d;
+    if((m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(s))){ y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else if((m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/.exec(s))){ d = +m[1]; mo = +m[2]; y = +m[3]; }
+    else if((m = /^(\d{1,2})[-/. ]([A-Za-z]{3,4})[A-Za-z]*[-/. ,]*(\d{2,4})$/.exec(s))){ d = +m[1]; mo = MONS[m[2].toLowerCase()]; y = +m[3]; }
+    else return null;
+    if(y < 100) y += 2000;
+    const t = new Date(y, mo - 1, d);
+    if(!mo || isNaN(t) || t.getMonth() !== mo - 1 || t.getDate() !== d) return null;
+    return `${y}-${pad(mo)}-${pad(d)}`;
+  }
+  function toHHMM(v){
+    if(v === null || v === undefined || v === '') return '';
+    if(typeof v === 'number' || /^0?\.\d+$|^0$/.test(String(v).trim())){ let f = (+v) % 1; if(f < 0) f += 1; let mins = Math.round(f * 1440); if(mins >= 1440) mins = 0; return `${pad(Math.floor(mins / 60))}:${pad(mins % 60)}`; }
+    const s = String(v).trim(), m = /(\d{1,2})[:.](\d{2})(?::\d{2})?\s*([AaPp][Mm])?\s*$/.exec(s);
+    if(!m) return null;
+    let h = +m[1]; const mi = +m[2];
+    if(m[3]){ const pm = /p/i.test(m[3]); if(h === 12) h = pm ? 12 : 0; else if(pm) h += 12; }
+    if(h > 23 || mi > 59) return null;
+    return `${pad(h)}:${pad(mi)}`;
+  }
+  const cellText = v=>v === null || v === undefined ? '' : typeof v === 'number' ? String(Math.round(v * 1e9) / 1e9) : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : String(v).trim();
+
+  /* ─── PDF writer ─── */
+  const WH = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584,350,556,350,222,556,333,1000,556,556,333,1000,667,333,1000,350,611,350,350,222,222,333,333,350,556,1000,333,1000,500,333,944,350,500,667,278,333,556,556,556,556,260,556,333,737,370,556,584,333,737,333,400,584,333,333,333,556,537,278,333,333,365,556,834,834,834,611,667,667,667,667,667,667,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,556,556,556,556,556,556,556,584,611,556,556,556,556,500,556,500];
+  const WB = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584,350,556,350,278,556,500,1000,556,556,333,1000,667,333,1000,350,611,350,350,278,278,500,500,350,556,1000,333,1000,556,333,944,350,500,667,278,333,556,556,556,556,280,556,333,737,370,556,584,333,737,333,400,584,333,333,333,611,556,278,333,333,365,556,834,834,834,611,722,722,722,722,722,722,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,556,556,556,556,556,278,278,278,278,611,611,611,611,611,611,611,584,611,611,611,611,611,556,611,556];
+  const WIN = { 0x20AC: 128, 0x201A: 130, 0x0192: 131, 0x201E: 132, 0x2026: 133, 0x2020: 134, 0x2021: 135, 0x02C6: 136, 0x2030: 137, 0x0160: 138, 0x2039: 139, 0x0152: 140, 0x017D: 142,
+                0x2018: 145, 0x2019: 146, 0x201C: 147, 0x201D: 148, 0x2022: 149, 0x2013: 150, 0x2014: 151, 0x02DC: 152, 0x2122: 153, 0x0161: 154, 0x203A: 155, 0x0153: 156, 0x017E: 158, 0x0178: 159 };
+  const SUB = { '\u03A9': 'ohm', '\u2126': 'ohm', '\u00B5': '\u00B5', '→': '->', '←': '<-', '✓': 'OK', '✔': 'OK', '✗': 'x', '✕': 'x', '≤': '<=', '≥': '>=', '₹': 'Rs ', '●': '•', '▸': '>', '▍': '|', '⚠': '!', '…': '...', '≈': '~', '−': '-', '′': "'", '″': '"' };
+  function winAnsi(s){
+    let out = '';
+    for(const ch of String(s == null ? '' : s)){
+      const c = ch.codePointAt(0);
+      if(c >= 32 && c < 127) out += ch;
+      else if(c >= 160 && c <= 255) out += String.fromCharCode(c);
+      else if(WIN[c]) out += String.fromCharCode(WIN[c]);
+      else if(SUB[ch] !== undefined) out += winAnsi(SUB[ch]);
+      else if(c === 9 || c === 10 || c === 13) out += ' ';
+      else if((c >= 0xFE00 && c <= 0xFE0F) || c === 0x200D || c === 0x200B || (c >= 0x1F000 && c <= 0x1FAFF) || (c >= 0x2600 && c <= 0x27BF) || (c >= 0x2190 && c <= 0x21FF) || (c >= 0x2700 && c <= 0x27BF)) {}
+      else out += '?';
+    }
+    return out;
+  }
+  const hexRgb = h=>{ h = String(h || '000000').replace('#', ''); return [0, 2, 4].map(i=>(parseInt(h.slice(i, i + 2), 16) / 255).toFixed(3)).join(' '); };
+  const pesc = s=>s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  function pdf(){
+    const W = 595.28, H = 841.89;
+    const P = { W, H, pages: [], imgs: [], cur: null, info: { title: 'Report' } };
+    const f2 = n=>(Math.round(n * 100) / 100).toString();
+    P.newPage = ()=>{ P.cur = []; P.pages.push(P.cur); return P; };
+    P.width = (s, size, bold)=>{ const t = winAnsi(s), w = bold ? WB : WH; let n = 0; for(let i = 0; i < t.length; i++){ const c = t.charCodeAt(i); n += c >= 32 ? (w[c - 32] || 556) : 0; } return n * (size || 10) / 1000; };
+    P.rect = (x, y, w, h, o = {})=>{
+      let s = '';
+      if(o.fill) s += `${hexRgb(o.fill)} rg `;
+      if(o.stroke) s += `${hexRgb(o.stroke)} RG ${f2(o.lw || 0.6)} w `;
+      s += `${f2(x)} ${f2(H - y - h)} ${f2(w)} ${f2(h)} re ` + (o.fill && o.stroke ? 'B' : o.fill ? 'f' : 'S');
+      P.cur.push(s);
+    };
+    P.line = (x1, y1, x2, y2, o = {})=>{ P.cur.push(`${hexRgb(o.color || 'D0D5DD')} RG ${f2(o.lw || 0.6)} w ${f2(x1)} ${f2(H - y1)} m ${f2(x2)} ${f2(H - y2)} l S`); };
+    P.text = (s, x, y, o = {})=>{
+      const size = o.size || 10, bold = !!o.bold; let t = String(s == null ? '' : s);
+      if(o.maxW && P.width(t, size, bold) > o.maxW){ while(t.length > 1 && P.width(t + '…', size, bold) > o.maxW) t = t.slice(0, -1); t += '…'; }
+      let xx = x; const w = P.width(t, size, bold);
+      if(o.align === 'right') xx = x - w; else if(o.align === 'center') xx = x - w / 2;
+      P.cur.push(`BT /${bold ? 'F2' : 'F1'} ${f2(size)} Tf ${hexRgb(o.color || '101828')} rg ${f2(xx)} ${f2(H - y)} Td (${pesc(winAnsi(t))}) Tj ET`);
+      return w;
+    };
+    P.wrap = (s, maxW, size, bold)=>{
+      const out = [];
+      String(s == null ? '' : s).split(/\n/).forEach(para=>{
+        const words = para.split(/\s+/).filter(Boolean); let line = '';
+        if(!words.length){ out.push(''); return; }
+        words.forEach(wd=>{
+          const t = line ? line + ' ' + wd : wd;
+          if(P.width(t, size, bold) <= maxW){ line = t; return; }
+          if(line) out.push(line);
+          let rest = wd;
+          while(P.width(rest, size, bold) > maxW && rest.length > 1){ let k = rest.length; while(k > 1 && P.width(rest.slice(0, k), size, bold) > maxW) k--; out.push(rest.slice(0, k)); rest = rest.slice(k); }
+          line = rest;
+        });
+        if(line) out.push(line);
+      });
+      return out;
+    };
+    P.addJpeg = (bytes, w, h)=>{ const im = { name: 'Im' + (P.imgs.length + 1), bytes, w, h }; P.imgs.push(im); return im; };
+    P.image = (im, x, y, w, h)=>{ P.cur.push(`q ${f2(w)} 0 0 ${f2(h)} ${f2(x)} ${f2(H - y - h)} cm /${im.name} Do Q`); };
+    P.output = ()=>{
+      const chunks = [], offs = []; let len = 0;
+      const push = x=>{ const u = typeof x === 'string' ? Uint8Array.from(x, c=>c.charCodeAt(0) & 255) : x; chunks.push(u); len += u.length; };
+      const objs = [];   // [id, bodyString | {dict, stream}]
+      const nImg = P.imgs.length, nPg = P.pages.length;
+      const idF1 = 3, idF2 = 4, idInfo = 5, img0 = 6, pg0 = img0 + nImg;   // each page = content id, page id
+      push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+      const obj = (id, body)=>{ offs[id] = len; push(`${id} 0 obj\n`); if(typeof body === 'string') push(body); else { push(body.dict.replace('%LEN%', body.stream.length)); push('\nstream\n'); push(body.stream); push('\nendstream'); } push('\nendobj\n'); };
+      const kids = []; for(let i = 0; i < nPg; i++) kids.push(`${pg0 + i * 2 + 1} 0 R`);
+      obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+      obj(2, `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${nPg} >>`);
+      obj(idF1, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+      obj(idF2, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+      const d = new Date(), ds = `D:${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+      obj(idInfo, `<< /Title (${pesc(winAnsi(P.info.title))}) /Producer (ITC Haridwar COT PM) /Creator (ITC Haridwar COT PM) /CreationDate (${ds}) >>`);
+      P.imgs.forEach((im, i)=>obj(img0 + i, { dict: `<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length %LEN% >>`, stream: im.bytes }));
+      const xo = nImg ? ` /XObject << ${P.imgs.map((im, i)=>`/${im.name} ${img0 + i} 0 R`).join(' ')} >>` : '';
+      P.pages.forEach((pg, i)=>{
+        const content = Uint8Array.from(pg.join('\n'), c=>c.charCodeAt(0) & 255);
+        obj(pg0 + i * 2, { dict: '<< /Length %LEN% >>', stream: content });
+        obj(pg0 + i * 2 + 1, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${idF1} 0 R /F2 ${idF2} 0 R >>${xo} >> /Contents ${pg0 + i * 2} 0 R >>`);
+      });
+      const n = pg0 + nPg * 2, xref = len;
+      let x = `xref\n0 ${n}\n0000000000 65535 f \n`;
+      for(let i = 1; i < n; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+      push(x + `trailer\n<< /Size ${n} /Root 1 0 R /Info ${idInfo} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+      return concat(chunks);
+    };
+    return P.newPage();
+  }
+  // Any photo (Blob or base64) → baseline RGB JPEG ≤ max px for the PDF
+  function jpeg(src, mime, max){
+    max = max || 1400;
+    return new Promise((res, rej)=>{
+      let url;
+      try{
+        const blob = src instanceof Blob ? src : (()=>{ const bin = atob(src); const a = new Uint8Array(bin.length); for(let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type: mime || 'image/jpeg' }); })();
+        url = URL.createObjectURL(blob);
+      }catch(e){ return rej(e); }
+      const img = new Image();
+      img.onload = ()=>{
+        try{
+          const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+          const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+          const b64 = cv.toDataURL('image/jpeg', 0.8).split(',')[1], bin = atob(b64), a = new Uint8Array(bin.length);
+          for(let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+          URL.revokeObjectURL(url); res({ bytes: a, w, h });
+        }catch(e){ URL.revokeObjectURL(url); rej(e); }
+      };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error('photo could not be read')); };
+      img.src = url;
+    });
+  }
+  function save(name, bytes, mime){
+    const blob = new Blob([bytes], { type: mime || 'application/octet-stream' });
+    PMX.last = { name, mime, size: blob.size, bytes };
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 8000);
+  }
+  const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const PMX = window.PMX = { xlsx, readSheet, readXlsx, parseCsv, toIsoDate, toHHMM, cellText, pdf, jpeg, save, winAnsi, colName, XLSX_MIME, last: null };
+})();
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   3.13 · PM History Reports (shared by Motor PM and Panel PM)
+   Page "📄 Reports": pick an area / unit and a motor / panel (or all of
+   them), see every PM with its result and the NEXT DUE date, then
+     ⤓ Excel  — formatted workbook: Summary + PM History (all checklist values)
+     ⤓ PDF    — A4 report: summary, history, and every done PM with its
+                checklist values, remarks and the check-sheet photos.
+   The module supplies an adapter (areas, equipment, history, next due…).
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if(window.X13R) return;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const z = n => String(n).padStart(2, '0');
+  const dmy = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+  const dt = iso => { if(!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : `${z(d.getDate())}-${z(d.getMonth() + 1)}-${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  const hm = iso => { if(!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : `${z(d.getHours())}:${z(d.getMinutes())}`; };
+  const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
+  const dayDiff = (a, b) => Math.round((Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10)) - Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10))) / 86400000);
+  const me = () => { const u = window.__pmCurrentUser; return u ? (u.email || u.uid) : ''; };
+  const safeFile = s => String(s || '').replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 60);
+
+  function stats(eq, rows, A){
+    const done = rows.filter(r => r.done), on = done.filter(r => r.v && r.v.k === 'ontime').length, late = done.filter(r => r.v && r.v.k === 'late').length;
+    const over = rows.filter(r => !r.done && r.st === 'OVERDUE').length;
+    const last = done.map(r => r.done).sort().pop() || '';
+    const nx = A.next(eq) || {};
+    const mt = done.map(r => +r.mttr).filter(x => x > 0);
+    return { done: done.length, on, late, pct: done.length ? Math.round(on / done.length * 100) : null, over, last, next: nx.date || '', nextOver: !!nx.overdue, nextEst: !!nx.est,
+             mttr: mt.length ? Math.round(mt.reduce((a, b) => a + b, 0) / mt.length) : null };
+  }
+  function resultOf(r){
+    if(r.done) return r.v ? { t: r.v.t, k: r.v.k } : { t: 'DONE', k: 'ontime' };
+    if(r.next && r.st !== 'OVERDUE') return { t: 'NEXT DUE', k: 'next' };
+    if(r.st === 'OVERDUE') return { t: 'OVERDUE', k: 'over' };
+    return { t: r.st || 'OPEN', k: 'open' };
+  }
+  function nextText(s){ if(!s.next) return '—'; return dmy(s.next) + (s.nextOver ? ' (OVERDUE)' : s.nextEst ? ' (next cycle)' : ''); }
+
+  /* ─── UI ─── */
+  function mount(A){
+    const page = $('page-reports'); if(!page) return;
+    const S = A.state = A.state || { area: '', eq: '', q: '', period: '', photos: true };
+    page.innerHTML = (A.pageHead || '') + `
+      <div class="x13-card" style="padding:16px" id="x13r-top">
+        <div class="x13-body" style="padding:0">
+          <div class="x13-row"><label>${esc(A.L.area)}</label><select class="x13-in x13-grow" id="x13r-area"></select></div>
+          <div class="x13-row"><label>${esc(A.L.equip)}</label><select class="x13-in x13-grow" id="x13r-eq"></select></div>
+          <div class="x13-row"><label>Search</label><input class="x13-in x13-grow" id="x13r-q" placeholder="${esc(A.L.searchPh)}" autocomplete="off"></div>
+          <div class="x13-row"><label>Period</label><select class="x13-in x13-grow" id="x13r-period"></select></div>
+          <div class="x13-row"><button class="x13-btn" id="x13r-xlsx" onclick="X13R.excel()">⤓ Excel</button><button class="x13-btn" id="x13r-pdf" onclick="X13R.pdf()">⤓ PDF report</button>
+            <label class="x13-note" style="display:flex;align-items:center;gap:6px;min-width:0;text-transform:none;letter-spacing:0;font-weight:400;font-size:12px"><input type="checkbox" id="x13r-photos" checked style="width:16px;height:16px;accent-color:var(--accent)"> with check-sheet photos</label></div>
+          <div class="x13-status" id="x13r-status"></div>
+        </div>
+      </div>
+      <div class="x13-kpis" id="x13r-kpis" style="margin-bottom:14px"></div>
+      <div class="x13-card" style="padding:0"><div style="padding:12px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b id="x13r-ttl" style="color:var(--text)"></b><span class="x13-note" id="x13r-sub"></span></div>
+        <div class="x13-tbl-wrap" style="border:0;border-top:1px solid var(--border, var(--line));border-radius:0"><table class="x13-tbl" id="x13r-tbl"></table></div></div>`;
+    $('x13r-area').addEventListener('change', e => { S.area = e.target.value; S.eq = ''; render(); });
+    $('x13r-eq').addEventListener('change', e => { S.eq = e.target.value; render(); });
+    $('x13r-q').addEventListener('input', e => { S.q = e.target.value; render(); });
+    $('x13r-period').addEventListener('change', e => { S.period = e.target.value; render(); });
+    $('x13r-photos').addEventListener('change', e => { S.photos = e.target.checked; });
+    $('x13r-q').value = S.q; $('x13r-photos').checked = S.photos;
+    A.mounted = true;
+  }
+  let A = null;
+  function selection(){
+    const S = A.state, q = S.q.trim().toLowerCase();
+    let eqs = A.equipment().filter(e => !S.area || e.area === S.area);
+    if(S.eq) eqs = eqs.filter(e => String(e.id) === String(S.eq));
+    else if(q) eqs = eqs.filter(e => (e.name + ' ' + e.code + ' ' + e.areaLabel + ' ' + e.id).toLowerCase().includes(q));
+    return eqs;
+  }
+  function inPeriod(r){
+    const p = A.state.period; if(!p) return true;
+    const d = r.done || r.planned;
+    if(p === '12m'){ const t = new Date(); t.setFullYear(t.getFullYear() - 1); const lo = `${t.getFullYear()}-${z(t.getMonth() + 1)}-${z(t.getDate())}`; return r.next || d >= lo; }
+    if(/^FY/.test(p)) return r.next || A.fyOf(d) === p;
+    return true;
+  }
+  function historyOf(eq){ return A.history(eq).filter(inPeriod); }
+  function render(){
+    if(!A) return; const page = $('page-reports'); if(!page) return;
+    if(!A.mounted || !$('x13r-area')) mount(A);
+    if(!page.classList.contains('active')) return;
+    const S = A.state;
+    const areas = A.areas();
+    const ae = $('x13r-area'); ae.innerHTML = `<option value="">All ${esc(A.L.areas)}</option>` + areas.map(a => `<option value="${esc(a.v)}">${esc(a.l)}</option>`).join(''); ae.value = S.area; if(ae.value !== S.area){ S.area = ''; ae.value = ''; }
+    const q = S.q.trim().toLowerCase();
+    const inArea = A.equipment().filter(e => !S.area || e.area === S.area);
+    const opts = inArea.filter(e => !q || String(e.id) === String(S.eq) || (e.name + ' ' + e.code + ' ' + e.areaLabel).toLowerCase().includes(q));
+    const ee = $('x13r-eq'); ee.innerHTML = `<option value="">All ${esc(A.L.equips)}${S.area ? ' in this ' + esc(A.L.area.toLowerCase()) : ''} (${opts.length})</option>` + opts.map(e => `<option value="${esc(e.id)}">${esc(e.code)} · ${esc(e.name)}</option>`).join(''); ee.value = S.eq; if(ee.value !== String(S.eq)){ S.eq = ''; ee.value = ''; }
+    const pe = $('x13r-period'), fys = A.fys(); pe.innerHTML = '<option value="">All history</option><option value="12m">Last 12 months</option>' + fys.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join(''); pe.value = S.period; if(pe.value !== S.period){ S.period = ''; pe.value = ''; }
+    const eqs = selection();
+    const single = eqs.length === 1 && S.eq;
+    $('x13r-pdf').disabled = !eqs.length; $('x13r-xlsx').disabled = !eqs.length;
+    const kp = $('x13r-kpis'), tb = $('x13r-tbl');
+    if(!eqs.length){ kp.innerHTML = ''; $('x13r-ttl').textContent = 'Nothing matches'; $('x13r-sub').textContent = ''; tb.innerHTML = ''; return; }
+    if(single){
+      const eq = eqs[0], rows = historyOf(eq), s = stats(eq, rows, A);
+      kp.innerHTML = kpis(s);
+      $('x13r-ttl').textContent = `${eq.code} · ${eq.name}`;
+      $('x13r-sub').textContent = `${eq.areaLabel} · ${eq.freqLabel}${eq.cat ? ' · cat ' + eq.cat : ''} · ${rows.length} PM${rows.length === 1 ? '' : 's'} listed`;
+      tb.innerHTML = `<thead><tr><th>PM</th><th>Planned</th><th>Done on</th><th>Result</th><th>MTTR</th><th>Done by</th><th>📎</th></tr></thead><tbody>` + rows.slice().reverse().map(r => { const R = resultOf(r); const fl = A.files(r);
+        return `<tr class="${r.done ? 'click' : ''}" ${r.done ? `onclick="X13R.open(${esc(JSON.stringify(r.key))})"` : ''}><td class="x13-mono" style="font-size:11px">${esc(r.pm)}</td><td class="x13-mono">${dmy(r.planned)}</td><td class="x13-mono">${dmy(r.done) || '—'}</td>
+          <td><span class="x13-v ${R.k}">${esc(R.t)}</span>${r.done && r.v && r.v.days ? `<div class="x13-note">${r.v.days > 0 ? '+' : ''}${r.v.days} d</div>` : ''}</td><td class="x13-mono">${r.mttr ? r.mttr + ' m' : '—'}</td><td style="font-size:11px">${esc(String(r.by || '').split('@')[0]) || '—'}</td><td>${fl && fl.length ? fl.length : ''}</td></tr>`; }).join('') + '</tbody>';
+      if(!rows.length) tb.innerHTML += '<tbody><tr><td colspan="7" class="x13-note" style="padding:18px">No PMs in this period.</td></tr></tbody>';
+    } else {
+      const all = eqs.map(eq => ({ eq, s: stats(eq, historyOf(eq), A) }));
+      const T = all.reduce((t, x) => { t.done += x.s.done; t.on += x.s.on; t.late += x.s.late; t.over += x.s.over; return t; }, { done: 0, on: 0, late: 0, over: 0 });
+      const nd = all.map(x => x.s.next).filter(Boolean).sort()[0] || '';
+      kp.innerHTML = kpis({ done: T.done, on: T.on, late: T.late, pct: T.done ? Math.round(T.on / T.done * 100) : null, over: T.over, last: all.map(x => x.s.last).filter(Boolean).sort().pop() || '', next: nd, nextOver: !!nd && nd < todayIso(), n: eqs.length });
+      $('x13r-ttl').textContent = `${eqs.length} ${eqs.length === 1 ? A.L.equip.toLowerCase() : A.L.equips}`;
+      $('x13r-sub').textContent = 'Tap one to see its PM history · Excel covers all of them · PDF: pick one for the full report with photos';
+      const LIM = 400;
+      tb.innerHTML = `<thead><tr><th>${esc(A.L.equip)}</th><th>${esc(A.L.area)}</th><th>Freq</th><th>Done</th><th>On time</th><th>Late</th><th>Overdue</th><th>Last done</th><th>Next due</th></tr></thead><tbody>` + all.slice(0, LIM).map(({ eq, s }) =>
+        `<tr class="click" onclick="X13R.pick(${esc(JSON.stringify(String(eq.id)))})"><td><b>${esc(eq.name)}</b><div class="x13-note x13-mono">${esc(eq.code)}</div></td><td style="font-size:11px">${esc(eq.areaLabel)}</td><td><span class="x13-pill ${esc(eq.freq)}">${esc(eq.freq)}</span></td>
+          <td class="x13-mono">${s.done}</td><td class="x13-mono" style="color:var(--accent-4, var(--green))">${s.on}</td><td class="x13-mono" style="color:${s.late ? 'var(--accent-3, var(--red))' : 'inherit'}">${s.late}</td><td class="x13-mono" style="color:${s.over ? 'var(--accent-3, var(--red))' : 'inherit'}">${s.over}</td>
+          <td class="x13-mono">${dmy(s.last) || '—'}</td><td class="x13-mono">${s.next ? `<span class="x13-v ${s.nextOver ? 'over' : 'next'}">${dmy(s.next)}</span>` : '—'}</td></tr>`).join('')
+        + (all.length > LIM ? `<tr><td colspan="9" class="x13-note">… ${all.length - LIM} more — narrow the ${esc(A.L.area.toLowerCase())} or search (Excel includes all)</td></tr>` : '') + '</tbody>';
+    }
+  }
+  function kpis(s){
+    const k = (l, v, c, sub) => `<div class="x13-kpi"><div class="l">${l}</div><div class="v ${c || ''}">${v}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
+    return (s.n ? k(A.L.equips, s.n) : '') + k('PMs done', s.done) + k('On time', s.on, 'ok') + k('Late', s.late, s.late ? 'bad' : '') + k('On-time %', s.pct == null ? '—' : s.pct + '%', s.pct == null ? '' : s.pct >= 90 ? 'ok' : s.pct >= 70 ? 'warn' : 'bad')
+      + k('Overdue now', s.over, s.over ? 'bad' : 'ok') + k('Last done', dmy(s.last) || '—') + k('Next due', s.next ? dmy(s.next) : '—', s.nextOver ? 'bad' : '', s.nextOver ? 'OVERDUE' : s.nextEst ? 'next cycle (est.)' : '')
+      + (s.mttr != null ? k('MTTR avg', s.mttr + ' min') : '');
+  }
+  function status(t, c){ const el = $('x13r-status'); if(el){ el.textContent = t || ''; el.className = 'x13-status' + (c ? ' ' + c : ''); } }
+
+  /* ─── Excel ─── */
+  function checklistCols(rowsAll){
+    const defs = (A.checklistDefs() || []).map(d => ({ id: d.id, l: d.label + (d.unit ? ` (${d.unit})` : '') }));
+    const known = new Set(defs.map(d => d.id));
+    rowsAll.forEach(r => { const cl = (r.e && r.e.checklist) || {}; Object.keys(cl).forEach(k => { if(!known.has(k) && cl[k] !== '' && cl[k] != null){ known.add(k); defs.push({ id: k, l: k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()) }); } }); });
+    return defs;
+  }
+  function excel(){
+    const eqs = selection(); if(!eqs.length) return;
+    try{
+      status('Building Excel…');
+      const T = todayIso(), gen = `Generated ${dt(new Date().toISOString())}${me() ? ' by ' + me() : ''} · ${A.L.area}: ${A.state.area ? A.areaLabel(A.state.area) : 'All'} · Period: ${periodLabel()}`;
+      const data = eqs.map(eq => { const rows = historyOf(eq); return { eq, rows, s: stats(eq, rows, A) }; });
+      const rowsAll = data.flatMap(x => x.rows), cols = checklistCols(rowsAll);
+      // Summary
+      const sh1 = ['Code', A.L.equip, A.L.area, 'Category', 'Frequency', 'PMs done', 'On time', 'Late', 'On-time %', 'Overdue now', 'Last done', 'Next due', 'Next due status'];
+      const sum = [[{ v: `ITC Haridwar · COT — ${A.L.module} PM history · Summary`, s: 'title' }], [{ v: gen, s: 'sub' }], [], sh1.map(h => ({ v: h, s: 'hdr' }))];
+      data.forEach(({ eq, s }) => sum.push([{ v: eq.code, s: 'cell' }, { v: eq.name, s: 'cell' }, { v: eq.areaLabel, s: 'cell' }, { v: eq.cat || '', s: 'cell' }, { v: eq.freqLabel, s: 'cell' },
+        { v: s.done, s: 'num' }, { v: s.on, s: 'num' }, { v: s.late, s: s.late ? 'late' : 'num' }, { v: s.pct == null ? '' : s.pct / 100, s: 'num' }, { v: s.over, s: s.over ? 'late' : 'num' },
+        s.last ? { d: s.last, s: 'date' } : { v: '', s: 'cell' }, s.next ? { d: s.next, s: s.nextOver ? 'late' : 'date' } : { v: '', s: 'cell' },
+        { v: !s.next ? '' : s.nextOver ? 'OVERDUE' : s.nextEst ? 'Next cycle (est.)' : `in ${dayDiff(s.next, T)} days`, s: !s.next ? 'cell' : s.nextOver ? 'late' : 'ok' }]));
+      sum.forEach(r => { if(r[8] && typeof r[8].v === 'number') r[8] = { v: Math.round(r[8].v * 100) + '%', s: 'num' }; });
+      const sheet1 = { name: 'Summary', title: `${A.L.module} PM history`, cols: [11, 34, 22, 9, 16, 9, 9, 9, 10, 11, 12, 12, 16], rows: sum, merges: ['A1:M1', 'A2:M2'], freeze: { r: 4, c: 2 }, filter: `A4:M${Math.max(5, 4 + data.length)}`, printTitle: 4, heights: { 0: 24 }, tab: '2D3D65' };
+      // History
+      const base = ['Code', A.L.equip, A.L.area, 'PM', 'Planned', 'Done on', 'Result', 'Days vs plan', 'PM start', 'PM stop', 'MTTR (min)'].concat(A.hasBd ? ['B/D (h)'] : []).concat(['Done by', 'Remarks', 'Files']);
+      const H = base.concat(cols.map(c => c.l));
+      const hist = [[{ v: `ITC Haridwar · COT — ${A.L.module} PM history · every PM with checklist values`, s: 'title' }], [{ v: gen + ' · Result: ON TIME / LATE for done PMs, OVERDUE / NEXT DUE for open ones', s: 'sub' }], H.map((h, i) => ({ v: h, s: i >= base.length ? 'hdrInput' : 'hdr' }))];
+      data.forEach(({ eq, rows }) => rows.forEach(r => {
+        const R = resultOf(r), cl = (r.e && r.e.checklist) || {}, fl = A.files(r);
+        const rs = R.k === 'ontime' ? 'ok' : R.k === 'late' || R.k === 'over' ? 'late' : 'open';
+        hist.push([{ v: eq.code, s: 'cell' }, { v: eq.name, s: 'cell' }, { v: eq.areaLabel, s: 'cell' }, { v: r.pm, s: 'cell' }, r.planned ? { d: r.planned, s: 'date' } : { v: '', s: 'cell' },
+          r.done ? { d: r.done, s: 'date' } : { v: '', s: 'cell' }, { v: R.t, s: rs }, { v: r.done && r.v && r.v.days != null ? r.v.days : '', s: 'num' },
+          { v: dt(r.start), s: 'cell' }, { v: dt(r.stop), s: 'cell' }, { v: r.mttr ? +r.mttr : '', s: 'num' }]
+          .concat(A.hasBd ? [{ v: r.bd != null && r.bd !== '' ? +r.bd : '', s: 'num' }] : [])
+          .concat([{ v: r.by || '', s: 'cell' }, { v: r.remarks || '', s: 'wrap' }, { v: fl && fl.length ? fl.length : '', s: 'num' }])
+          .concat(cols.map(c => { const v = cl[c.id]; return { v: v == null ? '' : (/^-?\d+(\.\d+)?$/.test(String(v).trim()) ? +v : String(v)), s: 'cell' }; })));
+      }));
+      const lastCol = PMX.colName(H.length - 1);
+      const sheet2 = { name: 'PM History', cols: [11, 30, 20, 20, 12, 12, 11, 9, 16, 16, 9].concat(A.hasBd ? [8] : []).concat([22, 30, 6]).concat(cols.map(c => Math.min(28, Math.max(12, c.l.length + 2)))),
+        rows: hist, merges: [`A1:${lastCol}1`, `A2:${lastCol}2`], freeze: { r: 3, c: 2 }, filter: `A3:${lastCol}${Math.max(4, hist.length)}`, printTitle: 3, heights: { 0: 24, 2: 30 }, tab: 'F5C542' };
+      const name = `${A.L.module}_PM_Report_${eqs.length === 1 ? safeFile(eqs[0].code + '_' + eqs[0].name) : safeFile(A.state.area ? A.areaLabel(A.state.area) : 'All')}_${T}.xlsx`;
+      PMX.save(name, PMX.xlsx([sheet1, sheet2]), PMX.XLSX_MIME);
+      status(`✓ ${name} · ${eqs.length} ${eqs.length === 1 ? A.L.equip.toLowerCase() : A.L.equips} · ${rowsAll.length} PM rows`, 'ok');
+    }catch(err){ console.error(err); status('Excel failed: ' + (err.message || err), 'err'); }
+  }
+  function periodLabel(){ const p = A.state.period; return !p ? 'All history' : p === '12m' ? 'Last 12 months' : p; }
+
+  /* ─── PDF ─── */
+  async function fetchFileB64(item){
+    const fs = window.__pmScanFs, fb = window.__pmFirebase; if(!fs || !fb || !fb.db) throw new Error('not connected');
+    const parts = item.parts || 1, snaps = await Promise.all(Array.from({ length: parts }, (_, k) => fs.getDoc(fs.doc(fb.db, 'itc_pm', `scandata_${item.id}_${k}`))));
+    return snaps.map((s, k) => { if(!s.exists()) throw new Error(`part ${k + 1} missing`); return (s.data() || {}).d || ''; }).join('');
+  }
+  async function waitFiles(rows){
+    const need = rows.filter(r => r.done);
+    need.forEach(r => A.files(r));
+    for(let i = 0; i < 40; i++){ if(need.every(r => A.files(r) !== undefined)) return; await new Promise(res => setTimeout(res, 150)); }
+  }
+  async function pdf(){
+    const eqs = selection(); if(!eqs.length) return;
+    const btn = $('x13r-pdf'); btn.disabled = true;
+    try{
+      const withPhotos = $('x13r-photos').checked && eqs.length <= 5;
+      status(`Building PDF… ${withPhotos ? 'fetching check-sheet photos' : ''}`);
+      const data = eqs.map(eq => { const rows = historyOf(eq); return { eq, rows, s: stats(eq, rows, A) }; });
+      if(withPhotos) await waitFiles(data.flatMap(x => x.rows));
+      const P = PMX.pdf(); P.info.title = `${A.L.module} PM report`;
+      const M = 34, W = P.W - 2 * M, BOT = P.H - 44;
+      let y = 0;
+      const gen = `Generated ${dt(new Date().toISOString())}${me() ? ' · ' + me() : ''}`;
+      const head = () => { P.rect(0, 0, P.W, 46, { fill: '1F2A44' }); P.text(`ITC Haridwar · COT — ${A.L.module} PM history report`, M, 28, { size: 13, bold: true, color: 'FFFFFF' }); P.text(gen, P.W - M, 28, { size: 7.5, color: 'C9D2E3', align: 'right' }); y = 66; };
+      const page = () => { P.newPage(); head(); };
+      const need = h => { if(y + h > BOT){ page(); return true; } return false; };
+      head();
+      const kbox = (items, h) => { const n = items.length, gap = 6, w = (W - gap * (n - 1)) / n; need(h + 8);
+        items.forEach(([l, v, c], i) => { const x = M + i * (w + gap); P.rect(x, y, w, h, { fill: 'F2F4F8', stroke: 'D0D5DD' }); P.text(String(l).toUpperCase(), x + 7, y + 13, { size: 6.8, bold: true, color: '667085', maxW: w - 12 }); P.text(v, x + 7, y + 31, { size: 12, bold: true, color: c || '101828', maxW: w - 12 }); });
+        y += h + 12; };
+      const section = t => { need(30); P.rect(M, y, W, 18, { fill: 'E8EEFB' }); P.text(t, M + 7, y + 12.5, { size: 9.5, bold: true, color: '1F2A44' }); y += 26; };
+      const RC = { ontime: '1E7B34', late: 'B42318', over: 'B42318', open: 'B54708', next: '1F4FB4' };
+      function table(cols, rows){
+        const hdr = () => { need(18); P.rect(M, y, W, 16, { fill: '2D3D65' }); let x = M; cols.forEach(c => { P.text(c.h, x + 4, y + 11, { size: 7.5, bold: true, color: 'FFFFFF', maxW: c.w - 6 }); x += c.w; }); y += 16; };
+        hdr();
+        rows.forEach((r, i) => {
+          if(y + 15 > BOT){ page(); hdr(); }
+          if(i % 2) P.rect(M, y, W, 15, { fill: 'F7F8FA' });
+          let x = M; cols.forEach((c, j) => { const v = r[j]; const o = typeof v === 'object' && v ? v : { t: v };
+            P.text(o.t == null ? '' : String(o.t), x + 4, y + 10.5, { size: 7.8, bold: !!o.b, color: o.c || '101828', maxW: c.w - 6 }); x += c.w; });
+          P.line(M, y + 15, M + W, y + 15, { color: 'E4E7EC', lw: 0.4 }); y += 15;
+        });
+        y += 8;
+      }
+      // multi → summary page first
+      if(data.length > 1){
+        P.text(`${data.length} ${A.L.equips}${A.state.area ? ' · ' + A.areaLabel(A.state.area) : ''}`, M, y + 4, { size: 15, bold: true }); y += 14;
+        P.text(`Period: ${periodLabel()}${!withPhotos && $('x13r-photos').checked ? ' · photos are included when 5 or fewer are selected' : ''}`, M, y + 8, { size: 8.5, color: '667085' }); y += 22;
+        const T = data.reduce((t, x) => { t.done += x.s.done; t.on += x.s.on; t.late += x.s.late; t.over += x.s.over; return t; }, { done: 0, on: 0, late: 0, over: 0 });
+        kbox([['PMs done', String(T.done)], ['On time', String(T.on), '1E7B34'], ['Late', String(T.late), T.late ? 'B42318' : ''], ['On-time %', T.done ? Math.round(T.on / T.done * 100) + '%' : '—'], ['Overdue now', String(T.over), T.over ? 'B42318' : '1E7B34']], 40);
+        section('Summary');
+        const cw = [58, 150, 92, 34, 34, 34, 36, 45, W - 483];
+        table([{ h: 'Code', w: cw[0] }, { h: A.L.equip, w: cw[1] }, { h: A.L.area, w: cw[2] }, { h: 'Done', w: cw[3] }, { h: 'On time', w: cw[4] }, { h: 'Late', w: cw[5] }, { h: 'Overdue', w: cw[6] }, { h: 'Last done', w: cw[7] }, { h: 'Next due', w: cw[8] }],
+          data.map(({ eq, s }) => [eq.code, { t: eq.name, b: true }, eq.areaLabel, s.done, { t: s.on, c: '1E7B34' }, { t: s.late, c: s.late ? 'B42318' : '' }, { t: s.over, c: s.over ? 'B42318' : '' }, dmy(s.last) || '—', { t: nextText(s), c: s.nextOver ? 'B42318' : '1F4FB4', b: true }]));
+      }
+      let photoN = 0, photoFail = 0;
+      for(let qi = 0; qi < data.length; qi++){
+        const { eq, rows, s } = data[qi];
+        if(data.length > 1 || qi > 0) page();
+        P.text(eq.name, M, y + 6, { size: 16, bold: true, maxW: W }); y += 20;
+        P.text(`${eq.code} · ${eq.areaLabel}${eq.cat ? ' · Category ' + eq.cat : ''} · ${eq.freqLabel}`, M, y + 4, { size: 9, color: '475467', maxW: W }); y += 18;
+        kbox([['PMs done', String(s.done)], ['On time', String(s.on), '1E7B34'], ['Late', String(s.late), s.late ? 'B42318' : ''], ['On-time %', s.pct == null ? '—' : s.pct + '%'], ['Last done', dmy(s.last) || '—'],
+              ['Next due', s.next ? dmy(s.next) : '—', s.nextOver ? 'B42318' : '1F4FB4']], 40);
+        if(s.next){ need(16); P.text(s.nextOver ? `NEXT DUE ${dmy(s.next)} — OVERDUE by ${dayDiff(todayIso(), s.next)} day(s)` : s.nextEst ? `Next due ${dmy(s.next)} — next cycle (all PMs of this cycle are done)` : `Next due ${dmy(s.next)} — in ${dayDiff(s.next, todayIso())} day(s)`, M, y + 2, { size: 9, bold: true, color: s.nextOver ? 'B42318' : '1F4FB4' }); y += 16; }
+        section(`PM history · ${periodLabel()} · ${rows.length} PM${rows.length === 1 ? '' : 's'}`);
+        const cw = [96, 54, 54, 58, 40, 110, 30, W - 442];
+        table([{ h: 'PM', w: cw[0] }, { h: 'Planned', w: cw[1] }, { h: 'Done on', w: cw[2] }, { h: 'Result', w: cw[3] }, { h: 'MTTR', w: cw[4] }, { h: 'Done by', w: cw[5] }, { h: 'Files', w: cw[6] }, { h: 'Remarks', w: cw[7] }],
+          rows.map(r => { const R = resultOf(r), fl = A.files(r); return [r.pm, dmy(r.planned), dmy(r.done) || '—', { t: R.t, c: RC[R.k], b: true }, r.mttr ? r.mttr + ' min' : '—', String(r.by || '').split('@')[0] || '—', fl && fl.length ? String(fl.length) : '', r.remarks || '']; }));
+        const done = rows.filter(r => r.done).slice().reverse();
+        if(done.length) section(`PM records · checklist values${withPhotos ? ' and check-sheet photos' : ''} · newest first`);
+        for(const r of done){
+          const R = resultOf(r);
+          need(60);
+          P.rect(M, y, W, 20, { fill: 'F2F4F8', stroke: 'D0D5DD' });
+          P.text(`${r.pm}`, M + 7, y + 13.5, { size: 9.5, bold: true, color: '1F2A44' });
+          P.text(`Done ${dmy(r.done)}  ·  planned ${dmy(r.planned)}`, M + 175, y + 13.5, { size: 8.5, color: '344054' });
+          P.text(R.t, M + W - 8, y + 13.5, { size: 9, bold: true, color: RC[R.k], align: 'right' }); y += 26;
+          const facts = [['PM start', dt(r.start) || '—'], ['PM stop', dt(r.stop) || '—'], ['MTTR', r.mttr ? r.mttr + ' min' : '—']].concat(A.hasBd ? [['Breakdown', r.bd != null && r.bd !== '' ? r.bd + ' h' : '—']] : []).concat([['Done by', r.by || '—'], ['Days vs plan', r.v && r.v.days != null ? (r.v.days > 0 ? '+' : '') + r.v.days : '—']]);
+          const cl = A.checklistOf(r);
+          const pairs = facts.concat(cl.map(c => [c.l, c.v + (c.u ? ' ' + c.u : '')]));
+          const colW = W / 2;
+          for(let i = 0; i < pairs.length; i += 2){
+            const L1 = P.wrap(pairs[i][1], colW - 128, 8.3), L2 = pairs[i + 1] ? P.wrap(pairs[i + 1][1], colW - 128, 8.3) : [];
+            const h = Math.max(L1.length, L2.length, 1) * 10 + 5;
+            need(h);
+            [pairs[i], pairs[i + 1]].forEach((p, j) => { if(!p) return; const x = M + j * colW; P.text(p[0], x + 4, y + 9, { size: 7.8, bold: true, color: '475467', maxW: 118 }); (j ? L2 : L1).forEach((ln, k) => P.text(ln, x + 124, y + 9 + k * 10, { size: 8.3 })); });
+            P.line(M, y + h, M + W, y + h, { color: 'EEF0F3', lw: 0.4 }); y += h;
+          }
+          if(r.remarks){ const L = P.wrap('Remarks: ' + r.remarks, W - 8, 8.5); need(L.length * 11 + 6); L.forEach((ln, k) => P.text(ln, M + 4, y + 11 + k * 11, { size: 8.5, color: '344054' })); y += L.length * 11 + 6; }
+          const fl = A.files(r) || [];
+          const imgs = fl.filter(f => f.kind === 'image' || /^image\//.test(f.type || '')), others = fl.filter(f => imgs.indexOf(f) < 0);
+          if(others.length){ const L = P.wrap('Attached: ' + others.map(f => `${f.name} (${f.kind === 'pdf' ? 'PDF' : 'file'})`).join(' · ') + ' — open them in the app', W - 8, 8); need(L.length * 10 + 4); L.forEach((ln, k) => P.text(ln, M + 4, y + 10 + k * 10, { size: 8, color: '667085' })); y += L.length * 10 + 4; }
+          if(withPhotos && imgs.length){
+            const bw = (W - 10) / 2, bh = 230; let col = 0;
+            for(const f of imgs){
+              status(`Building PDF… photo ${++photoN}`);
+              let im = null;
+              try{ const b64 = await fetchFileB64(f); const j = await PMX.jpeg(b64, f.type || 'image/jpeg', 1100); im = P.addJpeg(j.bytes, j.w, j.h); im._w = j.w; im._h = j.h; }catch(e){ photoFail++; console.warn('[report photo]', e); }
+              if(col === 0) need(bh + 22);
+              const x = M + col * (bw + 10);
+              if(im){ const k = Math.min(bw / im._w, bh / im._h), w = im._w * k, h = im._h * k; P.rect(x, y, bw, bh, { stroke: 'D0D5DD' }); P.image(im, x + (bw - w) / 2, y + (bh - h) / 2, w, h); }
+              else { P.rect(x, y, bw, bh, { fill: 'F7F8FA', stroke: 'D0D5DD' }); P.text('Photo could not be loaded', x + bw / 2, y + bh / 2, { size: 8, color: '667085', align: 'center' }); }
+              P.text(f.name || 'photo', x + 2, y + bh + 10, { size: 7.3, color: '667085', maxW: bw - 4 });
+              col++; if(col === 2){ col = 0; y += bh + 18; }
+            }
+            if(col) y += bh + 18;
+          }
+          y += 8;
+        }
+      }
+      // footer on every page
+      const N = P.pages.length;
+      P.pages.forEach((pg, i) => { P.cur = pg; P.line(M, P.H - 30, P.W - M, P.H - 30, { color: 'D0D5DD', lw: 0.5 }); P.text(`ITC Haridwar · COT PM module · ${A.L.module} PM · ${window.__motorBuild || window.__panelBuild || ''}`, M, P.H - 18, { size: 7, color: '98A2B3' }); P.text(`Page ${i + 1} of ${N}`, P.W - M, P.H - 18, { size: 7.5, color: '667085', align: 'right' }); });
+      const T = todayIso();
+      const name = `${A.L.module}_PM_Report_${eqs.length === 1 ? safeFile(eqs[0].code + '_' + eqs[0].name) : safeFile(A.state.area ? A.areaLabel(A.state.area) : 'All')}_${T}.pdf`;
+      PMX.save(name, P.output(), 'application/pdf');
+      status(`✓ ${name} · ${N} page${N === 1 ? '' : 's'}${photoN ? ` · ${photoN - photoFail} photo${photoN - photoFail === 1 ? '' : 's'}` : ''}${photoFail ? ` · ${photoFail} photo${photoFail === 1 ? '' : 's'} could not be loaded` : ''}`, photoFail ? 'err' : 'ok');
+    }catch(err){ console.error(err); status('PDF failed: ' + (err.message || err), 'err'); }
+    finally{ btn.disabled = false; }
+  }
+
+  window.X13R = {
+    use(adapter){ A = adapter; A.state = A.state || { area: '', eq: '', q: '', period: '', photos: true }; },
+    render, excel, pdf, dmy, dt, hm, dayDiff, todayIso,
+    pick(id){ if(!A) return; A.state.eq = String(id); A.state.q = ''; const q = $('x13r-q'); if(q) q.value = ''; render(); const t = $('page-reports'); if(t) t.scrollIntoView({ block: 'start' }); },
+    open(key){ if(A && A.openRecord) A.openRecord(key); },
+    select(o){ if(!A) return; Object.assign(A.state, o || {}); const q = $('x13r-q'); if(q) q.value = A.state.q || ''; render(); },
+    _stats: (eq) => stats(eq, historyOf(eq), A), _history: eq => historyOf(eq), _selection: () => selection()
+  };
+})();
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   3.13 · Bulk Mark Done from Excel — with EVERY checklist point
+   (shared by Motor PM and Panel PM)
+   Template (.xlsx): grey columns = the PM (do not change), yellow columns
+   = what you fill: Actual Date, PM Start / Stop, [B/D Start / Stop], Done by,
+   Remarks and one column per checklist field (dropdowns for pick lists).
+   Upload: the file is checked row by row and shown first (NEW / UPDATE /
+   error with the reason); nothing is saved until "Commit".
+     USER  : done date within the last 7 days; a PM already done can be
+             changed only inside its 7-day edit window.
+     ADMIN : any past date, any PM; required fields not enforced.
+   Blank rows are skipped. Existing values are kept unless a cell has a
+   new value. Every update is stamped (edits) and audited.
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if(window.X13I) return;
+  const WINDOW = 7;
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const z = n => String(n).padStart(2, '0');
+  const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`; };
+  const dmy = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+  const dayDiff = (a, b) => Math.round((Date.UTC(+a.slice(0, 4), +a.slice(5, 7) - 1, +a.slice(8, 10)) - Date.UTC(+b.slice(0, 4), +b.slice(5, 7) - 1, +b.slice(8, 10))) / 86400000);
+  const hmOf = iso => { if(!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : `${z(d.getHours())}:${z(d.getMinutes())}`; };
+  const dtOf = iso => { if(!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : `${z(d.getDate())}-${z(d.getMonth() + 1)}-${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+  const me = () => { const u = window.__pmCurrentUser; return u ? (u.email || u.uid) : 'unknown'; };
+  const admin = () => typeof isAdmin === 'function' && isAdmin();
+  const has = v => v !== null && v !== undefined && String(v).trim() !== '';
+  const norm = s => String(s == null ? '' : s).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[*✱]/g, ' ').replace(/[_\s]+/g, ' ').trim();
+  const nk = s => norm(s).replace(/[^a-z0-9]/g, '');
+
+  /* ─── Template ─── */
+  function template(A, scope){
+    const defs = A.fields() || [], rows = A.rows(scope), T = todayIso();
+    const info = A.infoHeads;
+    const inputs = ['Actual Date (DD-MM-YYYY)', 'PM Start (HH:MM)', 'PM Stop (HH:MM)'].concat(A.hasBd ? ['B/D Start (DD-MM-YYYY HH:MM)', 'B/D Stop (DD-MM-YYYY HH:MM)'] : []).concat(['Done by', 'Remarks']);
+    const clHead = defs.map(d => d.label + (d.unit ? ` (${d.unit})` : '') + (d.required ? ' *' : ''));
+    const H = [A.L.key].concat(info, ['Planned', 'Status'], inputs, clHead);
+    const nFix = 1 + info.length + 2, lastCol = PMX.colName(H.length - 1);
+    const out = [
+      [{ v: `ITC Haridwar · COT — ${A.L.module} PM · Bulk Mark Done with checklist`, s: 'title' }],
+      [{ v: `Fill the YELLOW columns for each PM you completed; leave a row blank to skip it. Grey columns identify the PM — do not change them. Dates DD-MM-YYYY · times HH:MM (24 h). Columns marked * are required for users. ${admin() ? 'Admin: any past date.' : 'Users: done date within the last 7 days.'} Generated ${dtOf(new Date().toISOString())} by ${me()} · ${rows.length} PM rows (${A.scopes.find(s => s.v === scope).l}).`, s: 'note' }],
+      H.map((h, i) => ({ v: h, s: i < nFix ? 'hdr' : 'hdrInput' }))];
+    rows.forEach(r => {
+      const e = r.e || null, cl = (e && e.checklist) || {};
+      const row = [{ v: String(r.key), s: 'grey' }].concat(r.info.map(v => ({ v: v == null ? '' : v, s: 'grey' })), [r.planned ? { d: r.planned, s: 'greyDate' } : { v: '', s: 'grey' }, { v: r.status || '', s: 'grey' }]);
+      const inp = [e && e.actualDate ? dmy(e.actualDate) : '', hmOf(e && e.pmStart), hmOf(e && e.pmStop)].concat(A.hasBd ? [dtOf(e && e.bdStart), dtOf(e && e.bdStop)] : []).concat([e ? (e.loggedBy || e.submittedBy || '') : '', e ? (e.remarks || '') : '']);
+      inp.forEach(v => row.push({ v, s: 'input' }));
+      defs.forEach(d => { const v = cl[d.id]; row.push({ v: v == null ? '' : String(v), s: 'input' }); });
+      out.push(row);
+    });
+    for(let i = 0; i < 3 && rows.length === 0; i++) out.push(H.map((h, j) => ({ v: '', s: j < nFix ? 'grey' : 'input' })));
+    const last = Math.max(out.length, 4) + 200;
+    const lists = [];
+    defs.forEach((d, i) => { if(d.type === 'select' && Array.isArray(d.options) && d.options.length){ const c = PMX.colName(nFix + inputs.length + i); lists.push({ ref: `${c}4:${c}${last}`, options: d.options }); } });
+    const widths = [A.keyWidth || 20].concat(A.infoWidths, [12, 11], [14, 11, 11].concat(A.hasBd ? [18, 18] : []).concat([20, 28]), defs.map(d => Math.min(26, Math.max(12, (d.label || '').length + 4))));
+    const sheet1 = { name: 'PM Upload', cols: widths, rows: out, merges: [`A1:${lastCol}1`, `A2:${lastCol}2`], freeze: { r: 3, c: 1 }, heights: { 0: 24, 1: 44, 2: 34 }, lists, printTitle: 3, tab: 'F5C542' };
+    const help = [[{ v: 'How to fill the PM Upload sheet', s: 'title' }], [],
+      [{ v: 'Column', s: 'hdr' }, { v: 'What to enter', s: 'hdr' }],
+      [{ v: A.L.key, s: 'label' }, { v: 'Identifies the PM. Keep as downloaded. Rows can be deleted or re-ordered.', s: 'keyval' }],
+      [{ v: 'Actual Date', s: 'label' }, { v: 'Date the PM was done, DD-MM-YYYY (e.g. 05-10-2026). Required to mark a PM done.', s: 'keyval' }],
+      [{ v: 'PM Start / PM Stop', s: 'label' }, { v: 'Time HH:MM, 24 hours (e.g. 09:30 and 11:15). Duration (MTTR) is calculated. A stop earlier than the start is taken as the next day.', s: 'keyval' }]]
+      .concat(A.hasBd ? [[{ v: 'B/D Start / Stop', s: 'label' }, { v: 'Breakdown start and stop, DD-MM-YYYY HH:MM (a time alone uses the Actual Date).', s: 'keyval' }]] : [])
+      .concat([[{ v: 'Done by', s: 'label' }, { v: 'Name or e-mail of the person who did the PM. Blank = the person uploading.', s: 'keyval' }],
+        [{ v: 'Remarks', s: 'label' }, { v: 'Free text.', s: 'keyval' }],
+        [{ v: 'Checklist columns', s: 'label' }, { v: 'One column per checklist point below. Pick-list columns have a dropdown. Leave blank to keep what is already saved.', s: 'keyval' }],
+        [{ v: 'Who can upload', s: 'label' }, { v: 'Users: done dates within the last 7 days; a PM already done can be changed only within 7 days of its done date. Admin: any date, any PM.', s: 'keyval' }],
+        [], [{ v: 'Checklist field', s: 'hdr' }, { v: 'Type · options / unit · required', s: 'hdr' }]])
+      .concat(defs.map(d => [{ v: d.label, s: 'label' }, { v: `${d.type || 'text'}${d.options ? ' · ' + d.options.join(' / ') : ''}${d.unit ? ' · unit ' + d.unit : ''}${d.required ? ' · required *' : ''}`, s: 'keyval' }]));
+    const sheet2 = { name: 'How to fill', cols: [26, 90], rows: help, portrait: true, tab: '2D3D65' };
+    const name = `${A.L.module}_PM_Upload_${scope}_${T}.xlsx`;
+    PMX.save(name, PMX.xlsx([sheet1, sheet2]), PMX.XLSX_MIME);
+    return { name, rows: rows.length, cols: H.length };
+  }
+
+  /* ─── Parse ─── */
+  function objects(rows){
+    let hi = -1;
+    for(let i = 0; i < Math.min(rows.length, 12); i++){ if((rows[i] || []).some(c => /^(pm id|pmid|panel pm id|pm_id)$/.test(norm(c)))){ hi = i; break; } }
+    if(hi < 0) return null;
+    const heads = rows[hi].map(h => PMX.cellText(h));
+    return { heads, data: rows.slice(hi + 1).map((r, i) => ({ n: hi + i + 2, cells: r || [] })) };
+  }
+  function toStamp(raw, dayIso){
+    if(!has(raw)) return '';
+    let date = dayIso, time = null;
+    if(typeof raw === 'number'){ if(raw >= 1){ date = PMX.toIsoDate(raw) || dayIso; } time = PMX.toHHMM(raw); }
+    else {
+      const s = String(raw).trim(), m = /^(.*?)[\sT]+(\d{1,2}[:.]\d{2}(?::\d{2})?\s*([AaPp][Mm])?)$/.exec(s);
+      if(m && PMX.toIsoDate(m[1])){ date = PMX.toIsoDate(m[1]); time = PMX.toHHMM(m[2]); }
+      else time = PMX.toHHMM(s);
+    }
+    if(!time || !date) return null;
+    const d = new Date(`${date}T${time}:00`); return isNaN(d) ? null : d;
+  }
+  function parse(A, rows){
+    const o = objects(rows);
+    if(!o) return { error: `No "${A.L.key}" column found. Use the Excel template from this page (the header row must contain "${A.L.key}").` };
+    const defs = A.fields() || [];
+    const col = {}; const H = o.heads.map(norm), HK = o.heads.map(nk);
+    const find = names => { for(const n of names){ const i = H.indexOf(n); if(i >= 0) return i; } return -1; };
+    col.key = find(['pm id', 'pmid', 'panel pm id', 'pm_id']);
+    col.actual = find(['actual date', 'done on', 'date done', 'actual', 'completion date']);
+    col.ps = find(['pm start', 'start']); col.pp = find(['pm stop', 'stop', 'pm end']);
+    col.bs = find(['b/d start', 'bd start', 'breakdown start']); col.bp = find(['b/d stop', 'bd stop', 'breakdown stop']);
+    col.by = find(['done by', 'by']); col.rm = find(['remarks', 'remark', 'notes']);
+    const cmap = defs.map(d => { let i = H.indexOf(norm(d.label)); if(i < 0) i = HK.indexOf(nk(d.label)); if(i < 0) i = HK.indexOf(nk(d.id)); return { d, i }; });
+    const T = todayIso(), adm = admin(), seen = new Set(), items = [];
+    let blank = 0;
+    o.data.forEach(({ n, cells }) => {
+      const g = i => i >= 0 ? cells[i] : '';
+      const keyRaw = PMX.cellText(g(col.key));
+      const inputs = [col.actual, col.ps, col.pp, col.bs, col.bp, col.by, col.rm].concat(cmap.map(c => c.i));
+      if(!inputs.some(i => i >= 0 && has(PMX.cellText(g(i))))){ blank++; return; }
+      const it = { n, key: keyRaw, label: '', st: 'ERR', msg: '', cl: {}, changes: [] };
+      items.push(it);
+      const bad = m => { it.st = 'ERR'; it.msg = m; };
+      if(!keyRaw){ bad(`no ${A.L.key}`); return; }
+      const rec = A.find(keyRaw);
+      if(!rec){ bad(`unknown ${A.L.key}`); return; }
+      it.key = rec.key; it.label = rec.label; it.planned = rec.planned;
+      if(seen.has(String(rec.key))){ bad('duplicate row for this PM (the first one is used)'); return; }
+      seen.add(String(rec.key));
+      const old = rec.e && rec.e.actualDate ? rec.e : null;
+      let actual = '';
+      if(has(g(col.actual))){ actual = PMX.toIsoDate(g(col.actual)); if(!actual){ bad(`Actual Date "${PMX.cellText(g(col.actual))}" not readable — use DD-MM-YYYY`); return; } }
+      else if(old) actual = old.actualDate;
+      else { bad('Actual Date is empty'); return; }
+      if(actual > T){ bad(`done date ${dmy(actual)} is in the future`); return; }
+      if(!adm){
+        if(old && Math.abs(dayDiff(T, old.actualDate)) > WINDOW){ bad(`already done on ${dmy(old.actualDate)} — the ${WINDOW}-day edit window is closed (admin only)`); return; }
+        if(dayDiff(T, actual) > WINDOW){ bad(`done date ${dmy(actual)} is more than ${WINDOW} days ago — admin only`); return; }
+      }
+      it.actual = actual;
+      // times
+      const ps = has(g(col.ps)) ? toStamp(g(col.ps), actual) : '', pp = has(g(col.pp)) ? toStamp(g(col.pp), actual) : '';
+      if(ps === null || pp === null){ bad(`PM ${ps === null ? 'Start' : 'Stop'} "${PMX.cellText(g(ps === null ? col.ps : col.pp))}" not readable — use HH:MM`); return; }
+      let pmStart = ps ? ps.toISOString() : (old ? old.pmStart || '' : ''), pmStop = pp ? pp.toISOString() : (old ? old.pmStop || '' : '');
+      if(ps && pp && pp < ps){ pp.setDate(pp.getDate() + 1); pmStop = pp.toISOString(); it.note = 'stop taken as next day'; }
+      if(ps && !pp && old && old.pmStop && new Date(old.pmStop) < ps) pmStop = '';
+      const sameMin = (a, b) => !!a && !!b && Math.abs(new Date(a) - new Date(b)) < 60000;
+      if(old && sameMin(pmStart, old.pmStart)) pmStart = old.pmStart;          // same minute → keep the saved value exactly
+      if(old && sameMin(pmStop, old.pmStop)) pmStop = old.pmStop;
+      it.pmStart = pmStart; it.pmStop = pmStop;
+      it.mttrMin = pmStart && pmStop && new Date(pmStop) > new Date(pmStart) ? Math.round((new Date(pmStop) - new Date(pmStart)) / 60000) : (pmStart || pmStop ? null : (old ? old.mttrMin ?? null : null));
+      if(A.hasBd){
+        const bs = has(g(col.bs)) ? toStamp(g(col.bs), actual) : '', bp = has(g(col.bp)) ? toStamp(g(col.bp), actual) : '';
+        if(bs === null || bp === null){ bad(`B/D ${bs === null ? 'Start' : 'Stop'} not readable — use DD-MM-YYYY HH:MM`); return; }
+        it.bdStart = bs ? bs.toISOString() : (old ? old.bdStart || '' : ''); it.bdStop = bp ? bp.toISOString() : (old ? old.bdStop || '' : '');
+        if(old && bs && old.bdStart && Math.abs(bs - new Date(old.bdStart)) < 60000) it.bdStart = old.bdStart;
+        if(old && bp && old.bdStop && Math.abs(bp - new Date(old.bdStop)) < 60000) it.bdStop = old.bdStop;
+        it.bdHrs = it.bdStart && it.bdStop && new Date(it.bdStop) > new Date(it.bdStart) ? +((new Date(it.bdStop) - new Date(it.bdStart)) / 3600000).toFixed(2) : null;
+      }
+      it.by = has(g(col.by)) ? PMX.cellText(g(col.by)) : (old ? (old.loggedBy || old.submittedBy || '') : me());
+      it.remarks = has(g(col.rm)) ? PMX.cellText(g(col.rm)) : (old ? old.remarks || '' : '');
+      // checklist
+      const oldCl = (old && old.checklist) || {}, missing = [];
+      for(const { d, i } of cmap){
+        const raw = i >= 0 ? PMX.cellText(g(i)) : '';
+        if(!raw){ if(has(oldCl[d.id])) it.cl[d.id] = oldCl[d.id]; else if(d.required) missing.push(d.label); continue; }
+        let v = raw;
+        if(d.type === 'number'){ const x = raw.replace(/,/g, '.'); if(!/^[-+]?\d*\.?\d+(e[-+]?\d+)?$/i.test(x)){ bad(`${d.label}: "${raw}" is not a number`); return; } v = String(+x); }
+        if(d.type === 'select' && Array.isArray(d.options) && d.options.length){ const opt = d.options.find(x => String(x).toLowerCase() === raw.toLowerCase()); if(!opt){ bad(`${d.label}: "${raw}" — pick one of ${d.options.join(' / ')}`); return; } v = opt; }
+        it.cl[d.id] = v;
+      }
+      Object.keys(oldCl).forEach(k => { if(!(k in it.cl) && has(oldCl[k])) it.cl[k] = oldCl[k]; });
+      if(missing.length && !adm){ bad(`required: ${missing.slice(0, 4).join(', ')}${missing.length > 4 ? '…' : ''}`); return; }
+      if(missing.length) it.note = (it.note ? it.note + ' · ' : '') + `admin: ${missing.length} required blank`;
+      it.filled = cmap.filter(c => has(it.cl[c.d.id])).length; it.total = cmap.length;
+      if(old){
+        const ch = it.changes;
+        if(old.actualDate !== actual) ch.push(`Done date: ${dmy(old.actualDate)} → ${dmy(actual)}`);
+        if((old.pmStart || '') !== pmStart || (old.pmStop || '') !== pmStop) ch.push(`PM time → ${hmOf(pmStart) || '—'}–${hmOf(pmStop) || '—'}`);
+        if(A.hasBd && ((old.bdStart || '') !== it.bdStart || (old.bdStop || '') !== it.bdStop)) ch.push('Breakdown times');
+        if((old.loggedBy || old.submittedBy || '') !== it.by) ch.push(`Done by → ${it.by}`);
+        if((old.remarks || '') !== it.remarks) ch.push('Remarks');
+        defs.forEach(d => { const a = oldCl[d.id] == null ? '' : String(oldCl[d.id]), b = it.cl[d.id] == null ? '' : String(it.cl[d.id]); if(a !== b) ch.push(`${d.label}: ${a || '—'} → ${b || '—'}`); });
+        it.st = ch.length ? 'UPDATE' : 'SAME'; it.msg = ch.length ? ch.slice(0, 3).join(' · ') + (ch.length > 3 ? ` · +${ch.length - 3} more` : '') : 'no change';
+      } else { it.st = 'NEW'; it.msg = `mark done ${dmy(actual)}`; }
+    });
+    const c = k => items.filter(x => x.st === k).length;
+    return { items, blank, n: { NEW: c('NEW'), UPDATE: c('UPDATE'), SAME: c('SAME'), ERR: c('ERR') }, unmatched: cmap.filter(c => c.i < 0).map(c => c.d.label) };
+  }
+
+  /* ─── Preview + commit ─── */
+  const PENDING = {};
+  function preview(A, el, res, fileName){
+    if(res.error){ el.innerHTML = `<div class="x13-status err" style="margin-top:10px">✗ ${esc(res.error)}</div>`; return; }
+    PENDING[A.L.module] = res.items.filter(x => x.st === 'NEW' || x.st === 'UPDATE');
+    const n = res.n, ok = n.NEW + n.UPDATE;
+    const cls = { NEW: 'ok', UPDATE: 'ok', SAME: 'warn', ERR: 'err' }, ORD = { ERR: 0, UPDATE: 1, NEW: 2, SAME: 3 };   // errors and changes first
+    el.innerHTML = `<div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+      <div class="x13-note"><b>${esc(fileName || 'File')}</b> · <span class="ok" style="color:var(--accent-4, var(--green))"><b>${n.NEW}</b> new</span> · <b>${n.UPDATE}</b> update${n.UPDATE === 1 ? '' : 's'} · ${n.SAME} unchanged · <span style="color:var(--accent-3, var(--red))"><b>${n.ERR}</b> error${n.ERR === 1 ? '' : 's'}</span> · ${res.blank} blank row${res.blank === 1 ? '' : 's'} skipped
+        ${res.unmatched.length ? `<br>⚠ Checklist column${res.unmatched.length === 1 ? '' : 's'} not in the file (values kept as they are): ${esc(res.unmatched.slice(0, 6).join(', '))}${res.unmatched.length > 6 ? '…' : ''}` : ''}</div>
+      <div class="x13-prev"><table><thead><tr><th>Row</th><th>${esc(A.L.key)}</th><th>${esc(A.L.equip)}</th><th>Done on</th><th>Checklist</th><th>Result</th></tr></thead><tbody>
+        ${res.items.slice().sort((a, b) => (ORD[a.st] - ORD[b.st]) || (a.n - b.n)).slice(0, 400).map(x => `<tr><td>${x.n}</td><td class="x13-mono">${esc(x.key)}</td><td>${esc(x.label || '—')}</td><td>${x.actual ? dmy(x.actual) : '—'}</td><td>${x.total ? `${x.filled}/${x.total}` : '—'}</td>
+          <td class="${cls[x.st]}"><b>${x.st}</b> · ${esc(x.msg)}${x.note ? ` <span class="x13-note">(${esc(x.note)})</span>` : ''}</td></tr>`).join('') || '<tr><td colspan="6">No filled rows found.</td></tr>'}
+        ${res.items.length > 400 ? `<tr><td colspan="6">… ${res.items.length - 400} more rows</td></tr>` : ''}</tbody></table></div>
+      <div class="x13-row"><button class="x13-btn" ${ok ? '' : 'disabled'} onclick="X13I.commit('${A.L.module}')">✓ Commit ${ok} PM${ok === 1 ? '' : 's'}</button><button class="x13-btn ghost" onclick="X13I.cancel('${A.L.module}')">Cancel</button>
+        ${n.ERR ? '<span class="x13-note">Rows with errors are not saved — fix them in Excel and upload again.</span>' : ''}</div></div>`;
+    A._el = el;
+  }
+  const AD = {};
+  function commit(mod){
+    const A = AD[mod], items = PENDING[mod] || []; if(!A || !items.length) return;
+    if(typeof requireSignedIn === 'function' ? !requireSignedIn('Bulk upload') : (typeof requireOps === 'function' && !requireOps('bulk upload'))) return;
+    if(!confirm(`Save ${items.length} PM${items.length === 1 ? '' : 's'} from the Excel file?\n\n${items.filter(x => x.st === 'NEW').length} new Mark Done · ${items.filter(x => x.st === 'UPDATE').length} updated`)) return;
+    const at = new Date().toISOString(); let saved = 0;
+    items.forEach(it => { try{ A.apply(it, at); saved++; }catch(e){ console.warn('[bulk]', it.key, e); } });
+    A.finish(items, at);
+    delete PENDING[mod];
+    if(A._el) A._el.innerHTML = `<div class="x13-status ok" style="margin-top:10px">✓ ${saved} PM${saved === 1 ? '' : 's'} saved (${items.filter(x => x.st === 'NEW').length} new · ${items.filter(x => x.st === 'UPDATE').length} updated).</div>`;
+    if(typeof toast === 'function') toast('Bulk upload saved', `${saved} PM${saved === 1 ? '' : 's'} · checklist values included`, 'good');
+    try{
+      const fb = window.__pmFirebase;
+      if(fb && fb.setDoc && window.__pmCurrentUser){
+        const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        fb.setDoc(fb.doc(fb.db, 'itc_pm', 'pm_audit'), { items: { [id]: { module: A.auditModule, key: `Bulk upload · ${saved} PM${saved === 1 ? '' : 's'}`, action: 'import', by: me(), role: admin() ? 'admin' : 'user', at,
+          changes: items.slice(0, 60).map(x => `${x.key}: ${x.st === 'NEW' ? 'done ' + dmy(x.actual) : x.changes.slice(0, 3).join('; ')}`) } }, updatedAt: at }, { merge: true }).catch(e => console.warn('[audit]', e));
+      }
+    }catch(e){}
+  }
+  function mergeInto(old, it, at, extra){
+    const e = Object.assign({}, old || {});
+    e.actualDate = it.actual; e.pmStart = it.pmStart || ''; e.pmStop = it.pmStop || ''; e.mttrMin = it.mttrMin == null ? null : it.mttrMin;
+    e.checklist = Object.assign({}, (old && old.checklist) || {}, it.cl); e.remarks = it.remarks || '';
+    Object.assign(e, extra || {});
+    if(old){ e.editedBy = me(); e.editedAt = at; e.edits = (old.edits || []).concat([{ by: me(), at, what: 'Bulk upload: ' + it.changes.join('; ') }]).slice(-10); }
+    else { e.importedBy = me(); e.importedAt = at; }
+    return e;
+  }
+  async function upload(A, file, el){
+    if(!file) return;
+    el.innerHTML = '<div class="x13-status" style="margin-top:10px">Reading the file…</div>';
+    try{ const rows = await PMX.readSheet(file); preview(A, el, parse(A, rows), file.name); }
+    catch(e){ el.innerHTML = `<div class="x13-status err" style="margin-top:10px">✗ Could not read ${esc(file.name)}: ${esc(e.message || e)}</div>`; }
+  }
+  window.X13I = { use(A){ AD[A.L.module] = A; }, me, template, parse, preview, commit, upload, mergeInto, cancel(mod){ delete PENDING[mod]; const A = AD[mod]; if(A && A._el) A._el.innerHTML = ''; }, WINDOW,
+                  _pending: mod => PENDING[mod] };
+})();
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   3.13 · Panel PM — PM frequency + ADMIN on the Schedule page
+   • Every panel has ONE master record (as before). A panel set to
+     Half-yearly / Quarterly / Bi-monthly gets its extra PMs of the year as
+     their own rows, e.g. "MCC-5 (PM 2/2)", each with its own Mark Done,
+     checklist, check-sheet photos, Edit / Undo and Shift date.
+       Y  → 1 PM a year (as before)      HY → 2 (every 6 months)
+       Q  → 4 (every 3 months)           BM → 6 (every 2 months)
+   • Extra rows are built from the master at every refresh; only masters
+     are saved (with freq, occDates = shifted extra dates, occSkip).
+     Extra PM id = 100000 + panelId×10 + k  (k = 1…5), so the existing
+     panel ids, done PMs and check-sheets are never touched.
+   • When a frequency is set, an extra PM whose date is already past is
+     skipped (the change starts from today — nothing becomes overdue).
+   • Admin card on the Schedule page: move panels to another unit, set
+     frequency. Every change → itc_pm/pm_audit (module "panel-admin").
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const PF = { Y: { n: 1, m: 12, t: 'Yearly', s: 'YEARLY', d: 'once a year' }, HY: { n: 2, m: 6, t: 'Half-yearly', s: 'HALF-YEAR', d: 'every 6 months (2 PMs a year)' },
+               Q: { n: 4, m: 3, t: 'Quarterly', s: 'QUARTERLY', d: 'every 3 months (4 PMs a year)' }, BM: { n: 6, m: 2, t: 'Bi-monthly', s: '2-MONTHLY', d: 'every 2 months (6 PMs a year)' } };
+  const XID = (pid, k) => 100000 + pid * 10 + k;
+  const freqOf = p => { const m = p && p.parent ? (STATE.panels || []).find(x => x.id === p.parent) : p; return m && PF[m.freq] ? m.freq : 'Y'; };
+  function addMonthsIso(iso, n){ const d = isoToDate(iso); if(isNaN(d)) return iso; const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return isoDate(d); }
+  const me = () => { const u = window.__pmCurrentUser; return u ? (u.email || u.uid) : 'unknown'; };
+
+  /* ─── Extra PM rows ─── */
+  function harvest(){
+    const byId = new Map(); (STATE.panels || []).forEach(p => { if(!p.parent) byId.set(p.id, p); });
+    (STATE.panels || []).forEach(x => {
+      if(!x.parent) return; const m = byId.get(x.parent); if(!m) return;
+      if(x.pm_date && x.pm_date !== x._d){ m.occDates = Object.assign({}, m.occDates || {}); m.occDates[x.occ] = x.pm_date; x._d = x.pm_date; }
+    });
+    return byId;
+  }
+  function extrasOf(m){
+    const f = PF[m.freq] ? m.freq : 'Y', F = PF[f], out = [], skip = new Set((m.occSkip || []).map(Number));
+    for(let k = 1; k < F.n; k++){
+      if(skip.has(k)) continue;
+      const d = (m.occDates && m.occDates[k]) || addMonthsIso(m.pm_date, k * F.m);
+      out.push({ id: XID(m.id, k), parent: m.id, occ: k, area: m.area, panel: `${m.panel} (PM ${k + 1}/${F.n})`, pm_date: d, _d: d, freq: f });
+    }
+    return out;
+  }
+  function panelExpand(){
+    if(!Array.isArray(STATE.panels)) return;
+    harvest();
+    const masters = STATE.panels.filter(p => !p.parent);
+    if(!masters.some(m => PF[m.freq] && m.freq !== 'Y') && masters.length === STATE.panels.length) return;
+    const out = []; masters.forEach(m => { out.push(m); if(PF[m.freq] && m.freq !== 'Y') extrasOf(m).forEach(x => out.push(x)); });
+    STATE.panels = out;
+  }
+  window.panelExpand = panelExpand;
+  window.panelMasters = function(){ harvest(); return (STATE.panels || []).filter(p => !p.parent); };
+  window.panelFreqOf = freqOf;
+  window.panelFreqLabel = p => PF[freqOf(p)].s;
+  window.panelFreqBadge = p => { const f = freqOf(p); return `<span class="x13-pill ${f}${f !== 'Y' ? ' set' : ''}">${f}</span>`; };
+  window.panelOccurrences = function(pid){ const m = (STATE.panels || []).find(x => x.id === pid && !x.parent); if(!m) return []; return [m].concat((STATE.panels || []).filter(x => x.parent === pid)).sort((a, b) => a.pm_date.localeCompare(b.pm_date)); };
+  window.panelNextCycle = function(pid){ const m = (STATE.panels || []).find(x => x.id === pid && !x.parent); if(!m) return ''; const F = PF[freqOf(m)]; const occ = window.panelOccurrences(pid); const last = occ.length ? occ[occ.length - 1].pm_date : m.pm_date; return addMonthsIso(last, F.m); };
+  window.PANEL_FREQ = PF;
+
+  /* ─── Admin card ─── */
+  const sel = new Set(); const F = { unit: '', q: '' };
+  function audit(kind, items, summary){
+    try{
+      const fb = window.__pmFirebase; if(!fb || !fb.setDoc || !window.__pmCurrentUser) return;
+      const at = new Date().toISOString(), id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      fb.setDoc(fb.doc(fb.db, 'itc_pm', 'pm_audit'), { items: { [id]: { module: 'panel-admin', key: kind, action: kind, by: me(), role: 'admin', at, changes: [summary], items: items.slice(0, 400) } }, updatedAt: at }, { merge: true })
+        .then(() => { const h = $('x13p-hist'); if(h && h.dataset.loaded) loadHist(); }).catch(err => console.warn('[audit]', err));
+    }catch(err){ console.warn('[audit]', err); }
+  }
+  async function loadHist(){
+    const el = $('x13p-hist'); if(!el) return; el.dataset.loaded = '1'; el.textContent = 'Loading…';
+    try{
+      const fb = window.__pmFirebase; const s = await fb.getDoc(fb.doc(fb.db, 'itc_pm', 'pm_audit'));
+      const items = Object.values((s.exists() && s.data().items) || {}).filter(x => x && x.module === 'panel-admin').sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 40);
+      const dt = iso => { const d = new Date(iso); const z = n => String(n).padStart(2, '0'); return `${z(d.getDate())}-${z(d.getMonth() + 1)}-${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+      el.innerHTML = items.length ? items.map(x => `<div>• <b>${esc((x.changes || [])[0] || x.action)}</b> — ${esc(String(x.by).split('@')[0])} · ${dt(x.at)}</div>`).join('') : 'No admin schedule changes yet.';
+    }catch(err){ el.textContent = 'Could not read the history: ' + (err.message || err); }
+  }
+  const masters = () => (STATE.panels || []).filter(p => !p.parent);
+  const units = () => [...new Set(masters().map(p => p.area))].sort((a, b) => a.localeCompare(b));
+  function nextOpen(pid){ const ex = STATE.panelExecutions || {}; const o = window.panelOccurrences(pid).find(p => !(ex[p.id] && ex[p.id].actualDate)); return o ? o.pm_date : ''; }
+  function shown(){
+    const q = F.q.trim().toLowerCase();
+    return masters().filter(p => (!F.unit || p.area === F.unit) && (!q || (p.panel + ' ' + unitShort(p.area) + ' ' + p.id + ' ' + String(p.id).padStart(3, '0')).toLowerCase().includes(q)))
+      .sort((a, b) => a.area.localeCompare(b.area) || String(a.panel).localeCompare(String(b.panel), undefined, { numeric: true }));
+  }
+  function mount(){
+    const page = $('page-schedule'); if(!page || $('x13p-card')) return;
+    const d = document.createElement('details'); d.className = 'x13-card'; d.id = 'x13p-card';
+    d.innerHTML = `<summary><span class="x13-caret">▶</span><span class="x13-t">✎ Move unit · change PM frequency</span><span class="x13-tag">Admin</span>
+        <span class="x13-s">Pick panels, then move them to the right unit or set how often their PM is done (Yearly · Half-yearly · Quarterly · Bi-monthly). Done PMs and check-sheets stay as they are.</span></summary>
+      <div class="x13-body">
+        <div class="x13-row"><label>Unit</label><select class="x13-in x13-grow" id="x13p-unit"></select></div>
+        <div class="x13-row"><label>Search</label><input class="x13-in x13-grow" id="x13p-q" placeholder="Panel name, id, unit…" autocomplete="off"></div>
+        <div class="x13-row"><button class="x13-btn ghost" onclick="x13pSelectAll(true)">☑ Select all shown</button><button class="x13-btn ghost" onclick="x13pSelectAll(false)">☐ Clear</button><span class="x13-note" id="x13p-count" style="margin-left:auto"></span></div>
+        <div class="x13-list" id="x13p-list"></div>
+        <div class="x13-act">
+          <h4>① Move selected to unit</h4>
+          <div class="x13-row"><select class="x13-in x13-grow" id="x13p-to"></select><input class="x13-in x13-grow" id="x13p-new" placeholder="New unit name" style="display:none"><button class="x13-btn" onclick="x13pMove()">⇄ Move</button></div>
+          <div class="x13-note">The panel keeps its id, name, PM dates, done PMs, check-sheets and history — only its unit changes (its extra PMs move with it).</div>
+        </div>
+        <div class="x13-act">
+          <h4>② Set PM frequency of selected</h4>
+          <div class="x13-row"><select class="x13-in x13-grow" id="x13p-freq">${Object.keys(PF).map(k => `<option value="${k}">${k} · ${PF[k].t} — ${PF[k].d}</option>`).join('')}</select><button class="x13-btn" onclick="x13pFreq()">⟳ Apply</button></div>
+          <div class="x13-note">PM 1 stays on the panel's planned date; the extra PMs follow every 2 / 3 / 6 months as their own rows (e.g. <b>MCC-5 (PM 2/2)</b>). An extra PM that would fall before today is skipped, so nothing turns overdue. Each extra PM can be shifted like any other.</div>
+        </div>
+        <details id="x13p-hd"><summary class="x13-note" style="cursor:pointer">🕘 Recent unit / frequency changes</summary><div class="x13-hist" id="x13p-hist"></div></details>
+      </div>`;
+    const head = page.querySelector('.page-head');
+    page.insertBefore(d, head ? head.nextSibling : page.firstChild);
+    d.addEventListener('toggle', () => { if(d.open) render(); });
+    $('x13p-unit').addEventListener('change', e => { F.unit = e.target.value; render(); });
+    $('x13p-q').addEventListener('input', e => { F.q = e.target.value; render(); });
+    $('x13p-to').addEventListener('change', e => { $('x13p-new').style.display = e.target.value === '__new' ? '' : 'none'; if(e.target.value === '__new') $('x13p-new').focus(); });
+    $('x13p-list').addEventListener('change', e => { const c = e.target; if(c && c.dataset && c.dataset.pid){ if(c.checked) sel.add(+c.dataset.pid); else sel.delete(+c.dataset.pid); count(); } });
+    $('x13p-hd').addEventListener('toggle', e => { if(e.target.open) loadHist(); });
+  }
+  function count(){ const el = $('x13p-count'); if(el) el.textContent = `${sel.size} selected · ${shown().length} shown`; }
+  function render(){
+    mount();
+    const card = $('x13p-card'); if(!card) return;
+    card.style.display = (typeof isAdmin === 'function' && isAdmin()) ? '' : 'none';
+    if(!card.open) return;
+    const U = units();
+    const a = $('x13p-unit'); a.innerHTML = '<option value="">All units</option>' + U.map(x => `<option value="${esc(x)}">${esc(unitShort(x))}</option>`).join(''); a.value = F.unit; if(a.value !== F.unit){ F.unit = ''; a.value = ''; }
+    const t = $('x13p-to'), cur = t.value; t.innerHTML = '<option value="">— choose unit —</option>' + U.map(x => `<option value="${esc(x)}">${esc(unitShort(x))}</option>`).join('') + '<option value="__new">➕ New unit…</option>'; t.value = cur; if(t.value !== cur) t.value = '';
+    const live = new Set(masters().map(p => p.id)); [...sel].forEach(s => { if(!live.has(s)) sel.delete(s); });
+    const rows = shown();
+    $('x13p-list').innerHTML = rows.length ? rows.map(p => { const n = nextOpen(p.id), f = freqOf(p);
+      return `<label class="x13-item"><input type="checkbox" data-pid="${p.id}"${sel.has(p.id) ? ' checked' : ''}><div style="min-width:0"><div class="n">${esc(p.panel)}</div><div class="m">${esc(unitShort(p.area))} · id ${String(p.id).padStart(3, '0')}</div></div>
+        <div class="r"><span class="x13-pill ${f}${f !== 'Y' ? ' set' : ''}">${f}</span><br>${n ? 'next ' + dateFmt(isoToDate(n)) : 'all done'}</div></label>`; }).join('')
+      : '<div class="x13-note" style="padding:14px">No panels match.</div>';
+    count();
+  }
+  const chosen = () => masters().filter(p => sel.has(p.id));
+  const list8 = ps => ps.slice(0, 8).map(p => `• ${p.panel} (${unitShort(p.area)})`).join('\n') + (ps.length > 8 ? `\n… and ${ps.length - 8} more` : '');
+  function refreshMasterUnits(){ const u = $('m-unit'); if(u){ const v = u.value; u.innerHTML = '<option value="">All units</option>'; u.value = v; } }
+
+  window.x13pSelectAll = function(on){ shown().forEach(p => { if(on) sel.add(p.id); else sel.delete(p.id); }); if(!on && !F.unit && !F.q) sel.clear(); render(); };
+  window.x13pMove = function(){
+    if(!requireAdmin('Move panels to another unit')) return;
+    const ps = chosen(); if(!ps.length){ toast('Select panels', 'Tick the panels to move first.', 'warn'); return; }
+    let to = $('x13p-to').value;
+    if(to === '__new'){ const nm = ($('x13p-new').value || '').replace(/\s+/g, ' ').replace(/^PANEL\s*·\s*/i, '').trim(); to = nm ? 'PANEL · ' + nm : ''; }
+    if(!to){ toast('Choose the unit', 'Pick a unit, or ➕ New unit and type its name.', 'warn'); return; }
+    const same = units().find(x => x.toLowerCase() === to.toLowerCase()); if(same) to = same;
+    const mv = ps.filter(p => p.area !== to);
+    if(!mv.length){ toast('Nothing to move', `All selected panels are already in ${unitShort(to)}.`, 'warn'); return; }
+    if(!confirm(`Move ${mv.length} panel${mv.length === 1 ? '' : 's'} to "${unitShort(to)}"?\n\n${list8(mv)}\n\nPM dates, done PMs and check-sheets stay with the panel.`)) return;
+    const log = mv.map(p => ({ id: p.id, panel: p.panel, from: p.area, to }));
+    mv.forEach(p => { p.area = to; (STATE.panels || []).forEach(x => { if(x.parent === p.id) x.area = to; }); });
+    sel.clear(); $('x13p-new').value = ''; $('x13p-to').value = ''; $('x13p-new').style.display = 'none';
+    refreshMasterUnits();
+    saveToFirebase(); renderAll();
+    audit('unit', log, `Moved ${mv.length} panel${mv.length === 1 ? '' : 's'} to ${unitShort(to)}: ${mv.slice(0, 5).map(p => p.panel).join(', ')}${mv.length > 5 ? '…' : ''}`);
+    toast('Unit changed', `${mv.length} panel${mv.length === 1 ? '' : 's'} → ${unitShort(to)}`, 'good');
+    render();
+  };
+  window.x13pFreq = function(){
+    if(!requireAdmin('Change PM frequency')) return;
+    const ps = chosen(); if(!ps.length){ toast('Select panels', 'Tick the panels first.', 'warn'); return; }
+    const f = $('x13p-freq').value; if(!PF[f]) return;
+    const ch = ps.filter(p => freqOf(p) !== f);
+    if(!ch.length){ toast('No change', `The selected panels are already ${PF[f].t}.`, 'warn'); return; }
+    const ex = STATE.panelExecutions || {}, T = isoDate(TODAY);
+    // done extra PMs that would no longer exist at the new frequency
+    const lost = []; ch.forEach(p => { for(let k = PF[f].n; k < 6; k++){ const e = ex[XID(p.id, k)]; if(e && e.actualDate) lost.push(`${p.panel} PM ${k + 1}`); } });
+    if(!confirm(`Set PM frequency of ${ch.length} panel${ch.length === 1 ? '' : 's'} to ${PF[f].t} (${PF[f].d})?\n\n${list8(ch)}\n\nPM 1 keeps its date. Extra PMs dated before today are skipped, so nothing becomes overdue.`
+      + (lost.length ? `\n\n⚠ ${lost.length} done extra PM${lost.length === 1 ? '' : 's'} will be hidden (the records are kept and come back if you set the frequency back): ${lost.slice(0, 5).join(', ')}${lost.length > 5 ? '…' : ''}` : ''))) return;
+    harvest();
+    const log = [];
+    ch.forEach(p => {
+      const old = freqOf(p), cur = {}; (STATE.panels || []).forEach(x => { if(x.parent === p.id) cur[x.occ] = x.pm_date; });
+      const occDates = {}, skip = [];
+      for(let k = 1; k < PF[f].n; k++){
+        const done = ex[XID(p.id, k)] && ex[XID(p.id, k)].actualDate;
+        if(done && cur[k]){ occDates[k] = cur[k]; continue; }             // a done extra PM keeps its planned date
+        const d = addMonthsIso(p.pm_date, k * PF[f].m);
+        if(d < T && !done) skip.push(k);
+      }
+      if(f === 'Y') delete p.freq; else p.freq = f;
+      if(Object.keys(occDates).length) p.occDates = occDates; else delete p.occDates;
+      if(skip.length) p.occSkip = skip; else delete p.occSkip;
+      (STATE.panels || []).forEach(x => { if(x.parent === p.id) x._d = x.pm_date; });   // don't harvest the old extra dates again
+      log.push({ id: p.id, panel: p.panel, area: p.area, from: old, to: f, skipped: skip.map(k => 'PM ' + (k + 1)).join(', ') });   // text, not an array (Firestore: no arrays inside array items)
+    });
+    STATE.panels = (STATE.panels || []).filter(x => !(x.parent && ch.some(p => p.id === x.parent)));
+    sel.clear();
+    saveToFirebase(); renderAll();
+    const sk = ch.reduce((n, p) => n + ((p.occSkip || []).length), 0);
+    audit('frequency', log, `Frequency → ${PF[f].t} for ${ch.length} panel${ch.length === 1 ? '' : 's'}: ${ch.slice(0, 5).map(p => p.panel).join(', ')}${ch.length > 5 ? '…' : ''}`);
+    toast('Frequency changed', `${ch.length} panel${ch.length === 1 ? '' : 's'} → ${PF[f].t}${sk ? ` · ${sk} past extra PM${sk === 1 ? '' : 's'} skipped` : ''}`, 'good');
+    render();
+  };
+
+  function start(){
+    mount();
+    const orig = window.renderAll;
+    if(typeof orig === 'function' && !orig.__x13p){
+      const w = function(){ try{ panelExpand(); }catch(e){ console.warn('[3.13 expand]', e); } const r = orig.apply(this, arguments); try{ render(); }catch(e){ console.warn('[3.13 admin]', e); } return r; };
+      w.__x13p = true; window.renderAll = w;
+    }
+    try{ panelExpand(); render(); }catch(e){ console.warn('[3.13]', e); }
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+</script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   3.13 · Panel PM — Reports page + Excel bulk Mark Done with checklist
+   (engines: PMX, X13R, X13I — this block only connects them to Panel PM)
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const z2 = n => String(n).padStart(2, '0');
+  const code = id => 'P' + String(id).padStart(3, '0');
+  const PF = () => window.PANEL_FREQ || { Y: { n: 1, m: 12, t: 'Yearly' } };
+  const freqOf = p => (typeof window.panelFreqOf === 'function') ? window.panelFreqOf(p) : 'Y';
+  function fyOf(iso){ const d = isoToDate(String(iso || '').slice(0, 10)); if(!d || isNaN(d)) return ''; const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `FY${y}-${z2((y + 1) % 100)}`; }
+  const scanKey = p => { const fy = fyOf(p.pm_date); return fy ? `P${String(p.id).padStart(4, '0')}-${fy}` : ''; };
+  function addDaysIso(iso, n){ const d = isoToDate(iso); d.setDate(d.getDate() + n); return isoDate(d); }
+  function verdict(planned, actual){
+    if(!actual) return null; if(!planned) return { k: 'ontime', t: 'DONE', days: null };
+    const days = Math.round((isoToDate(actual) - isoToDate(planned)) / 86400000), late = actual > addDaysIso(planned, 7);
+    return { k: late ? 'late' : 'ontime', t: late ? 'LATE' : 'ON TIME', days };
+  }
+  function checklistOf(e){
+    const defs = STATE.panelChecklistFields || [], cl = (e && e.checklist) || {}, out = [];
+    const has = v => v !== undefined && v !== null && String(v).trim() !== '';
+    defs.forEach(d => { if(has(cl[d.id])) out.push({ l: d.label, v: String(cl[d.id]), u: d.unit || '' }); });
+    Object.keys(cl).forEach(k => { if(!defs.some(d => d.id === k) && has(cl[k])) out.push({ l: k.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase()), v: String(cl[k]), u: '' }); });
+    return out;
+  }
+  function files(p){ const fy = fyOf(p.pm_date), key = scanKey(p); if(!fy || !key || !window.ScanKit) return undefined; ScanKit.ensure('panel', fy); return ScanKit.list('panel', fy, key); }
+  const masters = () => (STATE.panels || []).filter(p => !p.parent);
+  const occ = pid => (typeof window.panelOccurrences === 'function') ? window.panelOccurrences(pid) : (STATE.panels || []).filter(p => p.id === pid);
+  const byPid = pid => (STATE.panels || []).find(p => p.id === pid);
+
+  /* ─── Reports adapter ─── */
+  function pmLabel(p, n){ const k = p.parent ? p.occ + 1 : 1; return n > 1 ? `${code(p.parent || p.id)} · PM ${k}/${n} · ${fyOf(p.pm_date)}` : `${code(p.id)} · Yearly PM · ${fyOf(p.pm_date)}`; }
+  function panelHistory(eq){
+    const ex = STATE.panelExecutions || {}, T = isoDate(TODAY), list = occ(eq.id), n = (PF()[eq.freq] || { n: 1 }).n;
+    const next = list.find(p => !(ex[p.id] && ex[p.id].actualDate));
+    return list.filter(p => (ex[p.id] && ex[p.id].actualDate) || p.pm_date <= T || p === next).map(p => { const e = ex[p.id] && ex[p.id].actualDate ? ex[p.id] : null;
+      return { key: p.id, pm: pmLabel(p, n), planned: p.pm_date, done: e ? e.actualDate : '', v: e ? verdict(p.pm_date, e.actualDate) : null, st: e ? '' : getPanelStatus(p), next: p === next, e, p,
+               mttr: e && e.mttrMin, start: e && e.pmStart, stop: e && e.pmStop, by: e && e.submittedBy, remarks: e && e.remarks }; });
+  }
+  const RA = {
+    L: { module: 'Panel', area: 'Unit', areas: 'units', equip: 'Panel', equips: 'panels', searchPh: 'Panel name, P012, unit…' },
+    hasBd: false,
+    pageHead: `<div class="page-head"><div class="page-eyebrow">▍ Module · 02c</div><h1 class="page-title">PM History Reports</h1>
+      <p class="page-desc">Pick a unit and a panel (or all of them) — every PM with on time / late, the checklist values and the next due date. Download a formatted Excel, or a PDF report with the check-sheet photos.</p></div>`,
+    areas: () => [...new Set(masters().map(p => p.area))].sort((a, b) => a.localeCompare(b)).map(a => ({ v: a, l: unitShort(a) })),
+    areaLabel: a => unitShort(a),
+    equipment: () => masters().slice().sort((a, b) => a.area.localeCompare(b.area) || String(a.panel).localeCompare(String(b.panel), undefined, { numeric: true }))
+      .map(p => { const f = freqOf(p); return { id: p.id, code: code(p.id), name: p.panel, area: p.area, areaLabel: unitShort(p.area), cat: '', freq: f, freqLabel: `${(PF()[f] || PF().Y).t} (${f})` }; }),
+    history: panelHistory,
+    next(eq){ const h = panelHistory(eq).find(r => r.next); if(h) return { date: h.planned, overdue: h.st === 'OVERDUE' };
+      const d = typeof window.panelNextCycle === 'function' ? window.panelNextCycle(eq.id) : ''; return d ? { date: d, est: true } : null; },
+    checklistDefs: () => STATE.panelChecklistFields || [],
+    checklistOf: r => checklistOf(r.e),
+    files: r => { const p = r.p || byPid(r.key); return p ? files(p) : undefined; },
+    fys: () => [...new Set((STATE.panels || []).map(p => fyOf(p.pm_date)).filter(Boolean))].sort().reverse(),
+    fyOf,
+    openRecord: key => { if(typeof openPanelRecord === 'function') openPanelRecord(+key); }
+  };
+
+  /* ─── Bulk upload adapter ─── */
+  const PA = {
+    L: { module: 'Panel', key: 'Panel PM ID', equip: 'Panel' }, auditModule: 'panel', hasBd: false,
+    infoHeads: ['Unit', 'Panel', 'Freq'], infoWidths: [16, 32, 6], keyWidth: 12,
+    scopes: [{ v: 'open30', l: 'Open PMs · overdue + next 30 days' }, { v: 'openAll', l: 'All open PMs' }, { v: 'done', l: 'Done PMs · add or correct values' }],
+    fields: () => STATE.panelChecklistFields || (typeof defaultPanelChecklist === 'function' ? defaultPanelChecklist() : []),
+    rows(scope){
+      const ex = STATE.panelExecutions || {}, up = new Date(TODAY); up.setDate(up.getDate() + 30); const U = isoDate(up);
+      const lo = new Date(TODAY); lo.setDate(lo.getDate() - X13I.WINDOW); const L = isoDate(lo), adm = isAdmin();
+      let rows = (STATE.panels || []).filter(p => { const e = ex[p.id], done = !!(e && e.actualDate);
+        if(scope === 'done') return done && (adm || e.actualDate >= L);
+        if(done) return false;
+        return scope === 'openAll' ? true : p.pm_date <= U; });
+      rows = rows.sort((a, b) => a.pm_date.localeCompare(b.pm_date) || a.id - b.id);
+      if(scope === 'done') rows.reverse();
+      return rows.map(p => ({ key: p.id, info: [unitShort(p.area), p.panel, freqOf(p)], planned: p.pm_date, status: getPanelStatus(p), e: ex[p.id] || null }));
+    },
+    find(key){ const id = parseInt(String(key).replace(/^P/i, ''), 10); if(!id) return null; const p = byPid(id); if(!p) return null;
+      return { key: p.id, label: `${p.panel} · ${unitShort(p.area)}`, planned: p.pm_date, e: (STATE.panelExecutions || {})[p.id] || null }; },
+    apply(it, at){
+      const old = (STATE.panelExecutions || {})[it.key];
+      const e = X13I.mergeInto(old, it, at, {});
+      if(it.by || !old) e.submittedBy = it.by || X13I.me(); if(!old){ e.submittedAt = at; e.gps = null; }
+      STATE.panelExecutions[it.key] = e;
+    },
+    finish(){ saveToFirebase(); renderAll(); }
+  };
+
+  function mountUpload(){
+    const page = $('page-done'); if(!page || $('x13pi-card')) return;
+    const d = document.createElement('details'); d.className = 'x13-card'; d.id = 'x13pi-card';
+    d.innerHTML = `<summary><span class="x13-caret">▶</span><span class="x13-t">⇪ Bulk Mark Done from Excel — with every checklist point</span><span class="x13-tag">Excel</span>
+        <span class="x13-s">Download the template, fill the yellow columns (date, times, done by, remarks, checklist), upload. Rows are checked and shown before anything is saved.</span></summary>
+      <div class="x13-body">
+        <div class="x13-row"><label>Template</label><select class="x13-in x13-grow" id="x13pi-scope">${PA.scopes.map(s => `<option value="${s.v}">${esc(s.l)}</option>`).join('')}</select><button class="x13-btn" onclick="x13piTemplate()">⤓ Excel template</button></div>
+        <div class="x13-row"><label>Upload</label><input type="file" id="x13pi-file" accept=".xlsx,.csv,.xls" class="x13-in x13-grow"></div>
+        <div class="x13-note"><b>Users:</b> done dates within the last ${X13I.WINDOW} days, and changes to a done PM only within its ${X13I.WINDOW}-day edit window. <b>Admin:</b> any date, any PM. Blank rows are skipped; a blank cell keeps the value already saved.</div>
+        <div id="x13pi-prev"></div>
+      </div>`;
+    const head = page.querySelector('.page-head'); page.insertBefore(d, head ? head.nextSibling : page.firstChild);
+    $('x13pi-file').addEventListener('change', e => { const f = e.target.files[0]; if(f) X13I.upload(PA, f, $('x13pi-prev')); e.target.value = ''; });
+    // Import / Export page (admin): pointer card
+    const imp = $('page-import');
+    if(imp && !$('x13pi-imp')){
+      const c = document.createElement('div'); c.className = 'card'; c.id = 'x13pi-imp'; c.style.marginBottom = '16px';
+      c.innerHTML = `<div class="card-head"><div class="card-title">Bulk Mark Done · with checklist</div><div class="card-meta">Excel · all checklist points</div></div>
+        <div class="card-body"><p style="font-size:12.5px;color:var(--text-2);margin-bottom:12px;line-height:1.6">Record many done panel PMs at once — date, times, done by, remarks and <b>every checklist point</b> — from one Excel sheet.</p>
+        <button class="btn ghost" onclick="x13piTemplate('open30')">⤓ Excel template</button> <button class="btn" onclick="x13piGo()" style="margin-left:6px">⇪ Upload filled sheet →</button></div>`;
+      const rows = imp.querySelectorAll('.row'); const at = rows[1] || rows[0];
+      if(at) imp.insertBefore(c, at); else imp.appendChild(c);
+    }
+  }
+  window.x13piTemplate = function(scope){ try{ const r = X13I.template(PA, scope || ($('x13pi-scope') || {}).value || 'open30'); toast('Template downloaded', `${r.name} · ${r.rows} PMs · ${r.cols} columns incl. every checklist point`, 'good'); }catch(e){ console.error(e); toast('Template failed', e.message || String(e), 'error'); } };
+  window.x13piGo = function(){ const n = document.querySelector('.nav-item[data-page="done"]'); if(n) n.click(); setTimeout(() => { const d = $('x13pi-card'); if(d){ d.open = true; d.scrollIntoView({ block: 'start' }); } }, 80); };
+  window.panelReportOpen = function(pid){ const nav = document.querySelector('.nav-item[data-page="reports"]'); X13R.select({ eq: String(pid), area: '', q: '' }); if(nav) nav.click(); };
+
+  function start(){
+    X13R.use(RA); X13I.use(PA);
+    mountUpload();
+    const ra = window.renderAll;
+    if(typeof ra === 'function') window.renderAll = function(){ const out = ra.apply(this, arguments); try{ mountUpload(); const p = $('page-reports'); if(p && p.classList.contains('active')) X13R.render(); }catch(err){ console.warn('[reports]', err); } return out; };
+    if(window.ScanKit) ScanKit.onChange(() => { const p = $('page-reports'); if(p && p.classList.contains('active')) X13R.render(); });
+  }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 </script>

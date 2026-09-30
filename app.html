@@ -245,7 +245,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 // 3.12 — read-only access for the global search (tabs that are not opened yet)
 window.__gsFs = { db: getFirestore(app), doc, getDoc };
-window.__appBuild = '3.12 · 27-09-2026';
+window.__appBuild = '3.13 · 30-09-2026';
 
 // 3.10b — always load the newest module files (no stale phone cache after a GitHub update)
 const FRESH = '?v=' + Date.now();
@@ -434,7 +434,7 @@ const SCAN_TTL = 60 * 1000;
 function scanDocIds(st){
   const ids = new Set();
   Object.keys((st && st.fys) || {}).forEach(fy => ids.add('scanidx_motor_' + fy));
-  ((st && st.panels) || []).forEach(p => { if(p && p.pm_date) ids.add('scanidx_panel_' + fyOfIso(p.pm_date)); });
+  expandPanels((st && st.panels) || []).forEach(p => { if(p && p.pm_date) ids.add('scanidx_panel_' + fyOfIso(p.pm_date)); });
   return [...ids];
 }
 function filesFor(mod, key){ const m = SRC.scans.data && SRC.scans.data[mod]; return (m && m[key]) || []; }
@@ -560,7 +560,7 @@ function indexMotor(st, out, info){
   (st.motors || []).forEach(m => {
     const list = (bySr[m.sr] || []).slice().sort((a, b) => a.date.localeCompare(b.date));
     const next = list.find(r => !r.actualDate && r.date >= T);
-    const freq = list.length ? list[list.length - 1].freq : ({ A: 'BM', B: 'Q', C: 'HY' })[m.cat] || '';
+    const freq = (m.freq && FREQ_WORDS[m.freq]) ? m.freq : list.length ? list[list.length - 1].freq : ({ A: 'BM', B: 'Q', C: 'HY' })[m.cat] || '';   // 3.13: admin-set frequency
     out.push(mk({ mod: 'motor', kind: 'motor', title: m.motor, sub: `${m.area} · Sr ${m.sr} · Cat ${m.cat} · ${freq}`,
       meta: next ? 'Next ' + dmy(next.date) : '', sr: m.sr,
       fields: [[m.motor, 3], [`m${m.sr} m${pad3(m.sr)} sr ${m.sr} ${m.sr}`, 2.5], [m.area, 1.5], [`cat ${m.cat} category ${m.cat} ${freq} ${FREQ_WORDS[freq] || ''}`, 0.8]],
@@ -602,6 +602,17 @@ function indexMotor(st, out, info){
 }
 
 /* Panel PM */
+// 3.13: a panel with freq HY / Q / BM has extra PM rows (id 100000 + id×10 + k) — built the same way as in Panel PM
+const PFREQ = { Y: { n: 1, m: 12, t: 'yearly' }, HY: { n: 2, m: 6, t: 'half-yearly' }, Q: { n: 4, m: 3, t: 'quarterly' }, BM: { n: 6, m: 2, t: 'bi-monthly' } };
+function addMonthsIso(iso, n){ const d = dOf(iso); if(!d) return iso; const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return isoOf(d); }
+function expandPanels(list){
+  list = list || []; if(list.some(p => p && p.parent)) return list;
+  const out = [];
+  list.forEach(m => { if(!m) return; out.push(m); const F = PFREQ[m.freq]; if(!F || m.freq === 'Y') return; const skip = new Set((m.occSkip || []).map(Number));
+    for(let k = 1; k < F.n; k++){ if(skip.has(k)) continue; out.push({ id: 100000 + m.id * 10 + k, parent: m.id, occ: k, area: m.area, panel: `${m.panel} (PM ${k + 1}/${F.n})`, pm_date: (m.occDates && m.occDates[k]) || addMonthsIso(m.pm_date, k * F.m), freq: m.freq }); } });
+  return out;
+}
+const panelFreqWord = (p, list) => { const m = p.parent ? (list || []).find(x => x.id === p.parent) : p; const F = PFREQ[(m || {}).freq] || PFREQ.Y; return F.t + ' PM' + (F.n > 1 ? ` ${p.parent ? p.occ + 1 : 1}/${F.n}` : ''); };
 function panelStatus(p, ex){
   if(ex && ex.actualDate) return 'DONE';
   const diff = Math.floor((dOf(p.pm_date) - todayD()) / 86400000);
@@ -611,20 +622,21 @@ const unitShort = a => String(a || '').replace('PANEL · ', '');
 function indexPanel(st, out, info){
   const ex = st.panelExecutions || {}; const units = {};
   const pw = frameWin('panel'); const defs = st.panelChecklistFields || ev(pw, "typeof defaultPanelChecklist === 'function' ? defaultPanelChecklist() : null") || null;
-  (st.panels || []).forEach(p => {
+  const PL = expandPanels(st.panels || []);
+  PL.forEach(p => {
     if(!p || p.id == null) return;
     const e = ex[p.id] || {}; const s = panelStatus(p, ex[p.id]); const key = s.toLowerCase();
     const flags = [key]; if(s === 'OVERDUE' || s === 'DUE') flags.push('pending');
-    units[p.area] = (units[p.area] || 0) + 1;
+    if(!p.parent) units[p.area] = (units[p.area] || 0) + 1;
     const cl = clPairs(e.checklist, defs, PANEL_CL_DEFAULT); const fl = filesFor('panel', `P${String(p.id).padStart(4, '0')}-${fyOfIso(p.pm_date)}`);
     const vd = verdictPanel(p.pm_date, e.actualDate); if(vd) flags.push(vd); if(fl.length) flags.push('hasfile');
-    out.push(mk({ mod: 'panel', kind: 'panel', title: p.panel, sub: `${unitShort(p.area)} · ID ${pad3(p.id)} · yearly PM`, st: vd || key,
+    out.push(mk({ mod: 'panel', kind: 'panel', title: p.panel, sub: `${unitShort(p.area)} · ID ${pad3(p.parent || p.id)} · ${panelFreqWord(p, PL)}`, st: vd || key,
       meta: (e.actualDate ? 'Done ' + dmy(e.actualDate) : dmy(p.pm_date)) + (fl.length ? ' · 📎' + fl.length : ''), sortDate: e.actualDate || p.pm_date,
       snips: cl.concat(fl.map(n => ['File', n])),
-      fields: [[p.panel, 3], [`id ${p.id} ${pad3(p.id)}`, 1.5], [unitShort(p.area), 1.5], [e.submittedBy, 0.6], [e.remarks, 0.8],
+      fields: [[p.panel, 3], [`id ${p.parent || p.id} ${pad3(p.parent || p.id)} ${panelFreqWord(p, PL)}`, 1.5], [unitShort(p.area), 1.5], [e.submittedBy, 0.6], [e.remarks, 0.8],
                [cl.map(c => c.join(' ')).join(' · '), 2.5], [fl.join(' · '), 1.5]],
       dates: [p.pm_date, e.actualDate], flags, go: { t: 'panelCard', pid: p.id, name: p.panel, area: p.area } }));
-    info.panels++;
+    if(!p.parent) info.panels++;
   });
   Object.keys(units).forEach(u => out.push(mk({ mod: 'panel', kind: 'punit', title: unitShort(u), sub: `${units[u]} panels · Panel PM unit`,
     fields: [[unitShort(u), 3], ['unit panels', 0.4]], go: { t: 'panelUnit', area: u } })));
@@ -722,6 +734,8 @@ const SECTIONS = [
   ['motor', 'daily', 'Action List', 'Daily View · Action List', 'Mark Done, change a date, today and this week', 'daily today this week mark done log execute complete shift date reschedule'],
   ['motor', 'done', 'Done PMs', 'Done PMs (Motor) · on time / late', 'Every done motor PM with its checklist (permit no.) and check-sheet files', 'done completed executed on time late log history permit checklist check sheet record execution'],
   ['motor', 'done', '', 'Done late PMs (after overdue)', 'Motor PM · Done PMs filtered to late', 'late done after overdue delayed', 0, 'donePmsFilter', [{ show: 'late', fy: '', month: '', area: '', q: '' }]],
+  ['motor', 'reports', '', 'PM History Reports (Motor) · Excel / PDF', 'Any motor or area: every PM, on time / late, checklist values, check-sheet photos, next due date', 'report reports history pdf excel download print next due photos pictures values export'],
+  ['motor', 'schedule', '✎ Move area · change PM frequency', 'Move motors to another area · change PM frequency', 'Schedule page · admin · wrong area, BM → quarterly', 'move area shift area wrong area change frequency bm quarterly half yearly bimonthly', 1],
   ['motor', 'reliability', '', 'Reliability · MTTR / MTBF', 'Breakdowns, repair time, time between failures', 'reliability mttr mtbf breakdown repair failure downtime'],
   ['motor', 'reliability', 'Per-area Reliability Summary', 'Per-area Reliability Summary', 'Reliability · table by area', 'mttr mtbf area summary'],
   ['motor', 'motors', 'Motor Master', 'Motors · Motor Master list', 'All motors with category, frequency and next PM', 'motor list register master all motors next pm'],
@@ -748,6 +762,9 @@ const SECTIONS = [
   ['panel', 'executions', 'Completed PMs', 'Panel Execution Log · on time / late', 'All done panel PMs with checklist (permit no.) and check-sheet files', 'execution log history done completed panel on time late permit checklist check sheet record'],
   ['panel', 'done', 'Done PMs', 'Done PMs (Panel) · on time / late', 'Every done panel PM with its checklist (permit no.) and check-sheet files', 'done completed executed on time late permit checklist check sheet record panel'],
   ['panel', 'done', '', 'Panel PMs done late (after overdue)', 'Panel PM · Done PMs filtered to late', 'late done after overdue delayed panel', 0, 'panelDoneFilter', [{ show: 'late', fy: '', month: '', unit: '', q: '' }]],
+  ['panel', 'reports', '', 'PM History Reports (Panel) · Excel / PDF', 'Any panel or unit: every PM, on time / late, checklist values, check-sheet photos, next due date', 'report reports history pdf excel download print next due photos pictures values export panel'],
+  ['panel', 'schedule', '✎ Move unit · change PM frequency', 'Move panels to another unit · change PM frequency', 'Schedule page · admin · yearly → half-yearly / quarterly', 'move unit shift unit wrong unit change frequency yearly half yearly quarterly bimonthly panel', 1],
+  ['panel', 'done', '⇪ Bulk Mark Done from Excel — with every checklist point', 'Bulk Mark Done panels from Excel (checklist)', 'Done PMs · template with every checklist point', 'bulk upload excel template checklist import mark done panel sheet'],
   ['panel', 'master', 'Master Register', 'Panel Master Register', 'All panels with PM date and status', 'panel list master register all panels'],
   ['panel', 'checklist', 'Active Fields', 'Checklist Config (Panel PM)', 'Fields filled in at panel Mark Done', 'checklist fields panel required', 1],
   ['panel', 'import', 'Upload Panels', 'Panel Import / Export', 'Template, upload, export panels', 'import export upload template panels excel csv', 1],
@@ -1148,9 +1165,11 @@ const ntext = s => norm(s).replace(/\s+/g, ' ');
 function cardByTitle(w, title, scopeSel){
   const d = w.document; const scope = scopeSel ? d.querySelector(scopeSel) : d; if(!scope) return null;
   const want = ntext(title);
-  const els = [...scope.querySelectorAll('.card-title, .card-t, .action-tile-title, .rules-title, .page-title')];
+  const els = [...scope.querySelectorAll('.card-title, .card-t, .action-tile-title, .rules-title, .page-title, .x13-t')];
   const el = els.find(e => ntext(e.textContent) === want) || els.find(e => ntext(e.textContent).includes(want));
-  return el ? (el.closest('.card, .action-tile') || el) : null;
+  const box = el ? (el.closest('.card, .action-tile, .x13-card') || el) : null;
+  if(box && box.tagName === 'DETAILS' && !box.open) box.open = true;   // 3.13: collapsible admin / upload cards
+  return box;
 }
 function findText(scope, text, sel){
   if(!scope) return null; const want = ntext(text); let best = null;
@@ -1210,7 +1229,8 @@ const GO = {
     const d = w.document; navPage(w, 'master'); await sleep(150);
     const s = d.getElementById('m-search'), u = d.getElementById('m-unit'); if(s) s.value = g.name || ''; if(u) u.value = '';
     if(typeof w.renderMaster === 'function') w.renderMaster();
-    const p = panelIn(ev(w, 'STATE') || {}, g); const id = p ? p.id : g.pid;
+    const st0 = ev(w, 'STATE') || {}; const p0 = panelIn(st0, g); const p = p0 && p0.parent ? ((st0.panels || []).find(x => x.id === p0.parent) || p0) : p0; const id = p ? p.id : g.pid;   // 3.13: extra PM → its panel
+    if(p && p0 !== p && s){ s.value = p.panel; if(typeof w.renderMaster === 'function') w.renderMaster(); }
     const tr = [...d.querySelectorAll('#t-master tbody tr')].find(r => r.cells[0] && r.cells[0].textContent.trim() === pad3(id));
     return flash(w, tr || d.getElementById('page-master'));
   },
@@ -1332,7 +1352,7 @@ function pmCardHtml(w, pmId){
       ${ex ? '<button class="btn" onclick="closeModal()">Close</button>' : `<button class="btn secondary" onclick="openShiftDateModal(${attr(pmId)})">Change date</button><button class="btn" onclick="markDone(${attr(pmId)})">✓ Mark Done</button>`}</div>`;
 }
 function panelIn(st, g){
-  const list = st.panels || []; const byId = list.find(x => x.id === g.pid);
+  const list = expandPanels(st.panels || []); const byId = list.find(x => x.id === g.pid);
   if(byId && (!g.name || byId.panel === g.name)) return byId;
   return list.find(x => x.panel === g.name && (!g.area || x.area === g.area)) || list.find(x => x.panel === g.name) || null;
 }
@@ -1342,7 +1362,7 @@ function panelCardHtml(w, g){
   const ex = (st.panelExecutions || {})[pid]; const s = typeof w.getPanelStatus === 'function' ? w.getPanelStatus(p) : panelStatus(p, ex);
   return `<div class="modal-head"><div><div class="modal-eyebrow">▍ Panel PM · ID ${pad3(p.id)}</div><div class="modal-title">${esc(p.panel)}</div></div><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div class="info-strip"><div class="ttl">${esc(p.panel)}</div><div class="meta">${esc(unitShort(p.area))} · yearly PM</div></div>
+      <div class="info-strip"><div class="ttl">${esc(p.panel)}</div><div class="meta">${esc(unitShort(p.area))} · ${esc(panelFreqWord(p, expandPanels(st.panels || [])))}</div></div>
       <div class="gs-kv">
         <div><div class="k">Planned date</div><div class="v">${dmy(p.pm_date)}</div></div>
         <div><div class="k">Status</div><div class="v"><span class="pill ${s.toLowerCase()}">${s}</span></div></div>
