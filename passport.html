@@ -271,7 +271,9 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
   </div>
   <nav class="seg" aria-label="Sections">
     <button type="button" data-v="find" class="on">Find equipment</button>
+    <button type="button" data-v="reports">Reports</button>
     <button type="button" data-v="tools">Import &amp; export</button>
+    <button type="button" data-v="bin">🗑 Removed</button>
   </nav>
 </div></header>
 <main class="wrap" id="view"></main>
@@ -1239,6 +1241,964 @@ function start(){
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click', ()=>setView(b.dataset.v)));
 renderView();
 whenReady(start);
+</script>
+<style>
+/* 3.14 · Factory Passport add-on */
+.fp-rm{color:var(--red);border-color:rgba(239,68,68,.45);background:var(--red-soft)}
+.fp-warnb{color:var(--amber);border-color:rgba(245,158,11,.45);background:var(--amber-soft);line-height:1.6}
+.spec tr.fp-warn td{color:var(--amber)}
+.fp-hist{font-size:12px;color:var(--text-2);line-height:1.7;max-height:200px;overflow:auto}
+.fp-hist b{color:var(--text)}
+#view-reports .tools .checks label{border:0;padding:6px 2px}
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   3.13 · PMX — built-in Excel (.xlsx) writer + reader and PDF writer.
+   No internet library is needed, so Excel / PDF reports also work on a
+   weak phone connection.
+     PMX.xlsx(sheets)            → Uint8Array (.xlsx, styled)
+     PMX.readSheet(file)         → Promise<rows[][]>  (.xlsx / .csv; .xls via SheetJS if loaded)
+     PMX.pdf()                   → PDF builder (A4, Helvetica, JPEG photos)
+     PMX.save(name, bytes, mime) → download
+     PMX.jpeg(blobOrB64, mime)   → Promise<{bytes,w,h}> (photo re-encoded for the PDF)
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if(window.PMX) return;
+  const enc = new TextEncoder();
+
+  /* ─── ZIP (store) ─── */
+  const CRC = (()=>{ const t = new Uint32Array(256); for(let n = 0; n < 256; n++){ let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(u8){ let c = 0xFFFFFFFF; for(let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function concat(arrs){ const n = arrs.reduce((a, b)=>a + b.length, 0), out = new Uint8Array(n); let o = 0; arrs.forEach(a=>{ out.set(a, o); o += a.length; }); return out; }
+  function zipStore(files){
+    const parts = [], central = []; let off = 0;
+    const d = new Date(), dtime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), ddate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    files.forEach(f=>{
+      const name = enc.encode(f.name), data = typeof f.data === 'string' ? enc.encode(f.data) : f.data, crc = crc32(data);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, dtime, true); h.setUint16(12, ddate, true); h.setUint32(14, crc, true);
+      h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+      parts.push(new Uint8Array(h.buffer), name, data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+      c.setUint16(12, dtime, true); c.setUint16(14, ddate, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true);
+      c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+      central.push(new Uint8Array(c.buffer), name);
+      off += 30 + name.length + data.length;
+    });
+    const cd = concat(central), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+    e.setUint32(12, cd.length, true); e.setUint32(16, off, true);
+    return concat(parts.concat([cd, new Uint8Array(e.buffer)]));
+  }
+
+  /* ─── XLSX writer ─── */
+  const xe = s=>String(s == null ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '').replace(/[&<>"]/g, c=>({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const FONTS = [
+    '<font><sz val="10"/><color rgb="FF101828"/><name val="Calibri"/><family val="2"/></font>',             // 0 cell
+    '<font><b/><sz val="15"/><color rgb="FF1F2A44"/><name val="Calibri"/><family val="2"/></font>',         // 1 title
+    '<font><i/><sz val="9"/><color rgb="FF667085"/><name val="Calibri"/><family val="2"/></font>',          // 2 sub / note
+    '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>',         // 3 header
+    '<font><b/><sz val="10"/><color rgb="FF1E7B34"/><name val="Calibri"/><family val="2"/></font>',         // 4 ok
+    '<font><b/><sz val="10"/><color rgb="FFB42318"/><name val="Calibri"/><family val="2"/></font>',         // 5 late
+    '<font><b/><sz val="10"/><color rgb="FF344054"/><name val="Calibri"/><family val="2"/></font>',         // 6 label / bold
+    '<font><b/><sz val="10"/><color rgb="FF5A3A00"/><name val="Calibri"/><family val="2"/></font>',         // 7 input header
+    '<font><b/><sz val="10"/><color rgb="FFB54708"/><name val="Calibri"/><family val="2"/></font>',         // 8 open / amber
+    '<font><b/><sz val="11"/><color rgb="FF1F2A44"/><name val="Calibri"/><family val="2"/></font>'];        // 9 section
+  const FILLS = ['none', 'gray125', '2D3D65', 'E6F4EA', 'FDECEC', 'FFF7DA', 'F2F4F8', 'FFF4E0', 'EDEFF3', 'F5C542', 'E8EEFB'];
+  const fillXml = f=>f === 'none' || f === 'gray125' ? `<fill><patternFill patternType="${f}"/></fill>` : `<fill><patternFill patternType="solid"><fgColor rgb="FF${f}"/><bgColor indexed="64"/></patternFill></fill>`;
+  // name: [font, fill, border, numFmt, align]
+  const ST = {
+    default: [0, 0, 0, 0, ''], title: [1, 0, 0, 0, ''], sub: [2, 0, 0, 0, ''], note: [2, 0, 0, 0, 'wrap'],
+    hdr: [3, 2, 1, 0, 'hdr'], hdrInput: [7, 9, 1, 0, 'hdr'],
+    cell: [0, 0, 1, 0, 'top'], wrap: [0, 0, 1, 0, 'wrap'], num: [0, 0, 1, 0, 'right'], date: [0, 0, 1, 164, 'center'],
+    ok: [4, 3, 1, 0, 'center'], late: [5, 4, 1, 0, 'center'], open: [8, 7, 1, 0, 'center'],
+    grey: [0, 8, 1, 0, 'top'], greyDate: [0, 8, 1, 164, 'center'],
+    input: [0, 5, 1, 49, 'top'], inputNum: [0, 5, 1, 0, 'right'],
+    label: [6, 6, 1, 0, 'top'], keyval: [0, 0, 1, 0, 'wrapl'], bold: [6, 0, 0, 0, ''], section: [9, 10, 1, 0, 'top'],
+    okPlain: [4, 0, 1, 0, 'top'], latePlain: [5, 0, 1, 0, 'top'], openPlain: [8, 0, 1, 0, 'top'] };
+  const ST_NAMES = Object.keys(ST);
+  const ALIGN = { '': '', top: '<alignment vertical="top"/>', wrap: '<alignment vertical="top" wrapText="1"/>', wrapl: '<alignment horizontal="left" vertical="top" wrapText="1"/>',
+                  right: '<alignment horizontal="right" vertical="top"/>', center: '<alignment horizontal="center" vertical="top"/>',
+                  hdr: '<alignment horizontal="center" vertical="center" wrapText="1"/>' };
+  function stylesXml(){
+    const xfs = ST_NAMES.map(n=>{ const [fo, fi, bo, nf, al] = ST[n];
+      return `<xf numFmtId="${nf}" fontId="${fo}" fillId="${fi}" borderId="${bo}" xfId="0"${nf ? ' applyNumberFormat="1"' : ''} applyFont="1"${fi ? ' applyFill="1"' : ''}${bo ? ' applyBorder="1"' : ''}${al ? ' applyAlignment="1">' + ALIGN[al] + '</xf>' : '/>'}`; });
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+      + '<numFmts count="1"><numFmt numFmtId="164" formatCode="dd\\-mm\\-yyyy"/></numFmts>'
+      + `<fonts count="${FONTS.length}">${FONTS.join('')}</fonts>`
+      + `<fills count="${FILLS.length}">${FILLS.map(fillXml).join('')}</fills>`
+      + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'
+      + '<border><left style="thin"><color rgb="FFD0D5DD"/></left><right style="thin"><color rgb="FFD0D5DD"/></right><top style="thin"><color rgb="FFD0D5DD"/></top><bottom style="thin"><color rgb="FFD0D5DD"/></bottom><diagonal/></border></borders>'
+      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+      + `<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>`
+      + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  }
+  function colName(i){ let s = ''; i++; while(i > 0){ const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  const serial = iso=>{ const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? (Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(1899, 11, 30)) / 86400000 : null; };
+  function cellXml(ref, c){
+    if(c === null || c === undefined || c === '') return '';
+    let v = c, s = 'cell';
+    if(typeof c === 'object' && !(c instanceof Date)){ v = c.v; s = c.s || (c.d ? 'date' : 'cell'); if(c.d){ const n = serial(c.d); v = n === null ? c.d : n; } }
+    const si = Math.max(0, ST_NAMES.indexOf(s));
+    if(v === null || v === undefined || v === ''){ return si ? `<c r="${ref}" s="${si}"/>` : ''; }
+    if(typeof v === 'number' && isFinite(v)) return `<c r="${ref}" s="${si}"><v>${v}</v></c>`;
+    if(typeof v === 'boolean') return `<c r="${ref}" s="${si}" t="b"><v>${v ? 1 : 0}</v></c>`;
+    return `<c r="${ref}" s="${si}" t="inlineStr"><is><t xml:space="preserve">${xe(v)}</t></is></c>`;
+  }
+  function sheetXml(sh, idx){
+    const rows = sh.rows || [], ncol = Math.max(1, (sh.cols || []).length, ...rows.map(r=>(r || []).length));
+    const dim = `A1:${colName(ncol - 1)}${Math.max(1, rows.length)}`;
+    let pane = '';
+    if(sh.freeze && (sh.freeze.r || sh.freeze.c)){
+      const r = sh.freeze.r || 0, c = sh.freeze.c || 0, tl = colName(c) + (r + 1);
+      const ap = r && c ? 'bottomRight' : r ? 'bottomLeft' : 'topRight';
+      pane = `<pane${c ? ` xSplit="${c}"` : ''}${r ? ` ySplit="${r}"` : ''} topLeftCell="${tl}" activePane="${ap}" state="frozen"/><selection pane="${ap}" activeCell="${tl}" sqref="${tl}"/>`;
+    }
+    const cols = (sh.cols || []).length ? '<cols>' + sh.cols.map((w, i)=>`<col min="${i + 1}" max="${i + 1}" width="${+w || 10}" customWidth="1"/>`).join('') + '</cols>' : '';
+    const hts = sh.heights || {};
+    const data = rows.map((r, i)=>{
+      const cells = (r || []).map((c, j)=>cellXml(colName(j) + (i + 1), c)).join('');
+      const ht = hts[i] ? ` ht="${hts[i]}" customHeight="1"` : '';
+      return cells || ht ? `<row r="${i + 1}"${ht}>${cells}</row>` : '';
+    }).join('');
+    const merges = (sh.merges || []).length ? `<mergeCells count="${sh.merges.length}">${sh.merges.map(m=>`<mergeCell ref="${m}"/>`).join('')}</mergeCells>` : '';
+    const dv = (sh.lists || []).filter(x=>x.options && x.options.length && x.options.join(',').length < 250);
+    const dvx = dv.length ? `<dataValidations count="${dv.length}">${dv.map(x=>`<dataValidation type="list" allowBlank="1" showErrorMessage="1" errorTitle="Pick from the list" error="Choose one of: ${xe(x.options.join(', ').slice(0, 200))}" sqref="${x.ref}"><formula1>"${xe(x.options.map(o=>String(o).replace(/"/g, "'")).join(','))}"</formula1></dataValidation>`).join('')}</dataValidations>` : '';
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+      + (sh.tab ? `<sheetPr><tabColor rgb="FF${sh.tab}"/><pageSetUpPr fitToPage="1"/></sheetPr>` : '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>')
+      + `<dimension ref="${dim}"/><sheetViews><sheetView${idx === 0 ? ' tabSelected="1"' : ''} zoomScaleNormal="100" workbookViewId="0">${pane}</sheetView></sheetViews>`
+      + '<sheetFormatPr defaultRowHeight="15"/>' + cols + `<sheetData>${data}</sheetData>`
+      + (sh.filter ? `<autoFilter ref="${sh.filter}"/>` : '') + merges + dvx
+      + '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>'
+      + `<pageSetup paperSize="9" orientation="${sh.portrait ? 'portrait' : 'landscape'}" fitToWidth="1" fitToHeight="0"/></worksheet>`;
+  }
+  function safeSheet(n, used){ let s = String(n || 'Sheet').replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31).trim() || 'Sheet'; let k = 2, b = s; while(used.has(s.toLowerCase())){ s = (b.slice(0, 28) + ' ' + k++); } used.add(s.toLowerCase()); return s; }
+  function xlsx(sheets){
+    const used = new Set(); sheets.forEach(s=>{ s._name = safeSheet(s.name, used); });
+    const q = n=>`'${n.replace(/'/g, "''")}'`;
+    const names = [];
+    sheets.forEach((s, i)=>{
+      if(s.filter){ const [a, b] = s.filter.split(':'); const abs = r=>r.replace(/^([A-Z]+)(\d+)$/, '$$$1$$$2'); names.push(`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">${q(s._name)}!${abs(a)}:${abs(b)}</definedName>`); }
+      if(s.printTitle) names.push(`<definedName name="_xlnm.Print_Titles" localSheetId="${i}">${q(s._name)}!$${s.printTitle}:$${s.printTitle}</definedName>`);
+    });
+    const files = [
+      { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+          + sheets.map((s, i)=>`<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+          + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>' },
+      { name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>' },
+      { name: 'docProps/core.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+          + `<dc:title>${xe(sheets[0] && sheets[0].title || 'ITC Haridwar PM')}</dc:title><dc:creator>ITC Haridwar · COT PM</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().replace(/\.\d+Z$/, 'Z')}</dcterms:created></cp:coreProperties>` },
+      { name: 'xl/workbook.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets>'
+          + sheets.map((s, i)=>`<sheet name="${xe(s._name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets>'
+          + (names.length ? `<definedNames>${names.join('')}</definedNames>` : '') + '</workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+          + sheets.map((s, i)=>`<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')
+          + `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+      { name: 'xl/styles.xml', data: stylesXml() }]
+      .concat(sheets.map((s, i)=>({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(s, i) })));
+    return zipStore(files);
+  }
+
+  /* ─── XLSX / CSV reader → rows[][] (first sheet) ─── */
+  async function inflateRaw(u8){
+    if(typeof DecompressionStream === 'undefined') throw new Error('this browser cannot open .xlsx here — update the browser, or save the sheet as CSV');
+    const ds = new DecompressionStream('deflate-raw');
+    const buf = await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+    return new Uint8Array(buf);
+  }
+  async function unzip(u8){
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    let eo = -1; for(let i = u8.length - 22; i >= Math.max(0, u8.length - 70000); i--){ if(dv.getUint32(i, true) === 0x06054b50){ eo = i; break; } }
+    if(eo < 0) throw new Error('not an Excel .xlsx file');
+    const n = dv.getUint16(eo + 10, true); let p = dv.getUint32(eo + 16, true);
+    const dec = new TextDecoder(), out = {};
+    for(let k = 0; k < n; k++){
+      if(dv.getUint32(p, true) !== 0x02014b50) break;
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+      const name = dec.decode(u8.subarray(p + 46, p + 46 + nl));
+      out[name] = { method, csize, lo };
+      p += 46 + nl + xl + cl;
+    }
+    return async name=>{
+      const e = out[name] || out[Object.keys(out).find(k=>k.toLowerCase() === String(name).toLowerCase())];
+      if(!e) return null;
+      const lnl = dv.getUint16(e.lo + 26, true), lxl = dv.getUint16(e.lo + 28, true), st = e.lo + 30 + lnl + lxl;
+      const raw = u8.subarray(st, st + e.csize);
+      const data = e.method === 8 ? await inflateRaw(raw) : raw;
+      return dec.decode(data);
+    };
+  }
+  const tags = (doc, t)=>Array.from(doc.getElementsByTagNameNS('*', t));
+  function refRC(ref){ const m = /^([A-Z]+)(\d+)$/.exec(ref || ''); if(!m) return null; let c = 0; for(const ch of m[1]) c = c * 26 + ch.charCodeAt(0) - 64; return [+m[2] - 1, c - 1]; }
+  async function readXlsx(u8){
+    const get = await unzip(u8), P = new DOMParser();
+    const wbx = await get('xl/workbook.xml'); if(!wbx) throw new Error('not an Excel .xlsx file');
+    const wb = P.parseFromString(wbx, 'application/xml');
+    const first = tags(wb, 'sheet')[0]; if(!first) throw new Error('the workbook has no sheet');
+    const rid = first.getAttribute('r:id') || first.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+    let target = 'worksheets/sheet1.xml';
+    const relx = await get('xl/_rels/workbook.xml.rels');
+    if(relx){ const rel = tags(P.parseFromString(relx, 'application/xml'), 'Relationship').find(r=>r.getAttribute('Id') === rid); if(rel) target = rel.getAttribute('Target'); }
+    const path = target.startsWith('/') ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
+    const ssx = await get('xl/sharedStrings.xml');
+    const SS = ssx ? tags(P.parseFromString(ssx, 'application/xml'), 'si').map(si=>tags(si, 't').filter(t=>!(t.parentNode && t.parentNode.localName === 'rPh')).map(t=>t.textContent).join('')) : [];
+    const shx = await get(path); if(!shx) throw new Error('could not open the first sheet');
+    const sh = P.parseFromString(shx, 'application/xml'), rows = [];
+    tags(sh, 'row').forEach((row, ri)=>{
+      const rn = (+row.getAttribute('r') || ri + 1) - 1, arr = rows[rn] = rows[rn] || [];
+      let ci = 0;
+      tags(row, 'c').forEach(c=>{
+        const rc = refRC(c.getAttribute('r')); if(rc) ci = rc[1];
+        const t = c.getAttribute('t') || 'n', vEl = tags(c, 'v')[0], v = vEl ? vEl.textContent : '';
+        let val = '';
+        if(t === 's') val = SS[+v] || '';
+        else if(t === 'inlineStr') val = tags(c, 't').map(x=>x.textContent).join('');
+        else if(t === 'b') val = v === '1';
+        else if(t === 'str' || t === 'e' || t === 'd') val = v;
+        else val = v === '' ? '' : +v;
+        arr[ci++] = val;
+      });
+    });
+    for(let i = 0; i < rows.length; i++) if(!rows[i]) rows[i] = [];
+    return rows;
+  }
+  function parseCsv(text){
+    text = String(text).replace(/^﻿/, ''); const rows = []; let row = [], cur = '', q = false;
+    const sep = (text.split('\n')[0].match(/;/g) || []).length > (text.split('\n')[0].match(/,/g) || []).length ? ';' : ',';
+    for(let i = 0; i < text.length; i++){
+      const c = text[i];
+      if(q){ if(c === '"'){ if(text[i + 1] === '"'){ cur += '"'; i++; } else q = false; } else cur += c; }
+      else if(c === '"') q = true;
+      else if(c === sep){ row.push(cur); cur = ''; }
+      else if(c === '\n' || c === '\r'){ if(c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if(cur !== '' || row.length){ row.push(cur); rows.push(row); }
+    return rows;
+  }
+  function readSheet(file){
+    return new Promise((res, rej)=>{
+      const name = String(file && file.name || '').toLowerCase(), r = new FileReader();
+      r.onerror = ()=>rej(new Error('could not read the file'));
+      if(/\.csv$|\.txt$/.test(name)){ r.onload = ()=>res(parseCsv(r.result)); r.readAsText(file); return; }
+      r.onload = async ()=>{
+        const u8 = new Uint8Array(r.result);
+        try{ res(await readXlsx(u8)); }
+        catch(e){
+          try{
+            if(window.XLSX && XLSX.read && XLSX.utils && XLSX.utils.sheet_to_json){
+              const wb = XLSX.read(u8, { type: 'array' });
+              return res(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: '' }));
+            }
+          }catch(e2){ /* fall through */ }
+          rej(e);
+        }
+      };
+      r.readAsArrayBuffer(file);
+    });
+  }
+  // Cell helpers for imports: dates in any common form → ISO; times → HH:MM
+  const pad = n=>String(n).padStart(2, '0');
+  const MONS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, sept: 9, oct: 10, nov: 11, dec: 12 };
+  function toIsoDate(v){
+    if(v === null || v === undefined || v === '') return '';
+    if(v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${pad(v.getMonth() + 1)}-${pad(v.getDate())}`;
+    if(typeof v === 'number' || /^\d{5}(\.\d+)?$/.test(String(v).trim())){
+      const n = Math.floor(+v); if(n < 20000 || n > 80000) return null;
+      const d = new Date(Date.UTC(1899, 11, 30) + n * 86400000); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+    }
+    const s = String(v).trim().replace(/T\d{2}:\d{2}.*$/, '').replace(/\s+\d{1,2}[:.]\d{2}(:\d{2})?(\s*[AaPp][Mm])?$/, '').trim(); let m, y, mo, d;
+    if((m = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(s))){ y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else if((m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/.exec(s))){ d = +m[1]; mo = +m[2]; y = +m[3]; }
+    else if((m = /^(\d{1,2})[-/. ]([A-Za-z]{3,4})[A-Za-z]*[-/. ,]*(\d{2,4})$/.exec(s))){ d = +m[1]; mo = MONS[m[2].toLowerCase()]; y = +m[3]; }
+    else return null;
+    if(y < 100) y += 2000;
+    const t = new Date(y, mo - 1, d);
+    if(!mo || isNaN(t) || t.getMonth() !== mo - 1 || t.getDate() !== d) return null;
+    return `${y}-${pad(mo)}-${pad(d)}`;
+  }
+  function toHHMM(v){
+    if(v === null || v === undefined || v === '') return '';
+    if(typeof v === 'number' || /^0?\.\d+$|^0$/.test(String(v).trim())){ let f = (+v) % 1; if(f < 0) f += 1; let mins = Math.round(f * 1440); if(mins >= 1440) mins = 0; return `${pad(Math.floor(mins / 60))}:${pad(mins % 60)}`; }
+    const s = String(v).trim(), m = /(\d{1,2})[:.](\d{2})(?::\d{2})?\s*([AaPp][Mm])?\s*$/.exec(s);
+    if(!m) return null;
+    let h = +m[1]; const mi = +m[2];
+    if(m[3]){ const pm = /p/i.test(m[3]); if(h === 12) h = pm ? 12 : 0; else if(pm) h += 12; }
+    if(h > 23 || mi > 59) return null;
+    return `${pad(h)}:${pad(mi)}`;
+  }
+  const cellText = v=>v === null || v === undefined ? '' : typeof v === 'number' ? String(Math.round(v * 1e9) / 1e9) : typeof v === 'boolean' ? (v ? 'TRUE' : 'FALSE') : String(v).trim();
+
+  /* ─── PDF writer ─── */
+  const WH = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584,350,556,350,222,556,333,1000,556,556,333,1000,667,333,1000,350,611,350,350,222,222,333,333,350,556,1000,333,1000,500,333,944,350,500,667,278,333,556,556,556,556,260,556,333,737,370,556,584,333,737,333,400,584,333,333,333,556,537,278,333,333,365,556,834,834,834,611,667,667,667,667,667,667,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,556,556,556,556,556,556,556,584,611,556,556,556,556,500,556,500];
+  const WB = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584,350,556,350,278,556,500,1000,556,556,333,1000,667,333,1000,350,611,350,350,278,278,500,500,350,556,1000,333,1000,556,333,944,350,500,667,278,333,556,556,556,556,280,556,333,737,370,556,584,333,737,333,400,584,333,333,333,611,556,278,333,333,365,556,834,834,834,611,722,722,722,722,722,722,1000,722,667,667,667,667,278,278,278,278,722,722,778,778,778,778,778,584,778,722,722,722,722,667,667,611,556,556,556,556,556,556,889,556,556,556,556,556,278,278,278,278,611,611,611,611,611,611,611,584,611,611,611,611,611,556,611,556];
+  const WIN = { 0x20AC: 128, 0x201A: 130, 0x0192: 131, 0x201E: 132, 0x2026: 133, 0x2020: 134, 0x2021: 135, 0x02C6: 136, 0x2030: 137, 0x0160: 138, 0x2039: 139, 0x0152: 140, 0x017D: 142,
+                0x2018: 145, 0x2019: 146, 0x201C: 147, 0x201D: 148, 0x2022: 149, 0x2013: 150, 0x2014: 151, 0x02DC: 152, 0x2122: 153, 0x0161: 154, 0x203A: 155, 0x0153: 156, 0x017E: 158, 0x0178: 159 };
+  const SUB = { '\u03A9': 'ohm', '\u2126': 'ohm', '\u00B5': '\u00B5', '→': '->', '←': '<-', '✓': 'OK', '✔': 'OK', '✗': 'x', '✕': 'x', '≤': '<=', '≥': '>=', '₹': 'Rs ', '●': '•', '▸': '>', '▍': '|', '⚠': '!', '…': '...', '≈': '~', '−': '-', '′': "'", '″': '"' };
+  function winAnsi(s){
+    let out = '';
+    for(const ch of String(s == null ? '' : s)){
+      const c = ch.codePointAt(0);
+      if(c >= 32 && c < 127) out += ch;
+      else if(c >= 160 && c <= 255) out += String.fromCharCode(c);
+      else if(WIN[c]) out += String.fromCharCode(WIN[c]);
+      else if(SUB[ch] !== undefined) out += winAnsi(SUB[ch]);
+      else if(c === 9 || c === 10 || c === 13) out += ' ';
+      else if((c >= 0xFE00 && c <= 0xFE0F) || c === 0x200D || c === 0x200B || (c >= 0x1F000 && c <= 0x1FAFF) || (c >= 0x2600 && c <= 0x27BF) || (c >= 0x2190 && c <= 0x21FF) || (c >= 0x2700 && c <= 0x27BF)) {}
+      else out += '?';
+    }
+    return out;
+  }
+  const hexRgb = h=>{ h = String(h || '000000').replace('#', ''); return [0, 2, 4].map(i=>(parseInt(h.slice(i, i + 2), 16) / 255).toFixed(3)).join(' '); };
+  const pesc = s=>s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  function pdf(){
+    const W = 595.28, H = 841.89;
+    const P = { W, H, pages: [], imgs: [], cur: null, info: { title: 'Report' } };
+    const f2 = n=>(Math.round(n * 100) / 100).toString();
+    P.newPage = ()=>{ P.cur = []; P.pages.push(P.cur); return P; };
+    P.width = (s, size, bold)=>{ const t = winAnsi(s), w = bold ? WB : WH; let n = 0; for(let i = 0; i < t.length; i++){ const c = t.charCodeAt(i); n += c >= 32 ? (w[c - 32] || 556) : 0; } return n * (size || 10) / 1000; };
+    P.rect = (x, y, w, h, o = {})=>{
+      let s = '';
+      if(o.fill) s += `${hexRgb(o.fill)} rg `;
+      if(o.stroke) s += `${hexRgb(o.stroke)} RG ${f2(o.lw || 0.6)} w `;
+      s += `${f2(x)} ${f2(H - y - h)} ${f2(w)} ${f2(h)} re ` + (o.fill && o.stroke ? 'B' : o.fill ? 'f' : 'S');
+      P.cur.push(s);
+    };
+    P.line = (x1, y1, x2, y2, o = {})=>{ P.cur.push(`${hexRgb(o.color || 'D0D5DD')} RG ${f2(o.lw || 0.6)} w ${f2(x1)} ${f2(H - y1)} m ${f2(x2)} ${f2(H - y2)} l S`); };
+    P.text = (s, x, y, o = {})=>{
+      const size = o.size || 10, bold = !!o.bold; let t = String(s == null ? '' : s);
+      if(o.maxW && P.width(t, size, bold) > o.maxW){ while(t.length > 1 && P.width(t + '…', size, bold) > o.maxW) t = t.slice(0, -1); t += '…'; }
+      let xx = x; const w = P.width(t, size, bold);
+      if(o.align === 'right') xx = x - w; else if(o.align === 'center') xx = x - w / 2;
+      P.cur.push(`BT /${bold ? 'F2' : 'F1'} ${f2(size)} Tf ${hexRgb(o.color || '101828')} rg ${f2(xx)} ${f2(H - y)} Td (${pesc(winAnsi(t))}) Tj ET`);
+      return w;
+    };
+    P.wrap = (s, maxW, size, bold)=>{
+      const out = [];
+      String(s == null ? '' : s).split(/\n/).forEach(para=>{
+        const words = para.split(/\s+/).filter(Boolean); let line = '';
+        if(!words.length){ out.push(''); return; }
+        words.forEach(wd=>{
+          const t = line ? line + ' ' + wd : wd;
+          if(P.width(t, size, bold) <= maxW){ line = t; return; }
+          if(line) out.push(line);
+          let rest = wd;
+          while(P.width(rest, size, bold) > maxW && rest.length > 1){ let k = rest.length; while(k > 1 && P.width(rest.slice(0, k), size, bold) > maxW) k--; out.push(rest.slice(0, k)); rest = rest.slice(k); }
+          line = rest;
+        });
+        if(line) out.push(line);
+      });
+      return out;
+    };
+    P.addJpeg = (bytes, w, h)=>{ const im = { name: 'Im' + (P.imgs.length + 1), bytes, w, h }; P.imgs.push(im); return im; };
+    P.image = (im, x, y, w, h)=>{ P.cur.push(`q ${f2(w)} 0 0 ${f2(h)} ${f2(x)} ${f2(H - y - h)} cm /${im.name} Do Q`); };
+    P.output = ()=>{
+      const chunks = [], offs = []; let len = 0;
+      const push = x=>{ const u = typeof x === 'string' ? Uint8Array.from(x, c=>c.charCodeAt(0) & 255) : x; chunks.push(u); len += u.length; };
+      const objs = [];   // [id, bodyString | {dict, stream}]
+      const nImg = P.imgs.length, nPg = P.pages.length;
+      const idF1 = 3, idF2 = 4, idInfo = 5, img0 = 6, pg0 = img0 + nImg;   // each page = content id, page id
+      push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+      const obj = (id, body)=>{ offs[id] = len; push(`${id} 0 obj\n`); if(typeof body === 'string') push(body); else { push(body.dict.replace('%LEN%', body.stream.length)); push('\nstream\n'); push(body.stream); push('\nendstream'); } push('\nendobj\n'); };
+      const kids = []; for(let i = 0; i < nPg; i++) kids.push(`${pg0 + i * 2 + 1} 0 R`);
+      obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+      obj(2, `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${nPg} >>`);
+      obj(idF1, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+      obj(idF2, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+      const d = new Date(), ds = `D:${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+      obj(idInfo, `<< /Title (${pesc(winAnsi(P.info.title))}) /Producer (ITC Haridwar COT PM) /Creator (ITC Haridwar COT PM) /CreationDate (${ds}) >>`);
+      P.imgs.forEach((im, i)=>obj(img0 + i, { dict: `<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length %LEN% >>`, stream: im.bytes }));
+      const xo = nImg ? ` /XObject << ${P.imgs.map((im, i)=>`/${im.name} ${img0 + i} 0 R`).join(' ')} >>` : '';
+      P.pages.forEach((pg, i)=>{
+        const content = Uint8Array.from(pg.join('\n'), c=>c.charCodeAt(0) & 255);
+        obj(pg0 + i * 2, { dict: '<< /Length %LEN% >>', stream: content });
+        obj(pg0 + i * 2 + 1, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${idF1} 0 R /F2 ${idF2} 0 R >>${xo} >> /Contents ${pg0 + i * 2} 0 R >>`);
+      });
+      const n = pg0 + nPg * 2, xref = len;
+      let x = `xref\n0 ${n}\n0000000000 65535 f \n`;
+      for(let i = 1; i < n; i++) x += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+      push(x + `trailer\n<< /Size ${n} /Root 1 0 R /Info ${idInfo} 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+      return concat(chunks);
+    };
+    return P.newPage();
+  }
+  // Any photo (Blob or base64) → baseline RGB JPEG ≤ max px for the PDF
+  function jpeg(src, mime, max){
+    max = max || 1400;
+    return new Promise((res, rej)=>{
+      let url;
+      try{
+        const blob = src instanceof Blob ? src : (()=>{ const bin = atob(src); const a = new Uint8Array(bin.length); for(let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type: mime || 'image/jpeg' }); })();
+        url = URL.createObjectURL(blob);
+      }catch(e){ return rej(e); }
+      const img = new Image();
+      img.onload = ()=>{
+        try{
+          const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+          const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+          const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+          const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+          const b64 = cv.toDataURL('image/jpeg', 0.8).split(',')[1], bin = atob(b64), a = new Uint8Array(bin.length);
+          for(let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+          URL.revokeObjectURL(url); res({ bytes: a, w, h });
+        }catch(e){ URL.revokeObjectURL(url); rej(e); }
+      };
+      img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error('photo could not be read')); };
+      img.src = url;
+    });
+  }
+  function save(name, bytes, mime){
+    const blob = new Blob([bytes], { type: mime || 'application/octet-stream' });
+    PMX.last = { name, mime, size: blob.size, bytes };
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; a.rel = 'noopener'; document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 8000);
+  }
+  const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const PMX = window.PMX = { xlsx, readSheet, readXlsx, parseCsv, toIsoDate, toHHMM, cellText, pdf, jpeg, save, winAnsi, colName, XLSX_MIME, last: null };
+})();
+</script>
+<script>
+/* pass314 */
+/* ═══════════════════════════════════════════════════════════════════════
+   3.14 · FACTORY PASSPORT add-on
+   • Site data: every row of passport.xlsx (9 sheets) and the Biomass Boiler
+     inventory (4 sheets) + 28 nameplate photos, loaded once by an admin
+     from passport-data.js (Import & export → Load site data). Re-running
+     skips what is already there (matched by its source key).
+   • Add / edit for users and admin (as before) — every edit is stamped with
+     who changed what (Change history). 🗑 Remove for users and admin: the
+     entry moves to the "Removed" tab and can be restored; only admin can
+     delete permanently.
+   • Reports: formatted Excel passport book (Summary + one sheet per system)
+     and PDF datasheets (one equipment, an area, a system or everything) with
+     the nameplate photos.
+   • New equipment types for utilities (tank, filter, safety valve, burner,
+     gearbox, control component, sensor, …) and status "Not in use".
+   ═══════════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  const SEED_V = '20261001';
+  /* ─── Types & statuses ─── */
+  const NEWTYPES = [
+    { t: 'System overview', f: [] },
+    { t: 'Tank / vessel', f: ['Capacity', 'Max. working pressure', 'MOC', 'Quantity (nos)'] },
+    { t: 'Filter / softener', f: ['Capacity', 'Type', 'MOC'] },
+    { t: 'Safety valve', f: ['Pressure', 'Size', 'Year of manufacture', 'Body MOC'] },
+    { t: 'Burner', f: ['Capacity / firing range', 'Fuel', 'Power (kW)'] },
+    { t: 'Heater', f: ['Power (kW)', 'Quantity (nos)'] },
+    { t: 'Level control', f: ['Type', 'Max. working pressure'] },
+    { t: 'Blower', f: ['Airflow (m³/h)', 'Motor power (kW)', 'Quantity (nos)'] },
+    { t: 'Process equipment', f: ['Capacity', 'Motor power (kW)', 'Quantity (nos)'] },
+    { t: 'Sump / pit', f: ['Cutter pumps (nos)', 'Cutter pump rating (kW)'] },
+    { t: 'Gearbox', f: ['Gear ratio (actual)', 'Output torque (Nm)', 'Input power (kW)', 'Input speed (RPM)', 'Size'] },
+    { t: 'Belt / hose', f: ['Size / specification'] },
+    { t: 'Control component', f: ['Component', 'Machine / location', 'Rating', 'Quantity (nos)', 'Cubicle / feeder'] },
+    { t: 'VFD / drive', f: ['Component', 'Machine / location', 'Rating', 'Quantity (nos)', 'Cubicle / feeder'] },
+    { t: 'PLC / HMI', f: ['Component', 'Machine / location', 'Rating', 'Quantity (nos)'] },
+    { t: 'Sensor / switch', f: ['Location', 'Type', 'Rating'] },
+    { t: 'Water harvesting', f: ['Quantity (nos)', 'Flow rate', 'Location'] }];
+  const oi = TYPES.findIndex(t => t.t === 'Other');
+  TYPES.splice(oi < 0 ? TYPES.length : oi, 0, ...NEWTYPES.filter(x => !TYPES.some(t => t.t === x.t)));
+  if(!STATUSES.includes('Not in use')) STATUSES.splice(2, 0, 'Not in use');
+  const _sc = statusClass;
+  window.statusClass = s => s === 'Not in use' ? 'none' : _sc(s);
+  window.allItems = function(){ return Object.values(P.items).filter(i => i && i.id && !i.removed); };
+  const removedItems = () => Object.values(P.items).filter(i => i && i.id && i.removed).sort((a, b) => String(b.removed.at).localeCompare(String(a.removed.at)));
+  const z = n => String(n).padStart(2, '0');
+  const nowIso = () => new Date().toISOString();
+  const LBL = { unit: 'Unit', area: 'Area', type: 'Type', name: 'Name', tag: 'Tag', make: 'Make', model: 'Model', serial: 'Serial no.', year: 'Year', status: 'Status', notes: 'Notes' };
+  function diffItem(a, b){
+    const ch = [];
+    Object.keys(LBL).forEach(k => { const x = String(a[k] || ''), y = String(b[k] || ''); if(x !== y) ch.push(k === 'notes' ? 'Notes edited' : k === 'unit' ? `Unit: ${unitLabel(x)} → ${unitLabel(y)}` : `${LBL[k]}: ${x || '—'} → ${y || '—'}`); });
+    const am = {}, bm = {}; (a.specs || []).forEach(s => { am[s.k] = s.v; }); (b.specs || []).forEach(s => { bm[s.k] = s.v; });
+    [...new Set(Object.keys(am).concat(Object.keys(bm)))].forEach(k => { if(String(am[k] || '') !== String(bm[k] || '')) ch.push(`${k}: ${am[k] || '—'} → ${bm[k] || '—'}`); });
+    return ch;
+  }
+  const stamp = (i, what) => (i.edits || []).concat([{ by: me().email, at: nowIso(), what }]).slice(-15);
+
+  /* ─── Views: Find · Reports · Import & export · Removed ─── */
+  const _renderView = renderView;
+  window.renderView = function(){ if(P.view === 'reports') return renderReports(); if(P.view === 'bin') return renderBin(); return _renderView(); };
+  window.refresh = function(){
+    if(!byId('view-' + P.view)) return renderView();
+    if(P.view === 'find') fillFind(); else if(P.view === 'tools') fillTools(); else if(P.view === 'reports') fillReports(); else renderBin();
+    binCount();
+  };
+  function binCount(){ const b = document.querySelector('.seg button[data-v="bin"]'); if(b){ const n = removedItems().length; b.textContent = n ? `🗑 Removed (${n})` : '🗑 Removed'; } }
+  const _fillFind = fillFind;
+  window.fillFind = function(){
+    _fillFind();
+    const s = byId('f-sum'), n = removedItems().length;
+    if(s && n && allLoaded()) s.innerHTML += ` · <a href="#" onclick="setView('bin');return false">🗑 ${n} removed</a>`;
+    binCount();
+  };
+
+  /* ─── Passport card ─── */
+  window.fpOpen = function(id){
+    const i = P.items[id]; if(!i){ toast('Not found', 'This equipment may have been deleted.', 'warn'); return; }
+    const specs = (i.specs || []).filter(s => s.v !== '' && s.v != null), rm = i.removed;
+    openModal(`${mHead('Factory passport', `${unitLabel(i.unit)}${i.area ? ' · ' + i.area : ''}`)}
+      <div class="modal-body">
+        ${rm ? `<div class="banner fp-rm">🗑 Removed by ${esc(String(rm.by || '').split('@')[0])} on ${fmtStamp(rm.at)}${rm.reason ? ' — “' + esc(rm.reason) + '”' : ''}. Hidden from Find and search. Restore it to bring it back.</div>` : ''}
+        <div class="plate"><span class="rv tl"></span><span class="rv tr"></span><span class="rv bl"></span><span class="rv br"></span>
+          <div class="ptype">${esc(i.type)}</div>
+          <div class="pname">${esc(i.name)}</div>
+          <div class="ptag"><span class="mono">${esc(i.tag || 'No tag')}</span> · <span class="pill ${statusClass(i.status)}">${esc(i.status || 'In service')}</span></div>
+          <div class="pgrid">
+            <div><div class="k">Make</div><div class="v">${esc(i.make || '—')}</div></div>
+            <div><div class="k">Model</div><div class="v">${esc(i.model || '—')}</div></div>
+            <div><div class="k">Serial no.</div><div class="v">${esc(i.serial || '—')}</div></div>
+            <div><div class="k">Year installed</div><div class="v">${esc(i.year || '—')}</div></div>
+          </div>
+        </div>
+        <div class="sec-t">Technical specifications</div>
+        ${specs.length ? `<table class="spec">${specs.map(s => `<tr${/^⚠/.test(s.k) ? ' class="fp-warn"' : ''}><td>${esc(s.k)}</td><td>${esc(s.v)}</td></tr>`).join('')}</table>`
+          : '<div class="empty" style="padding:12px">No technical specs yet — tap Edit to add them.</div>'}
+        ${i.notes ? `<div class="sec-t">Notes</div><div class="pre" style="font-size:12.5px">${esc(i.notes)}</div>` : ''}
+        <div class="sec-t">Documents &amp; photos</div>
+        <div id="fp-att"></div>
+        ${(i.edits || []).length ? `<div class="sec-t">Change history</div><div class="fp-hist">${(i.edits || []).slice().reverse().map(e => `<div><b>${esc(String(e.by || '').split('@')[0])}</b> · ${fmtStamp(e.at)} — ${esc(e.what)}</div>`).join('')}</div>` : ''}
+        <div class="hint" style="margin-top:12px">Added by ${esc(i.by || '—')} · ${fmtStamp(i.at)}${i.editedAt ? ` · last edited by ${esc(i.editedBy || '')} · ${fmtStamp(i.editedAt)}` : ''}${i.src && /^(motor|panel):/.test(i.src) ? ` · created from ${i.src.indexOf('motor') === 0 ? 'Motor PM' : 'Panel PM'}` : ''}${i.ref ? `<br>Source: ${esc(i.ref)}` : ''}</div>
+      </div>
+      <div class="modal-foot">
+        ${rm ? `${isAdmin() ? `<button type="button" class="btn danger" onclick="fpPurge('${i.id}')">Delete permanently</button>` : ''}<button type="button" class="btn ghost" onclick="closeModal()">Close</button><button type="button" class="btn" onclick="fpRestore('${i.id}')">↺ Restore</button>`
+          : `<button type="button" class="btn danger" onclick="fpRemove('${i.id}')">🗑 Remove</button><button type="button" class="btn ghost" onclick="fpPdfOne('${i.id}')">⤓ PDF</button>
+             <button type="button" class="btn ghost" onclick="fpForm('${i.id}')">Edit</button><button type="button" class="btn" onclick="closeModal()">Done</button>`}
+      </div>`);
+    ScanKit.mount(byId('fp-att'), { module: 'passport', shard: bucketOf(i.id), key: i.id, accept: DOC_ACCEPT,
+      pickLabel: 'Upload datasheet, manual or photo', itemWord: 'File',
+      emptyText: 'No documents yet. Add a nameplate photo, datasheet, test certificate or manual.' });
+  };
+
+  /* ─── Save with change history ─── */
+  window.fpSave = async function(id){
+    if(!requireReady()) return;
+    captureSpecs();
+    const unit = val('pf-unit'), type = val('pf-type'), name = val('pf-name'), tag = val('pf-tag'), year = val('pf-year');
+    if(!unit || !type || !name) return formErr('pf-err', 'Fill in plant unit, equipment type and equipment name.');
+    if(year && !/^(19|20)\d{2}$/.test(year)) return formErr('pf-err', 'Year of installation should be four digits, e.g. 2018.');
+    if(tag){
+      const dup = allItems().find(x => x.id !== id && x.unit === unit && String(x.tag || '').toLowerCase() === tag.toLowerCase());
+      if(dup && !confirm(`Tag "${tag}" is already used by "${dup.name}" in ${unitLabel(unit)}. Save anyway?`)) return;
+    }
+    const tf = typeDef(type).f;
+    const specs = tf.map(k => ({ k, v: String(P.form.vals[k] || '').trim() })).filter(s => s.v !== '');
+    P.form.extras.forEach(s => { if(s.k && s.v && !specs.some(x => x.k.toLowerCase() === s.k.toLowerCase())) specs.push({ k: s.k, v: s.v }); });
+    const u = me(); const now = nowIso();
+    const old = id ? P.items[id] : null;
+    const base = old || { id: newId('eq'), by: u.email, uid: u.uid, at: now };
+    const obj = Object.assign({}, base, { unit, area: val('pf-area'), type, name, tag, make: val('pf-make'), model: val('pf-model'),
+      serial: val('pf-serial'), year, status: val('pf-status') || 'In service', specs, notes: val('pf-notes') }, id ? { editedBy: u.email, editedAt: now } : {});
+    if(old){ const ch = diffItem(old, obj); if(!ch.length){ toast('No change', name); fpOpen(id); return; } obj.edits = stamp(old, ch.join('; ')); }
+    else obj.edits = [{ by: u.email, at: now, what: 'Added' }];
+    const b = bucketOf(obj.id); const btn = byId('pf-save'); if(btn) btn.disabled = true;
+    try{
+      if(id) await updateFields(bucketDoc(b), { ['items.' + id]: obj });
+      else await setMerge(bucketDoc(b), { items: { [obj.id]: obj } });
+      localPut(obj); refresh();
+      fpOpen(obj.id);
+      toast(id ? 'Passport updated' : 'Equipment added', name);
+    }catch(e){ if(btn) btn.disabled = false; formErr('pf-err', 'Could not save: ' + friendlyErr(e)); }
+  };
+
+  /* ─── Remove (users + admin) · Restore · Delete permanently (admin) ─── */
+  window.fpRemove = async function(id){
+    if(!requireReady()) return;
+    const i = P.items[id]; if(!i) return;
+    const reason = prompt(`Remove "${i.name}" from the passport?\n\nIt moves to 🗑 Removed together with its documents and can be restored any time. Reason (optional):`, '');
+    if(reason === null) return;
+    const u = me(), now = nowIso(), r = String(reason || '').trim();
+    const obj = Object.assign({}, i, { removed: { by: u.email, uid: u.uid, at: now, reason: r } });
+    obj.edits = stamp(i, 'Removed' + (r ? ': ' + r : ''));
+    try{ await updateFields(bucketDoc(bucketOf(id)), { ['items.' + id]: obj }); localPut(obj); closeModal(); refresh(); toast('Moved to 🗑 Removed', `${i.name} — restore it any time from the Removed tab`); }
+    catch(e){ toast('Remove failed', friendlyErr(e), 'error'); }
+  };
+  window.fpRestore = async function(id){
+    if(!requireReady()) return;
+    const i = P.items[id]; if(!i || !i.removed) return;
+    const obj = Object.assign({}, i); delete obj.removed;
+    obj.edits = stamp(i, 'Restored'); obj.editedBy = me().email; obj.editedAt = nowIso();
+    try{ await updateFields(bucketDoc(bucketOf(id)), { ['items.' + id]: obj }); localPut(obj); closeModal(); refresh(); toast('Restored', i.name); }
+    catch(e){ toast('Restore failed', friendlyErr(e), 'error'); }
+  };
+  window.fpPurge = async function(id){ if(!requireAdmin('Delete permanently')) return; await fpDelete(id); refresh(); };
+  function renderBin(){
+    const list = removedItems();
+    byId('view').innerHTML = `<div id="view-bin"><div class="card"><div class="card-h"><div><div class="card-t">🗑 Removed equipment</div>
+      <div class="card-m">Entries removed by users or admin, with their documents. Anyone can restore an entry; only an admin can delete it permanently.</div></div></div>
+      <div class="list">${list.length ? list.map(i => `<div class="li"><div class="main"><div class="t">${esc(i.name)}</div>
+        <div class="s">${esc(i.type)} · ${esc(unitLabel(i.unit))}${i.area ? ' · ' + esc(i.area) : ''}</div>
+        <div class="s">Removed by ${esc(String(i.removed.by || '').split('@')[0])} · ${fmtStamp(i.removed.at)}${i.removed.reason ? ' · “' + esc(i.removed.reason) + '”' : ''}</div></div>
+        <div class="acts"><button type="button" class="btn sm ghost" onclick="fpOpen('${i.id}')">View</button><button type="button" class="btn sm" onclick="fpRestore('${i.id}')">↺ Restore</button>
+        ${isAdmin() ? `<button type="button" class="btn sm danger" onclick="fpPurge('${i.id}')">Delete</button>` : ''}</div></div>`).join('')
+        : '<div class="empty">Nothing removed.</div>'}</div></div></div>`;
+    binCount();
+  }
+
+  /* ─── Import: read .xlsx without the internet library, match "Passport ID" ─── */
+  window.fpImportFile = async function(file){
+    if(!requireAdmin('Import') || !requireReady()) return;
+    let rows;
+    try{
+      if(/\.csv$/i.test(file.name)) rows = parseCSV(await file.text());
+      else rows = (await PMX.readSheet(file)).map(r => (r || []).map(c => PMX.cellText(c)));
+    }catch(e){ toast('Could not read the file', friendlyErr(e), 'error'); return; }
+    while(rows.length && !(rows[0] || []).some(c => /^(name|equipment|equipment name)$/i.test(String(c).trim()))) rows.shift();   // skip title rows
+    const plan = planImport(rows);
+    if(plan.error){ toast('Import stopped', plan.error, 'warn'); return; }
+    P.importPlan = plan;
+    const sample = plan.add.slice(0, 6).map(r => ['New', r]).concat(plan.upd.slice(0, 4).map(x => ['Update', x.rec]));
+    openModal(`${mHead('Check the import', file.name)}
+      <div class="modal-body">
+        <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+          <div class="kpi good"><div class="l">New</div><div class="v">${plan.add.length}</div></div>
+          <div class="kpi"><div class="l">Updates</div><div class="v">${plan.upd.length}</div></div>
+          <div class="kpi ${plan.errors.length ? 'bad' : ''}"><div class="l">Skipped</div><div class="v">${plan.errors.length}</div></div>
+        </div>
+        ${plan.specCols.length ? `<div class="hint" style="margin-bottom:10px">Spec columns found: ${plan.specCols.map(esc).join(', ')}</div>` : ''}
+        <div class="list">${sample.map(([k, r]) => `<div class="li"><div class="main"><div class="t">${esc(r.name)} <span class="pill ${k === 'New' ? 'ok' : 'acc'}">${k}</span></div>
+          <div class="s">${esc(r.type || 'Other')}${r.tag ? ' · ' + esc(r.tag) : ''} · ${esc(unitLabel(r.unit))}${r.area ? ' · ' + esc(r.area) : ''} · ${r.specs.length} spec${r.specs.length === 1 ? '' : 's'}</div></div></div>`).join('')}</div>
+        ${plan.errors.length ? `<div class="sec-t">Skipped rows</div><div class="hint">${plan.errors.slice(0, 12).map(esc).join('<br>')}${plan.errors.length > 12 ? `<br>…and ${plan.errors.length - 12} more` : ''}</div>` : ''}
+      </div>
+      <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+        <button type="button" class="btn" id="imp-go" onclick="fpApplyImport()" ${plan.add.length + plan.upd.length ? '' : 'disabled'}>Import ${plan.add.length + plan.upd.length} row${plan.add.length + plan.upd.length === 1 ? '' : 's'}</button></div>`);
+  };
+  const IGNORE = ['source', 'documents', 'removed'];
+  window.planImport = function(rows){
+    if(!rows || rows.length < 2) return { error: 'The file has no data rows under the headings.' };
+    const head = rows[0].map(h => String(h == null ? '' : h).trim());
+    const map = {};
+    head.forEach((h, idx) => { const k = h.toLowerCase(); if(k === 'passport id'){ map.pid = idx; return; }
+      for(const [c, al] of Object.entries(ALIAS)){ if(al.includes(k) && map[c] === undefined){ map[c] = idx; return; } } });
+    if(map.name === undefined || map.unit === undefined) return { error: 'The file needs at least a "Unit" and a "Name" column. Download the template (or an Excel export) to see the layout.' };
+    const used = new Set(Object.values(map));
+    const specCols = head.map((h, idx) => ({ h, idx })).filter(x => x.h && !used.has(x.idx) && !IGNORE.includes(x.h.toLowerCase()));
+    const out = { add: [], upd: [], errors: [], specCols: specCols.map(x => x.h) };
+    const byTag = {}; allItems().forEach(i => { if(i.tag) byTag[i.unit + '|' + String(i.tag).toLowerCase()] = i; });
+    const seen = new Set(), seenId = new Set();
+    rows.slice(1).forEach((r, n) => {
+      const g = c => map[c] === undefined ? '' : String(r[map[c]] == null ? '' : r[map[c]]).trim();
+      const line = n + 2, name = g('name'), unit = matchUnit(g('unit'));
+      if(!name && !r.some(c => String(c == null ? '' : c).trim())) return;
+      if(!name){ out.errors.push(`Row ${line}: equipment name is empty`); return; }
+      if(!unit){ out.errors.push(`Row ${line}: unit "${g('unit')}" not recognised — use Foods, PCPB, COT or PPB`); return; }
+      const specs = specCols.map(x => ({ k: x.h, v: String(r[x.idx] == null ? '' : r[x.idx]).trim() })).filter(s => s.v !== '');
+      const rec = { unit, area: g('area'), type: matchType(g('type')), name, tag: g('tag'), make: g('make'), model: g('model'),
+                    serial: g('serial'), year: g('year'), status: matchStatus(g('status')), notes: g('notes'), specs };
+      const pid = g('pid'), byPid = pid && P.items[pid] && !P.items[pid].removed ? P.items[pid] : null;
+      if(byPid){ if(seenId.has(pid)){ out.errors.push(`Row ${line}: Passport ID ${pid} appears twice in this file`); return; } seenId.add(pid); out.upd.push({ ex: byPid, rec }); return; }
+      const key = rec.tag ? unit + '|' + rec.tag.toLowerCase() : '';
+      if(key && seen.has(key)){ out.errors.push(`Row ${line}: tag "${rec.tag}" appears twice in this file`); return; }
+      if(key) seen.add(key);
+      const ex = key ? byTag[key] : null;
+      if(ex) out.upd.push({ ex, rec }); else out.add.push(rec);
+    });
+    return out;
+  };
+
+  /* ─── Export (Excel, import format) ─── */
+  const PRE = ['Passport ID', 'Unit', 'Area', 'Type', 'Name', 'Tag', 'Make', 'Model', 'Serial No', 'Year', 'Status'];
+  function specOrder(list){
+    const keys = [];
+    TYPES.forEach(t => t.f.forEach(k => { if(!keys.includes(k) && list.some(i => (i.specs || []).some(s => s.k === k))) keys.push(k); }));
+    list.forEach(i => (i.specs || []).forEach(s => { if(!keys.includes(s.k)) keys.push(s.k); }));
+    return keys;
+  }
+  window.fpExportXlsx = function(selection){
+    const list = selection ? findList() : sortItems(allItems());
+    if(!list.length){ toast('Nothing to export', 'No equipment matches.', 'warn'); return; }
+    const keys = specOrder(list), H = PRE.concat(['Notes'], keys, ['Source']);
+    const rows = [H.map((h, n) => ({ v: h, s: n < PRE.length + 1 ? 'hdr' : 'hdrInput' }))];
+    list.forEach(i => { const m = {}; (i.specs || []).forEach(s => { m[s.k] = s.v; });
+      rows.push([i.id, unitLabel(i.unit), i.area, i.type, i.name, i.tag, i.make, i.model, i.serial, i.year, i.status || 'In service', i.notes].map(v => ({ v: v || '', s: 'cell' }))
+        .concat(keys.map(k => ({ v: m[k] || '', s: /^⚠/.test(k) && m[k] ? 'late' : 'cell' })), [{ v: i.ref || '', s: 'cell' }])); });
+    const last = PMX.colName(H.length - 1);
+    PMX.save(`Factory_Passport_${selection ? 'selection' : 'all'}_${todayIso()}.xlsx`, PMX.xlsx([{ name: 'Passport', cols: [16, 14, 26, 18, 34, 12, 18, 20, 18, 7, 12, 30].concat(keys.map(k => Math.min(26, Math.max(12, k.length + 2))), [36]),
+      rows, freeze: { r: 1, c: 5 }, filter: `A1:${last}${rows.length}`, printTitle: 1, heights: { 0: 30 } }]), PMX.XLSX_MIME);
+    toast('Excel ready', `${list.length} equipment · keep "Passport ID" to update the same entries when you upload it back`);
+  };
+  const _renderTools = renderTools;
+  window.renderTools = function(){
+    _renderTools();
+    const v = byId('view-tools'); if(!v) return;
+    const exp = v.querySelector('.card .tools');
+    if(exp) exp.insertAdjacentHTML('afterbegin', '<button type="button" class="btn" onclick="fpExportXlsx(false)">⤓ Excel — everything</button><button type="button" class="btn ghost" onclick="fpExportXlsx(true)">⤓ Excel — current selection</button>');
+    const cards = v.querySelectorAll('.card');
+    const seedCard = `<div class="card" id="fp-seed-card"><div class="card-h"><div><div class="card-t">Load site data — utilities passport</div>
+        <div class="card-m">Creates the passport of every equipment in <b>passport.xlsx</b> (Electrical, ETP, Boilers #01/#02, HVAC, WTP, fire pump houses, harvesting) and the <b>Biomass Boiler #1 inventory</b> (motors, gearboxes, control panel, sensors), with the 28 nameplate photos. Entries already loaded are skipped.</div></div></div>
+        <div class="card-b tools">${isAdmin() ? '<button type="button" class="btn" onclick="fpSeedOpen()">Load site data</button>' : '<span class="hint">Only admins can do this.</span>'}</div></div>`;
+    if(cards[1]) cards[1].insertAdjacentHTML('afterend', seedCard); else v.insertAdjacentHTML('beforeend', seedCard);
+    const t = v.querySelector('.card .card-m'); if(t) t.textContent = 'Download the passport as Excel (formatted, can be uploaded back — keep the "Passport ID" column) or as CSV. “Current selection” uses the filters on the Find page.';
+  };
+
+  /* ─── Load site data (passport-data.js) ─── */
+  function seedLoad(){
+    return new Promise((res, rej) => {
+      if(window.FP_SEED) return res(window.FP_SEED);
+      const s = document.createElement('script'); s.src = 'passport-data.js?v=' + SEED_V;
+      s.onload = () => window.FP_SEED ? res(window.FP_SEED) : rej(new Error('passport-data.js is empty'));
+      s.onerror = () => rej(new Error('passport-data.js was not found next to passport.html — upload it to GitHub together with the other files.'));
+      document.head.appendChild(s);
+    });
+  }
+  window.fpSeedOpen = async function(){
+    if(!requireAdmin('Load site data') || !requireReady()) return;
+    if(!allLoaded()){ toast('Still loading', 'Wait until the passport has loaded, then try again.', 'warn'); return; }
+    let S; try{ S = await seedLoad(); }catch(e){ toast('Could not load the site data', e.message, 'error'); return; }
+    const bySrc = {}; Object.values(P.items).forEach(i => { if(i && i.src) bySrc[i.src] = i; });
+    const fresh = S.items.filter(x => !bySrc[x.src]), have = S.items.filter(x => bySrc[x.src]);
+    const groups = counts(fresh, x => unitLabel(x.unit) + ' · ' + x.area);
+    openModal(`${mHead('Load site data', S.title)}
+      <div class="modal-body">
+        <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+          <div class="kpi good"><div class="l">New</div><div class="v">${fresh.length}</div></div>
+          <div class="kpi"><div class="l">Already loaded</div><div class="v">${have.length}</div></div>
+          <div class="kpi"><div class="l">Photos</div><div class="v">${Object.keys(S.photos || {}).length}</div></div>
+        </div>
+        ${S.conflicts && S.conflicts.length ? `<div class="banner fp-warnb"><b>⚠ Please confirm — your sheets disagree here:</b><br>${S.conflicts.map(c => '• ' + esc(c)).join('<br>')}<br><span style="opacity:.8">Where two sheets disagree, the Main Page value is loaded and the other value is shown in that passport as “⚠ Check”. Repeated serial numbers are loaded as written, with a note to verify.</span></div>` : ''}
+        ${fresh.length ? `<div class="sec-t" style="margin-top:4px;border-top:0;padding-top:0">What will be created</div><div class="list">${Object.keys(groups).sort().map(k => `<div class="li" style="padding:7px 0"><div class="main"><div class="s" style="margin:0">${esc(k)}</div></div><b class="mono">${groups[k]}</b></div>`).join('')}</div>` : '<div class="banner ok">Every entry from the sheets is already in the passport.</div>'}
+        ${have.length ? `<label class="checks" style="margin-top:12px"><label><input type="checkbox" id="seed-refresh"> Also refresh the ${have.length} entries already loaded from the sheets (overwrites their fields; the change is kept in their history)</label></label>` : ''}
+        <div class="hint" id="seed-status" style="margin-top:10px"></div>
+      </div>
+      <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+        <button type="button" class="btn" id="seed-go" onclick="fpSeedApply()">${fresh.length ? `Load ${fresh.length} entries + photos` : 'Check photos / refresh'}</button></div>`);
+  };
+  async function putPhoto(key, shard, p){
+    const f = window.__pmScanFs, db = fb().db, u = window.__pmCurrentUser;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), CH = 700000, parts = Math.max(1, Math.ceil(p.b64.length / CH));
+    for(let k = 0; k < parts; k++) await f.setDoc(f.doc(db, 'itc_pm', `scandata_${id}_${k}`), { d: p.b64.slice(k * CH, (k + 1) * CH), k, n: parts, scan: id, pm: key, module: 'passport' });
+    const at = nowIso();
+    await f.setDoc(f.doc(db, 'itc_pm', `scanidx_passport_${shard}`), { items: { [id]: { pm: key, name: p.name, type: p.type || 'image/jpeg', kind: 'image', size: Math.round(p.b64.length * 0.75),
+      stored: p.b64.length, parts, by: u.email || u.uid, uid: u.uid, at } }, module: 'passport', shard, updatedAt: at }, { merge: true });
+  }
+  async function listed(shard, key){ ScanKit.ensure('passport', shard); for(let n = 0; n < 60; n++){ const l = ScanKit.list('passport', shard, key); if(l !== undefined) return l; await new Promise(r => setTimeout(r, 100)); } return []; }
+  window.fpSeedApply = async function(){
+    if(!requireAdmin('Load site data') || !requireReady()) return;
+    const S = window.FP_SEED; if(!S) return;
+    const refreshOld = !!(byId('seed-refresh') && byId('seed-refresh').checked);
+    const st = t => { const e = byId('seed-status'); if(e) e.textContent = t; };
+    const btn = byId('seed-go'); if(btn){ btn.disabled = true; btn.textContent = 'Loading…'; }
+    const u = me(), now = nowIso(), bySrc = {};
+    Object.values(P.items).forEach(i => { if(i && i.src) bySrc[i.src] = i; });
+    const byB = {}; const slot = b => (byB[b] = byB[b] || { set: {}, upd: {} });
+    let nNew = 0, nUpd = 0, nPh = 0;
+    const FIELDS = ['unit', 'area', 'type', 'name', 'tag', 'make', 'model', 'serial', 'year', 'status', 'specs', 'notes', 'ref'];
+    S.items.forEach(x => {
+      const ex = bySrc[x.src];
+      if(!ex){
+        const id = newId('eq'); const obj = { id, src: x.src, by: u.email, uid: u.uid, at: now, edits: [{ by: u.email, at: now, what: 'Added from ' + (x.ref || '').split(' › ')[0] }] };
+        FIELDS.forEach(k => { obj[k] = x[k] == null ? '' : JSON.parse(JSON.stringify(x[k])); });
+        slot(bucketOf(id)).set[id] = obj; bySrc[x.src] = obj; nNew++;
+      } else if(refreshOld){
+        const m = Object.assign({}, ex); FIELDS.forEach(k => { m[k] = x[k] == null ? '' : JSON.parse(JSON.stringify(x[k])); });
+        const ch = diffItem(ex, m); if(!ch.length) return;
+        m.editedBy = u.email; m.editedAt = now; m.edits = stamp(ex, 'Refreshed from the Excel sheets: ' + ch.slice(0, 6).join('; ') + (ch.length > 6 ? ` …(+${ch.length - 6})` : ''));
+        slot(bucketOf(ex.id)).upd['items.' + ex.id] = m; nUpd++;
+      }
+    });
+    try{
+      let done = 0; const nb = Object.keys(byB).length;
+      for(const [b, w] of Object.entries(byB)){
+        if(Object.keys(w.set).length) await setMerge(bucketDoc(b), { items: w.set });
+        if(Object.keys(w.upd).length) await updateFields(bucketDoc(b), w.upd);
+        Object.values(w.set).forEach(localPut); Object.values(w.upd).forEach(localPut);
+        st(`Saving entries… ${++done} / ${nb} storage blocks`);
+      }
+      const ph = Object.entries(S.photos || {}); let k = 0;
+      for(const [src, p] of ph){
+        k++; const it = bySrc[src]; if(!it) continue;
+        const shard = bucketOf(it.id), l = await listed(shard, it.id);
+        if(l.some(x => x.name === p.name)) continue;
+        st(`Uploading photos… ${k} / ${ph.length}`);
+        await putPhoto(it.id, shard, p); nPh++;
+      }
+      closeModal(); setView('find');
+      toast('Site data loaded', `${nNew} new · ${nUpd} refreshed · ${nPh} photo${nPh === 1 ? '' : 's'} attached`);
+    }catch(e){ if(btn){ btn.disabled = false; btn.textContent = 'Try again'; } st('Stopped: ' + friendlyErr(e) + ' — tap Try again; entries already saved are skipped.'); refresh(); }
+  };
+
+  /* ─── Reports: Excel passport book + PDF datasheets ─── */
+  const R = { unit: '', area: '', type: '', q: '', photos: true };
+  function repList(){
+    let l = allItems();
+    if(R.unit) l = l.filter(i => i.unit === R.unit);
+    if(R.area) l = l.filter(i => (i.area || NO_AREA) === R.area);
+    if(R.type) l = l.filter(i => i.type === R.type);
+    const q = R.q.trim().toLowerCase(); if(q){ const w = q.split(/\s+/); l = l.filter(i => { const h = hay(i); return w.every(x => h.includes(x)); }); }
+    return sortItems(l);
+  }
+  const repLabel = () => [R.unit ? unitLabel(R.unit) : 'All units', R.area ? (R.area === NO_AREA ? '(no area)' : R.area) : 'all areas', R.type || 'all types'].concat(R.q ? [`search “${R.q}”`] : []).join(' · ');
+  function renderReports(){
+    byId('view').innerHTML = `<div id="view-reports">
+      <div class="card"><div class="card-h"><div><div class="card-t">Passport reports</div>
+        <div class="card-m">Choose what to include, then download a formatted <b>Excel passport book</b> (summary + one sheet per system, every spec in its own column) or <b>PDF datasheets</b> with the nameplate photos. One equipment: open it and tap ⤓ PDF.</div></div></div>
+        <div class="filters">
+          <div class="fld"><label for="r-unit">Plant unit</label><select id="r-unit"></select></div>
+          <div class="fld"><label for="r-area">Area / system</label><select id="r-area"></select></div>
+          <div class="fld"><label for="r-type">Equipment type</label><select id="r-type"></select></div>
+          <div class="fld"><label for="r-q">Search</label><input id="r-q" type="search" value="${esc(R.q)}" placeholder="e.g. Grundfos, Boiler #01"></div>
+        </div>
+        <div class="card-b tools"><button type="button" class="btn" id="r-xlsx" onclick="fpBookXlsx()">⤓ Excel passport book</button><button type="button" class="btn" id="r-pdf" onclick="fpBookPdf()">⤓ PDF datasheets</button>
+          <label class="checks"><label><input type="checkbox" id="r-ph" ${R.photos ? 'checked' : ''}> with photos</label></label></div>
+        <div class="f-sum" id="r-sum"></div><div class="f-sum" id="r-status" role="status"></div></div>
+      <div class="card"><div class="card-h"><div class="card-t">What is in the selection</div></div><div class="list" id="r-list"></div></div></div>`;
+    byId('r-unit').onchange = e => { R.unit = e.target.value; R.area = ''; R.type = ''; fillReports(); };
+    byId('r-area').onchange = e => { R.area = e.target.value; R.type = ''; fillReports(); };
+    byId('r-type').onchange = e => { R.type = e.target.value; fillReports(); };
+    byId('r-q').oninput = e => { R.q = e.target.value; fillReports(); };
+    byId('r-ph').onchange = e => { R.photos = e.target.checked; };
+    fillReports();
+  }
+  function fillReports(){
+    if(!byId('r-unit')) return;
+    const all = allItems(), uc = counts(all, i => i.unit);
+    byId('r-unit').innerHTML = `<option value="">All units (${all.length})</option>` + UNITS.map(u => `<option value="${u.id}">${esc(u.phase + ' · ' + u.name)} (${uc[u.id] || 0})</option>`).join(''); byId('r-unit').value = R.unit;
+    const l1 = R.unit ? all.filter(i => i.unit === R.unit) : all, ac = counts(l1, i => i.area || NO_AREA);
+    if(R.area && !ac[R.area]) R.area = '';
+    byId('r-area').innerHTML = `<option value="">All areas (${l1.length})</option>` + Object.keys(ac).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).map(a => `<option value="${esc(a)}">${esc(a === NO_AREA ? '(no area given)' : a)} (${ac[a]})</option>`).join(''); byId('r-area').value = R.area;
+    const l2 = R.area ? l1.filter(i => (i.area || NO_AREA) === R.area) : l1, tc = counts(l2, i => i.type);
+    if(R.type && !tc[R.type]) R.type = '';
+    byId('r-type').innerHTML = `<option value="">All types (${l2.length})</option>` + Object.keys(tc).sort().map(t => `<option value="${esc(t)}">${esc(t)} (${tc[t]})</option>`).join(''); byId('r-type').value = R.type;
+    const list = repList();
+    byId('r-sum').textContent = allLoaded() ? `${list.length} equipment in the selection · ${repLabel()}` : 'Loading the passport…';
+    ['r-xlsx', 'r-pdf'].forEach(id => { byId(id).disabled = !list.length; });
+    const g = counts(list, i => unitLabel(i.unit) + ' · ' + (i.area || '(no area)'));
+    byId('r-list').innerHTML = Object.keys(g).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).map(k => `<div class="li"><div class="main"><div class="t" style="font-weight:500">${esc(k)}</div>
+      <div class="s">${Object.entries(counts(list.filter(i => unitLabel(i.unit) + ' · ' + (i.area || '(no area)') === k), i => i.type)).map(([t, n]) => `${esc(t)} ${n}`).join(' · ')}</div></div><b class="mono">${g[k]}</b></div>`).join('') || '<div class="empty">Nothing matches.</div>';
+  }
+  const rstat = (t, c) => { const e = byId('r-status'); if(e){ e.textContent = t || ''; e.style.color = c === 'err' ? 'var(--red)' : c === 'ok' ? 'var(--green)' : ''; } };
+  const sysOf = i => { const a = i.area || '(no area)'; const s = a.split(' · ')[0]; return /^fire/i.test(s) ? 'Fire fighting' : s; };
+  const safeName = s => String(s || '').replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 50);
+  async function ensureLists(list){
+    [...new Set(list.map(i => bucketOf(i.id)))].forEach(b => ScanKit.ensure('passport', b));
+    for(let n = 0; n < 40; n++){ if(list.every(i => ScanKit.list('passport', bucketOf(i.id), i.id) !== undefined)) return; await new Promise(r => setTimeout(r, 100)); }
+  }
+  window.fpBookXlsx = async function(listIn, label){
+    const list = listIn || repList(); label = label || repLabel();
+    if(!list.length) return;
+    try{
+      rstat('Building the Excel book…'); await ensureLists(list);
+      const gen = `Generated ${fmtStamp(nowIso())} by ${me() ? me().email : ''} · ${label} · ${list.length} equipment`;
+      const groups = {}; list.forEach(i => { (groups[sysOf(i)] = groups[sysOf(i)] || []).push(i); });
+      let keys = Object.keys(groups).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      if(keys.length > 24){ const small = keys.filter(k => groups[k].length < 3); if(small.length > 1){ groups['Other areas'] = small.flatMap(k => groups[k]); small.forEach(k => delete groups[k]); keys = Object.keys(groups).sort(); } }
+      const byArea = {}; list.forEach(i => { const k = i.unit + '|' + (i.area || '(no area)'); (byArea[k] = byArea[k] || []).push(i); });
+      const sum = [[{ v: 'ITC Haridwar — Factory Passport · equipment book', s: 'title' }], [{ v: gen, s: 'sub' }], [],
+        ['Unit', 'Area / system', 'Equipment', 'Types', 'Sheet'].map(h => ({ v: h, s: 'hdr' }))];
+      Object.keys(byArea).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).forEach(k => { const l = byArea[k], [u, a] = k.split('|');
+        sum.push([{ v: unitLabel(u), s: 'cell' }, { v: a, s: 'cell' }, { v: l.length, s: 'num' }, { v: Object.entries(counts(l, i => i.type)).map(([t, n]) => `${t} ${n}`).join(' · '), s: 'wrap' }, { v: keys.find(g => groups[g].includes(l[0])) || '', s: 'cell' }]); });
+      sum.push([{ v: 'Total', s: 'label' }, { v: '', s: 'label' }, { v: list.length, s: 'label' }, { v: '', s: 'label' }, { v: '', s: 'label' }]);
+      const warn = list.filter(i => (i.specs || []).some(s => /^⚠/.test(s.k)));
+      if(warn.length){ sum.push([], [{ v: '⚠ Values to confirm (the source sheets disagree)', s: 'section' }]);
+        warn.forEach(i => (i.specs || []).filter(s => /^⚠/.test(s.k)).forEach(s => sum.push([{ v: i.name, s: 'cell' }, { v: s.k.replace(/^⚠\s*/, ''), s: 'cell' }, { v: s.v, s: 'late' }]))); }
+      const sheets = [{ name: 'Summary', title: 'Factory Passport', cols: [16, 40, 11, 60, 18], rows: sum, merges: ['A1:E1', 'A2:E2'], freeze: { r: 4, c: 0 }, heights: { 0: 24 }, tab: '065F46', portrait: true }];
+      keys.forEach(g => {
+        const l = groups[g], sk = specOrder(l);
+        const H = ['Unit', 'Area', 'Type', 'Equipment', 'Make', 'Model', 'Serial no.', 'Year', 'Status'].concat(sk, ['Notes', 'Documents', 'Source', 'Passport ID']);
+        const rows = [[{ v: `${g} — ${l.length} equipment`, s: 'title' }], [{ v: gen, s: 'sub' }], H.map((h, n) => ({ v: h.replace(/^⚠\s*/, '⚠ '), s: n >= 9 && n < 9 + sk.length ? 'hdrInput' : 'hdr' }))];
+        l.forEach(i => { const m = {}; (i.specs || []).forEach(s => { m[s.k] = s.v; }); const fl = ScanKit.list('passport', bucketOf(i.id), i.id);
+          rows.push([unitLabel(i.unit), i.area, i.type, i.name, i.make, i.model, i.serial, i.year, i.status || 'In service'].map((v, n) => ({ v: v || '', s: n === 3 ? 'label' : 'cell' }))
+            .concat(sk.map(k => ({ v: m[k] == null ? '' : (/^-?\d+(\.\d+)?$/.test(String(m[k]).trim()) ? +m[k] : m[k]), s: /^⚠/.test(k) && m[k] ? 'late' : 'cell' })),
+                    [{ v: i.notes || '', s: 'wrap' }, { v: fl && fl.length ? fl.length : '', s: 'num' }, { v: i.ref || '', s: 'cell' }, { v: i.id, s: 'grey' }])); });
+        const last = PMX.colName(H.length - 1);
+        sheets.push({ name: g, cols: [12, 26, 16, 32, 18, 20, 18, 7, 11].concat(sk.map(k => Math.min(24, Math.max(11, k.length + 2))), [34, 10, 34, 16]), rows,
+          merges: [`A1:${last}1`, `A2:${last}2`], freeze: { r: 3, c: 4 }, filter: `A3:${last}${rows.length}`, printTitle: 3, heights: { 0: 22, 2: 32 } });
+      });
+      const name = `Factory_Passport_Book_${safeName(R.area || (R.unit ? unitLabel(R.unit) : 'All'))}_${todayIso()}.xlsx`;
+      PMX.save(name, PMX.xlsx(sheets), PMX.XLSX_MIME);
+      rstat(`✓ ${name} · ${keys.length + 1} sheets · ${list.length} equipment`, 'ok');
+    }catch(e){ console.error(e); rstat('Excel failed: ' + (e.message || e), 'err'); }
+  };
+  async function fileB64(x){
+    const f = window.__pmScanFs, db = fb().db, parts = x.parts || 1;
+    const snaps = await Promise.all(Array.from({ length: parts }, (_, k) => f.getDoc(f.doc(db, 'itc_pm', `scandata_${x.id}_${k}`))));
+    return snaps.map(s => (s.exists() ? (s.data() || {}).d : '') || '').join('');
+  }
+  window.fpPdfOne = function(id){ const i = P.items[id]; if(!i) return; fpBookPdf([i], i.name, true); };
+  window.fpBookPdf = async function(listIn, label, photos){
+    const list = listIn || repList(); label = label || repLabel(); if(!list.length) return;
+    const withPhotos = photos != null ? photos : !!(byId('r-ph') && byId('r-ph').checked);
+    const btn = byId('r-pdf'); if(btn) btn.disabled = true;
+    const say = t => { rstat(t); if(listIn && listIn.length === 1) toast('PDF', t); };
+    try{
+      if(listIn && listIn.length === 1) toast('Building the PDF…', list[0].name);
+      else rstat('Building the PDF…');
+      const files = {};
+      for(const i of list){ files[i.id] = await listed(bucketOf(i.id), i.id); }
+      const D = PMX.pdf(); D.info.title = 'Factory Passport — ' + label;
+      const M = 34, W = D.W - 2 * M, BOT = D.H - 44; let y = 0;
+      const gen = `Generated ${fmtStamp(nowIso())}${me() ? ' · ' + me().email : ''}`;
+      const head = () => { D.rect(0, 0, D.W, 44, { fill: '064E3B' }); D.text('ITC Haridwar — Factory Passport', M, 27, { size: 13, bold: true, color: 'FFFFFF' }); D.text(gen, D.W - M, 27, { size: 7.5, color: 'C7F0DD', align: 'right' }); y = 62; };
+      const page = () => { D.newPage(); head(); };
+      const need = h => { if(y + h > BOT){ page(); return true; } return false; };
+      head();
+      if(list.length > 1){
+        D.text(label, M, y + 6, { size: 14, bold: true, maxW: W }); y += 16;
+        D.text(`${list.length} equipment`, M, y + 6, { size: 9, color: '667085' }); y += 18;
+        const cw = [22, 170, 82, 110, 70, W - 454];
+        const hdr = () => { need(18); D.rect(M, y, W, 15, { fill: '065F46' }); let x = M; ['#', 'Equipment', 'Type', 'Area', 'Make', 'Model / serial'].forEach((h, n) => { D.text(h, x + 4, y + 10.5, { size: 7.5, bold: true, color: 'FFFFFF', maxW: cw[n] - 6 }); x += cw[n]; }); y += 15; };
+        hdr();
+        list.forEach((i, n) => { if(y + 14 > BOT){ page(); hdr(); } if(n % 2) D.rect(M, y, W, 14, { fill: 'F3F7F5' }); let x = M;
+          [String(n + 1), i.name, i.type, i.area || '', i.make || '', [i.model, i.serial].filter(Boolean).join(' · ')].forEach((t, k) => { D.text(t, x + 4, y + 10, { size: 7.5, bold: k === 1, maxW: cw[k] - 6 }); x += cw[k]; }); y += 14; });
+        y += 10;
+      }
+      let ph = 0;
+      for(const i of list){
+        if(list.length > 1) need(150);
+        D.rect(M, y, W, 40, { fill: 'ECFDF5', stroke: 'A7F3D0' });
+        D.text(String(i.type || '').toUpperCase(), M + 8, y + 12, { size: 7, bold: true, color: '047857' });
+        D.text(i.name, M + 8, y + 28, { size: 13, bold: true, maxW: W - 140 });
+        D.text(i.status || 'In service', M + W - 8, y + 12, { size: 8, bold: true, color: i.status && i.status !== 'In service' ? 'B54708' : '047857', align: 'right' });
+        D.text(`${unitLabel(i.unit)}${i.area ? ' · ' + i.area : ''}`, M + W - 8, y + 28, { size: 8, color: '475467', align: 'right', maxW: 200 });
+        y += 48;
+        const facts = [['Make', i.make], ['Model', i.model], ['Serial no.', i.serial], ['Tag', i.tag], ['Year installed', i.year]].filter(f => f[1]);
+        const specs = (i.specs || []).filter(s => s.v !== '' && s.v != null).map(s => [s.k, s.v]);
+        const pairs = facts.concat(specs), colW = W / 2;
+        for(let k = 0; k < pairs.length; k += 2){
+          const L1 = D.wrap(pairs[k][1], colW - 132, 8.3), L2 = pairs[k + 1] ? D.wrap(pairs[k + 1][1], colW - 132, 8.3) : [];
+          const h = Math.max(L1.length, L2.length, 1) * 10 + 5; need(h);
+          [pairs[k], pairs[k + 1]].forEach((p, j) => { if(!p) return; const x = M + j * colW, wv = /^⚠/.test(p[0]);
+            D.text(p[0].replace(/^⚠\s*/, '! '), x + 4, y + 9, { size: 7.6, bold: true, color: wv ? 'B42318' : '475467', maxW: 124 });
+            (j ? L2 : L1).forEach((ln, q) => D.text(ln, x + 128, y + 9 + q * 10, { size: 8.3, color: wv ? 'B42318' : '101828' })); });
+          D.line(M, y + h, M + W, y + h, { color: 'E5E7EB', lw: 0.4 }); y += h;
+        }
+        if(!pairs.length){ need(14); D.text('No specifications recorded yet.', M + 4, y + 10, { size: 8.3, color: '667085' }); y += 14; }
+        if(i.notes){ const L = D.wrap('Notes: ' + i.notes, W - 8, 8.3); need(L.length * 10.5 + 6); L.forEach((ln, q) => D.text(ln, M + 4, y + 11 + q * 10.5, { size: 8.3, color: '344054' })); y += L.length * 10.5 + 6; }
+        const fl = files[i.id] || [], imgs = fl.filter(f => f.kind === 'image' || /^image\//.test(f.type || '')), docs = fl.filter(f => imgs.indexOf(f) < 0);
+        if(docs.length){ const L = D.wrap('Documents: ' + docs.map(d => d.name).join(' · '), W - 8, 8); need(L.length * 10 + 4); L.forEach((ln, q) => D.text(ln, M + 4, y + 10 + q * 10, { size: 8, color: '667085' })); y += L.length * 10 + 4; }
+        if(withPhotos && imgs.length){
+          const bw = (W - 10) / 2, bh = 200; let col = 0;
+          for(const f of imgs.slice(0, 4)){
+            say(`Building the PDF… photo ${++ph}`);
+            let im = null; try{ const j = await PMX.jpeg(await fileB64(f), f.type || 'image/jpeg', 1200); im = D.addJpeg(j.bytes, j.w, j.h); im._w = j.w; im._h = j.h; }catch(e){ console.warn('[passport pdf photo]', e); }
+            if(col === 0) need(bh + 20);
+            const x = M + col * (bw + 10);
+            if(im){ const k = Math.min(bw / im._w, bh / im._h), w = im._w * k, h = im._h * k; D.rect(x, y + 4, bw, bh, { stroke: 'D0D5DD' }); D.image(im, x + (bw - w) / 2, y + 4 + (bh - h) / 2, w, h); }
+            else { D.rect(x, y + 4, bw, bh, { fill: 'F7F8FA', stroke: 'D0D5DD' }); D.text('Photo could not be loaded', x + bw / 2, y + 4 + bh / 2, { size: 8, color: '667085', align: 'center' }); }
+            D.text(f.name, x + 2, y + bh + 14, { size: 7.2, color: '667085', maxW: bw - 4 });
+            col++; if(col === 2){ col = 0; y += bh + 20; }
+          }
+          if(col) y += bh + 20;
+        }
+        if(i.ref){ need(12); D.text('Source: ' + i.ref, M + 4, y + 9, { size: 7, color: '98A2B3', maxW: W - 8 }); y += 12; }
+        y += 14;
+      }
+      const N = D.pages.length;
+      D.pages.forEach((pg, n) => { D.cur = pg; D.line(M, D.H - 30, D.W - M, D.H - 30, { color: 'D0D5DD', lw: 0.5 }); D.text('ITC Haridwar · COT PM module · Factory Passport', M, D.H - 18, { size: 7, color: '98A2B3' }); D.text(`Page ${n + 1} of ${N}`, D.W - M, D.H - 18, { size: 7.5, color: '667085', align: 'right' }); });
+      const name = `Factory_Passport_${safeName(list.length === 1 ? list[0].name : (R.area || (R.unit ? unitLabel(R.unit) : 'All')))}_${todayIso()}.pdf`;
+      PMX.save(name, D.output(), 'application/pdf');
+      say(`✓ ${name} · ${N} page${N === 1 ? '' : 's'}${ph ? ` · ${ph} photo${ph === 1 ? '' : 's'}` : ''}`); rstat(`✓ ${name} · ${N} page${N === 1 ? '' : 's'}`, 'ok');
+    }catch(e){ console.error(e); rstat('PDF failed: ' + (e.message || e), 'err'); toast('PDF failed', e.message || String(e), 'error'); }
+    finally{ if(btn) btn.disabled = false; }
+  };
+  window.__passportBuild = '3.14 · 01-10-2026';
+  if(P.view !== 'find') renderView();
+  binCount();
+})();
 </script>
 </body>
 </html>

@@ -245,7 +245,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 // 3.12 — read-only access for the global search (tabs that are not opened yet)
 window.__gsFs = { db: getFirestore(app), doc, getDoc };
-window.__appBuild = '3.13 · 30-09-2026';
+window.__appBuild = '3.14 · 01-10-2026';
 
 // 3.10b — always load the newest module files (no stale phone cache after a GitHub update)
 const FRESH = '?v=' + Date.now();
@@ -700,9 +700,9 @@ function indexAic(A, out, info){
 
 /* Factory Passport */
 function indexPassport(items, out, info){
-  const list = Object.values(items || {}).filter(i => i && i.id); const areas = {}, types = {};
+  const list = Object.values(items || {}).filter(i => i && i.id && !i.removed); const areas = {}, types = {};   // 3.14: removed passport entries are not searched
   list.forEach(i => {
-    const stt = String(i.status || 'In service'); const key = /repair/i.test(stt) ? 'repair' : /standby/i.test(stt) ? 'standby' : /decom/i.test(stt) ? 'admin' : 'service';
+    const stt = String(i.status || 'In service'); const key = /repair/i.test(stt) ? 'repair' : /standby/i.test(stt) ? 'standby' : /decom|not in use/i.test(stt) ? 'admin' : 'service';
     if(i.area){ const k = i.unit + '|' + i.area; areas[k] = (areas[k] || 0) + 1; }
     if(i.type) types[i.type] = (types[i.type] || 0) + 1;
     out.push(mk({ mod: 'passport', kind: 'equip', title: i.name || i.tag || '(no name)', st: key, stText: stt,
@@ -771,6 +771,8 @@ const SECTIONS = [
   // Complaints
   ['complaint', '', 'Log New Complaint', 'Log New Complaint', 'Complaints · area, issue, start / stop time', 'new complaint log breakdown register issue downtime'],
   ['complaint', '', 'Complaint Log', 'Complaint Log', 'Complaints · list, filters and CSV export', 'complaint list history export csv downtime'],
+  ['complaint', '', 'Complaint Reports', 'Complaint Reports · Excel / PDF', 'Complaints · summary by area and month, downtime, full log', 'complaint report pdf excel download downtime summary month area'],
+  ['complaint', '', 'Removed complaints', 'Removed complaints', 'Complaints · restore removed entries', 'removed deleted restore complaint bin'],
   ['complaint', '', 'Manage Areas', 'Complaint Areas', 'Complaints · add or remove areas', 'area add remove complaint areas', 1],
   // Asset Integrity
   ['aic', 'overview', 'Compliance matrix', 'Compliance matrix', 'Asset Integrity · activity × plant unit', 'statutory compliance matrix asset integrity'],
@@ -785,6 +787,9 @@ const SECTIONS = [
   ['passport', 'find', '', 'Add equipment', 'Factory Passport · new equipment passport', 'add equipment new passport', 0, 'fpForm', []],
   ['passport', 'tools', 'Import from Excel / CSV', 'Import from Excel / CSV', 'Factory Passport · bulk upload', 'import excel csv upload bulk passport'],
   ['passport', 'tools', 'Export', 'Passport Export', 'Factory Passport · download', 'export download passport csv'],
+  ['passport', 'reports', 'Passport reports', 'Passport reports · Excel book / PDF datasheets', 'Factory Passport · download equipment details with photos', 'report pdf excel datasheet book download passport print nameplate'],
+  ['passport', 'bin', '', 'Removed passport entries', 'Factory Passport · restore removed equipment', 'removed deleted restore bin trash passport'],
+  ['passport', 'tools', 'Load site data — utilities passport', 'Load site data (utilities passport)', 'Factory Passport · admin · Excel sheets + biomass boiler inventory', 'load site data excel inventory biomass seed utilities', 1],
   ['passport', 'tools', 'Start from the PM modules', 'Start from the PM modules', 'Factory Passport · create from motors / panels', 'motors panels start pm modules create'],
 ];
 function indexSections(out, info){
