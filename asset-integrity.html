@@ -265,13 +265,53 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 .sx-embed-title{font-size:13px;font-weight:700;color:var(--text, #e8ecf3);margin-bottom:2px}
 .sx-embed-sub{font-size:11px;line-height:1.5;color:var(--text-muted, var(--text-3, #6b7488));margin-bottom:10px}
 
+/* ═══ 3.16 · admin matrix controls · activities without fixed frequency · Ph-2 COT ═══ */
+.mx-wrap{overflow-x:auto}
+.mx-ab{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:2px 0;border-radius:4px}
+.mx-ab .mx-an,.mx-ab .mx-af{display:block}
+.mx-ab:hover .mx-an{color:var(--accent)}
+.mx-ab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mx-ed{color:var(--accent);font-size:10.5px}
+td.mx-sec{padding:14px 0 4px;font:700 9.5px/1.3 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--blue);text-align:left;border-top:1px solid var(--line)}
+.cell.na.add{opacity:.75;border-color:var(--line-2);color:var(--accent);font:700 16px/1 var(--mono);cursor:pointer}
+.cell.na.add:hover{opacity:1;border-style:solid;border-color:var(--accent);background:rgba(234,179,8,.08)}
+.cell.ev{background:var(--blue-soft);color:var(--blue);border-color:rgba(96,165,250,.45)}
+.cell.evnone{color:var(--text-3)}
+.pill.ev{color:var(--blue);border-color:rgba(96,165,250,.45);background:var(--blue-soft)}
+.adm-note{color:var(--accent)}
+.rm-link{color:var(--red)}
+.sub-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 14px;font-size:11.5px;font-weight:700;color:var(--text-2);background:var(--bg-2);border-bottom:1px solid var(--line)}
+.sub-h + .list{border-bottom:1px solid var(--line)}
+.banner.evb{color:var(--text);border-color:rgba(96,165,250,.55);background:var(--blue-soft);line-height:1.55}
+.banner.evb b{color:var(--blue)}
+#rf-body .ev-only{display:none}
+#rf-body.mode-ev .ev-only{display:block}
+#rf-body.mode-ev .row2.ev-only{display:grid}
+#rf-body.mode-ev .sch-only{display:none}
+#rf-body [hidden]{display:none !important}
+#rf-body.mode-ev .rep-box{border-color:var(--blue)}
+#rf-body.mode-ev .rep-box .rep-t{color:var(--blue)}
+label.inl{display:flex;gap:7px;align-items:center;font-size:12px;color:var(--text-2);margin-top:7px;font-weight:500}
+label.inl input{width:auto;min-height:0}
+.evb.pop{animation:evpop .9s ease-out 1}
+@keyframes evpop{0%{transform:scale(.97);box-shadow:0 0 0 4px rgba(96,165,250,.55)}100%{transform:none;box-shadow:0 0 0 0 rgba(96,165,250,0)}}
+@media (max-width:480px){
+  .mx{border-spacing:3px 4px}
+  .mx .mx-a{min-width:86px;max-width:98px}
+  .mx-an{font-size:11px}
+  .mx th{font-size:10.5px}
+  .cell{min-width:42px;height:44px}
+  .cell b{font-size:11.5px}
+  .cell small{font-size:7.2px;letter-spacing:0}
+}
+@media (prefers-reduced-motion: reduce){ .evb.pop{animation:none} }
 </style>
 </head>
 <body>
 <script>
 /* 3.10b — phones have no console: show any script error on screen, and warn if
    the page never finishes loading (old cached file or a file cut short on GitHub). */
-window.__aicBuild = '3.10b · 27-09-2026';
+window.__aicBuild = '3.16 · 13-10-2026';
 (function(){
   function show(msg){
     var box = document.getElementById('aic-errors'); if(!box) return setTimeout(function(){ show(msg); }, 300);
@@ -285,7 +325,7 @@ window.__aicBuild = '3.10b · 27-09-2026';
   window.addEventListener('unhandledrejection', function(e){ var r = e && e.reason; show((r && (r.code ? r.code + ' — ' : '') + (r.message || r)) || 'request failed'); });
   setTimeout(function(){
     if(window.__aicBooted) return;
-    show('This page did not finish loading. Most likely the file on GitHub is cut short or an old copy is cached. Re-upload asset-integrity.html (GitHub must show about 1,479 lines ending with &lt;/html&gt;), then clear the browser cache.');
+    show('This page did not finish loading. Most likely the file on GitHub is cut short or an old copy is cached. Re-upload asset-integrity.html (GitHub must show about 1,851 lines ending with &lt;/html&gt;), then clear the browser cache.');
   }, 12000);
 })();
 </script>
@@ -295,11 +335,12 @@ window.__aicBuild = '3.10b · 27-09-2026';
 <header class="app-head"><div class="app-head-in">
   <div class="title-row">
     <div><div class="mod-title">Asset Integrity &amp; Statutory Compliance</div>
-      <div class="mod-sub">Annual · half-yearly · quarterly testing, inspection and maintenance records — Ph-1 (Foods · PCPB · COT) and Ph-2 (PPB)</div></div>
+      <div class="mod-sub">Testing, inspection and maintenance with a fixed frequency, plus OEM visits, calls and projects — Ph-1 (Foods · PCPB · COT) and Ph-2 (COT · PPB)</div></div>
     <span class="role" id="role-pill">…</span>
   </div>
   <div class="hdr-acts">
     <button type="button" class="btn" id="hdr-report" onclick="aicAddReport()">📄 Add test report (PDF / photo)</button>
+    <button type="button" class="btn ghost" id="hdr-event" onclick="aicLogEvent()">🗂 Log visit / MoM</button>
     <button type="button" class="btn sm ghost" onclick="aicDiagnostics()">🩺 Check connection</button>
     <span class="build" id="aic-build"></span>
   </div>
@@ -313,11 +354,12 @@ window.__aicBuild = '3.10b · 27-09-2026';
 <div id="aic-status"></div>
 <main class="wrap" id="view"></main>
 <script>
-/* ═══ Shared helpers — Phase 3.9 modules (Statutory register, Factory Passport) ═══ */
+/* ═══ Shared helpers — Asset Integrity ═══ */
 const UNITS = [
   { id: 'P1-FOODS', phase: 'Ph-1', name: 'Foods' },
   { id: 'P1-PCPB',  phase: 'Ph-1', name: 'PCPB'  },
   { id: 'P1-COT',   phase: 'Ph-1', name: 'COT'   },
+  { id: 'P2-COT',   phase: 'Ph-2', name: 'COT'   },
   { id: 'P2-PPB',   phase: 'Ph-2', name: 'PPB'   },
 ];
 function unitById(id){ return UNITS.find(u=>u.id === id) || null; }
@@ -783,9 +825,18 @@ function setRolePill(){
 </script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════
-   ASSET INTEGRITY & STATUTORY COMPLIANCE — module logic (Phase 3.9)
-   Annual / half-yearly / quarterly testing, inspection and maintenance
-   records for Ph-1 (Foods · PCPB · COT) and Ph-2 (PPB).
+   ASSET INTEGRITY & STATUTORY COMPLIANCE — module logic (3.16)
+   • Activities with a fixed frequency (testing, inspection, maintenance)
+     → compliance matrix activity × plant unit, next-due dates, action list.
+   • Activities WITHOUT a fixed frequency (OEM visit, call based, project
+     based, other) → logged when they happen with MoM / service report,
+     follow-up date and open / closed status; shown in the matrix (count +
+     open follow-ups), the action list and the equipment history.
+   • Admin edits activities straight from the matrix: frequency / basis,
+     plant units (tap ＋ to start tracking a unit), name, remove. Every
+     change is saved to itc_pm/aic_master, which every login listens to, so
+     users see it at once.
+   • Plant units: Ph-1 Foods · PCPB · COT, Ph-2 COT · PPB.
    Storage (inside the existing itc_pm collection — no rules change):
      itc_pm/aic_master          activities, equipment, list of record years
      itc_pm/aic_records_<FY>    records.{id} — one document per financial year
@@ -793,9 +844,22 @@ function setRolePill(){
    ═══════════════════════════════════════════════════════════════════════ */
 const MASTER_DOC = 'aic_master';
 const recDocId = fy=>'aic_records_' + fy;
-const FREQS = [ { m: 1, l: 'Monthly' }, { m: 3, l: 'Quarterly' }, { m: 6, l: 'Half-yearly' }, { m: 12, l: 'Annual' }, { m: 24, l: 'Every 2 years' } ];
+const FREQS = [ { m: 1, l: 'Monthly' }, { m: 2, l: 'Bi-monthly' }, { m: 3, l: 'Quarterly' }, { m: 6, l: 'Half-yearly' }, { m: 12, l: 'Annual' },
+                { m: 24, l: 'Every 2 years' }, { m: 36, l: 'Every 3 years' }, { m: 60, l: 'Every 5 years' } ];
 function freqLabel(m){ const f = FREQS.find(x=>x.m === +m); return f ? f.l : `Every ${m} months`; }
+// Activities without a fixed frequency
+const BASES = [
+  { k: 'oem',     s: 'OEM visit',     l: 'OEM visit / service' },
+  { k: 'call',    s: 'Call based',    l: 'Call based — breakdown / service call' },
+  { k: 'project', s: 'Project based', l: 'Project based — upgradation / modification' },
+  { k: 'other',   s: 'As required',   l: 'Other — as required' },
+];
+function basisDef(k){ return BASES.find(b=>b.k === k) || BASES[BASES.length - 1]; }
+const isEvent = a=>!!(a && a.basis);
+function schedLabel(a){ return isEvent(a) ? basisDef(a.basis).s : freqLabel(a.months); }
 const RESULTS = ['OK', 'Observation', 'Not OK'];
+const EV_STATUS = ['Closed', 'Open'];
+const LEGACY_UNITS = ['P1-FOODS', 'P1-PCPB', 'P1-COT', 'P2-PPB'];
 const ALL_UNIT_IDS = UNITS.map(u=>u.id);
 const REPORT_ACCEPT = 'image/*,application/pdf,.xlsx,.xls,.docx,.doc,.csv';
 const DEFAULT_ACTIVITIES = {
@@ -809,63 +873,98 @@ const DEFAULT_ACTIVITIES = {
   act_acb:     { id: 'act_acb',     order: 8, name: 'ACB maintenance',                    months: 12, ref: '',                                scope: 'Cleaning, main contacts and arc chutes, mechanism lubrication, release and trip test, IR' },
   act_vcb:     { id: 'act_vcb',     order: 9, name: 'VCB maintenance',                    months: 12, ref: '',                                scope: 'Vacuum integrity, contact wear, operating mechanism, IR / HV test, interlocks' },
 };
-Object.values(DEFAULT_ACTIVITIES).forEach(a=>{ a.units = ALL_UNIT_IDS.slice(); a.active = true; });
+const EVENT_DEFAULTS = {
+  ev_oem:     { id: 'ev_oem',     order: 101, name: 'OEM visit / service',          basis: 'oem',     months: 0, ref: '', scope: 'OEM service engineer visit — inspection, service, software / hardware upgrade, commissioning. Record the service report and the MoM.' },
+  ev_project: { id: 'ev_project', order: 102, name: 'Project / upgradation work',   basis: 'project', months: 0, ref: '', scope: 'Modification, upgradation, retrofit or new installation — scope, MoM, completion / handing-over report.' },
+  ev_call:    { id: 'ev_call',    order: 103, name: 'Breakdown / service call',     basis: 'call',    months: 0, ref: '', scope: 'Breakdown attended by the vendor / OEM on call — service report, root cause, parts replaced.' },
+  ev_other:   { id: 'ev_other',   order: 104, name: 'Other activity (as required)', basis: 'other',   months: 0, ref: '', scope: 'Any other one-time inspection, audit, survey or visit.' },
+};
+Object.values(DEFAULT_ACTIVITIES).concat(Object.values(EVENT_DEFAULTS)).forEach(a=>{ a.units = ALL_UNIT_IDS.slice(); a.unitsV2 = true; a.active = true; });
 
-const A = { master: undefined, recs: {}, subs: {}, seeding: false, view: 'overview',
+const A = { master: undefined, recs: {}, subs: {}, seeding: false, view: 'overview', actMap: {}, actSig: '', localAt: 0, migrating: false,
   ov: { unit: '', status: '', act: '', cu: '' },
   rf: { unit: '', act: '', fy: '', result: '', q: '' },
   sf: { act: '', unit: '' } };
-const ST_RANK = { over: 0, none: 1, due: 2, ok: 3 };
-const ST_TEXT = { over: 'Overdue', due: 'Due soon', none: 'No record', ok: 'OK' };
+const ST_RANK = { over: 0, none: 1, open: 2, due: 2, ok: 3 };
+const ST_TEXT = { over: 'Overdue', due: 'Due soon', none: 'No record', ok: 'OK', open: 'Open' };
 const ST_CELL = { over: 'Overdue', due: 'Due', none: 'No record', ok: 'OK' };
 
 const byId = id=>document.getElementById(id);
 const val = id=>{ const e = byId(id); return e ? String(e.value || '').trim() : ''; };
+const nowIso = ()=>new Date().toISOString();
+const ddmm = iso=>iso ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}` : '';
+/* Activities = what is stored + the four built-in "no fixed frequency" ones (until an admin's first visit saves them) */
+function rebuildActs(){
+  const m = {}; const stored = (A.master && A.master.activities) || {};
+  Object.keys(stored).forEach(id=>{ if(stored[id]) m[id] = Object.assign({ id }, stored[id]); });
+  Object.values(EVENT_DEFAULTS).forEach(d=>{ if(m[d.id]) m[d.id] = Object.assign({}, d, m[d.id]); else if(!(A.master && A.master.evSeeded)) m[d.id] = Object.assign({}, d); });
+  Object.values(m).forEach(a=>{ if(!a.name) a.name = 'Activity'; });
+  A.actMap = m;
+  A.actSig = JSON.stringify(Object.values(m).map(a=>[a.id, a.name, a.months, a.basis || '', actUnits(a).join(','), a.active !== false]).sort());
+}
 function acts(withRetired){
-  const m = (A.master && A.master.activities) || {};
-  return Object.values(m).filter(a=>a && a.id && (withRetired || a.active !== false))
-    .sort((x, y)=>(x.order || 99) - (y.order || 99) || String(x.name).localeCompare(y.name));
+  return Object.values(A.actMap).filter(a=>a && a.id && (withRetired || a.active !== false))
+    .sort((x, y)=>(isEvent(x) ? 1 : 0) - (isEvent(y) ? 1 : 0) || (x.order || 99) - (y.order || 99) || String(x.name).localeCompare(y.name));
 }
 function eqs(withRetired){
   const m = (A.master && A.master.equipment) || {};
   return Object.values(m).filter(e=>e && e.id && (withRetired || e.active !== false))
     .sort((x, y)=>String(x.name).localeCompare(y.name, undefined, { numeric: true }));
 }
-function actById(id){ return ((A.master && A.master.activities) || {})[id] || null; }
+function actById(id){ return A.actMap[id] || null; }
 function eqById(id){ return ((A.master && A.master.equipment) || {})[id] || null; }
-function actUnits(a){ return (a && a.units && a.units.length) ? a.units : ALL_UNIT_IDS; }
+// 3.16: an activity that covered every unit before Ph-2 · COT existed covers Ph-2 · COT too
+function actUnits(a){
+  const u = (a && a.units && a.units.length) ? a.units.slice() : ALL_UNIT_IDS.slice();
+  if(a && !a.unitsV2 && !u.includes('P2-COT') && LEGACY_UNITS.every(x=>u.includes(x))) u.push('P2-COT');
+  return ALL_UNIT_IDS.filter(x=>u.includes(x));
+}
 function records(){ const out = []; Object.values(A.recs).forEach(m=>Object.values(m || {}).forEach(r=>{ if(r && r.id) out.push(r); })); return out; }
 function recById(id){ return records().find(r=>r.id === id) || null; }
-function nextDueOf(r){ const a = actById(r.actId); return r.nextDue || (a && r.date ? addMonthsIso(r.date, a.months) : ''); }
-function targetLabel(r){ if(!r.eqId) return 'Whole unit'; const e = eqById(r.eqId); return e ? e.name : '(removed equipment)'; }
-function resultPill(res){ return `<span class="pill ${res === 'OK' ? 'ok' : res === 'Not OK' ? 'notok' : 'due'}">${esc(res || '—')}</span>`; }
+function nextDueOf(r){ const a = actById(r.actId); if(isEvent(a)) return r.nextDue || ''; return r.nextDue || (a && r.date ? addMonthsIso(r.date, a.months) : ''); }
+function targetLabel(r){ if(r.eqId){ const e = eqById(r.eqId); return e ? e.name : (r.eqName || '(removed equipment)'); } return r.eqName || 'Whole unit'; }
+function resultPill(res){ return `<span class="pill ${res === 'OK' || res === 'Closed' ? 'ok' : res === 'Not OK' ? 'notok' : 'due'}">${esc(res || '—')}</span>`; }
+function basisPill(r, a){ const k = r.basis || (a && a.basis); return k ? `<span class="pill ev">${esc(basisDef(k).s)}</span>` : ''; }
 function mHead(title, sub){
   return `<div class="modal-head"><div><div class="modal-title">${esc(title)}</div>${sub ? `<div class="modal-sub">${esc(sub)}</div>` : ''}</div><button type="button" class="modal-close" onclick="closeModal()" aria-label="Close">×</button></div>`;
 }
 function localPut(fy, rec){ (A.recs[fy] = A.recs[fy] || {})[rec.id] = rec; }
 function localDel(fy, id){ if(A.recs[fy]) delete A.recs[fy][id]; }
 function formErr(id, msg){ const e = byId(id); if(e){ e.hidden = false; e.textContent = msg; e.scrollIntoView && e.scrollIntoView({ block: 'nearest' }); } else toast('Check the form', msg, 'warn'); }
+function unitsText(ids){ return ids.length === ALL_UNIT_IDS.length ? 'All units' : ids.map(id=>unitLabel(id)).join(' · '); }
 
 /* ─── Status of every tracked item (activity × unit × equipment) ─── */
-function buildItems(){
-  const T = todayIso(); const latest = {};
+function latestMap(){
+  const latest = {};
   records().forEach(r=>{
     const k = `${r.actId}|${r.unit}|${r.eqId || ''}`; const cur = latest[k];
     if(!cur || r.date > cur.date || (r.date === cur.date && String(r.at) > String(cur.at))) latest[k] = r;
   });
-  const out = [];
+  return latest;
+}
+function buildItems(){
+  const T = todayIso(); const latest = latestMap(); const out = [];
   acts().forEach(a=>{
+    if(isEvent(a)) return;
     actUnits(a).forEach(u=>{
       const list = eqs().filter(e=>e.actId === a.id && e.unit === u);
+      const whole = latest[`${a.id}|${u}|`] || null;
       const targets = list.length ? list.map(e=>({ eqId: e.id, label: e.name, loc: e.location || '' })) : [{ eqId: '', label: 'Whole unit', loc: '' }];
       targets.forEach(t=>{
-        const last = latest[`${a.id}|${u}|${t.eqId}`] || null;
+        let last = latest[`${a.id}|${u}|${t.eqId}`] || null;
+        if(t.eqId && whole && (!last || whole.date > last.date)) last = whole;   // 3.16: a whole-unit test covers every listed equipment
         const due = last ? nextDueOf(last) : '';
         let st = 'none';
         if(last){ const d = daysBetween(T, due); st = d < 0 ? 'over' : d <= 30 ? 'due' : 'ok'; }
         out.push({ act: a, unit: u, eqId: t.eqId, label: t.label, loc: t.loc, last, due, st, notOk: !!(last && last.result === 'Not OK') });
       });
     });
+  });
+  // open follow-ups of activities without a fixed frequency
+  records().forEach(r=>{
+    const a = actById(r.actId); if(!isEvent(a) || a.active === false || r.result !== 'Open') return;
+    const st = r.nextDue && r.nextDue < T ? 'over' : 'open';
+    out.push({ act: a, unit: r.unit, eqId: r.eqId || '', label: targetLabel(r), loc: '', last: r, due: r.nextDue || '', st, notOk: false, ev: true });
   });
   return out;
 }
@@ -887,21 +986,24 @@ function refresh(){
   if(A.view === 'overview') fillOverview(); else if(A.view === 'records') fillRecords(); else fillSetup();
 }
 
-/* Overview */
+/* ═══ Overview ═══ */
 function renderOverview(){
+  const adm = isAdmin();
   byId('view').innerHTML = `<div id="view-overview">
     <div class="card"><div class="filters" style="border-bottom:0">
       <div class="fld"><label for="ov-unit">Plant unit</label><select id="ov-unit">${unitOptions(A.ov.unit, 'All units')}</select></div>
       <div class="fld"><label for="ov-status">Status</label><select id="ov-status">
         <option value="">All statuses</option><option value="over">Overdue</option><option value="due">Due within 30 days</option>
-        <option value="none">No record yet</option><option value="ok">OK</option><option value="notok">Latest result Not OK</option></select></div>
+        <option value="none">No record yet</option><option value="ok">OK</option><option value="notok">Latest result Not OK</option>
+        <option value="open">Open follow-ups (no fixed frequency)</option></select></div>
     </div></div>
     <div class="kpis" id="ov-kpis"></div>
     <div class="card"><div class="card-h"><div><div class="card-t">Compliance matrix</div>
-      <div class="card-m">Activity × plant unit. The number shows items done within frequency out of the total; the colour shows the worst item, and red “Not OK” means a latest test failed. Tap a cell to list its items.</div></div></div>
-      <div class="card-b" style="overflow-x:auto" id="ov-matrix"></div></div>
+      <div class="card-m">Activity × plant unit. The number shows items done within frequency out of the total; the colour shows the worst item, and red “Not OK” means a latest test failed. Activities without a fixed frequency show how many were logged and how many are still open. Tap a cell to list its items.${adm ? ' <b class="adm-note">Admin:</b> tap an activity name to change its frequency, units or name, or remove it · tap <b>＋</b> to start tracking it in that unit.' : ''}</div></div>
+      ${adm ? '<button type="button" class="btn sm" onclick="aicActivityForm()">＋ Add activity</button>' : ''}</div>
+      <div class="card-b mx-wrap" id="ov-matrix"></div></div>
     <div class="card" id="ov-list-card"><div class="card-h"><div><div class="card-t" id="ov-list-title">Action list</div><div class="card-m" id="ov-list-sub"></div></div>
-      <button type="button" class="btn sm" onclick="aicNewRecord()">＋ New record</button></div>
+      <button type="button" class="btn sm" id="ov-new" onclick="aicNewRecord(A.ov.act, A.ov.cu)">＋ New record</button></div>
       <div class="list" id="ov-list"></div></div>
   </div>`;
   byId('ov-status').value = A.ov.status;
@@ -910,26 +1012,36 @@ function renderOverview(){
   fillOverview();
 }
 function fillOverview(){
-  const all = buildItems();
-  const scoped = A.ov.unit ? all.filter(i=>i.unit === A.ov.unit) : all;
+  if(!byId('ov-kpis')) return;
+  const adm = isAdmin();
+  const all = buildItems(), sched = all.filter(i=>!i.ev);
+  const scoped = A.ov.unit ? sched.filter(i=>i.unit === A.ov.unit) : sched;
   const n = scoped.length;
   const good = scoped.filter(i=>i.st === 'ok' || i.st === 'due').length;
   const over = scoped.filter(i=>i.st === 'over').length, due = scoped.filter(i=>i.st === 'due').length;
   const none = scoped.filter(i=>i.st === 'none').length, bad = scoped.filter(i=>i.notOk).length;
+  const openEv = all.filter(i=>i.ev && (!A.ov.unit || i.unit === A.ov.unit)).length;
   const pct = n ? Math.round(good * 100 / n) : 0;
   byId('ov-kpis').innerHTML = `
     <div class="kpi ${pct >= 90 ? 'good' : pct >= 60 ? 'warn' : 'bad'}"><div class="l">Compliance</div><div class="v">${pct}%</div><div class="m">${good} of ${n} items within frequency</div></div>
     <div class="kpi ${over ? 'bad' : ''}"><div class="l">Overdue</div><div class="v">${over}</div><div class="m">${none} with no record yet</div></div>
     <div class="kpi ${due ? 'warn' : ''}"><div class="l">Due in 30 days</div><div class="v">${due}</div><div class="m">plan these next</div></div>
-    <div class="kpi ${bad ? 'bad' : ''}"><div class="l">Latest result Not OK</div><div class="v">${bad}</div><div class="m">open observations</div></div>`;
+    <div class="kpi ${bad ? 'bad' : ''}"><div class="l">Latest result Not OK</div><div class="v">${bad}</div><div class="m">open observations${openEv ? ` · ${openEv} open follow-up${openEv === 1 ? '' : 's'}` : ''}</div></div>`;
 
+  // matrix
   const us = A.ov.unit ? UNITS.filter(u=>u.id === A.ov.unit) : UNITS;
+  const recs = records();
+  const label = a=>`<td class="mx-a"><button type="button" class="mx-ab" onclick="aicActTap('${a.id}')" aria-label="${esc(a.name)} — ${adm ? 'change frequency, units or remove' : 'details'}">
+      <span class="mx-an">${esc(a.name)}${adm ? ' <span class="mx-ed" aria-hidden="true">✎</span>' : ''}</span><span class="mx-af">${esc(schedLabel(a))}</span></button></td>`;
+  const naCell = (a, u)=>adm ? `<td><button type="button" class="cell na add" onclick="aicAddUnit('${a.id}','${u.id}')" aria-label="Start tracking ${esc(a.name)} in ${esc(unitLabel(u.id))}">＋</button></td>`
+    : '<td><div class="cell na" title="Not tracked for this unit">–</div></td>';
   let h = `<table class="mx"><thead><tr><th class="mx-a"></th>${us.map(u=>`<th><div class="mx-ph">${esc(u.phase)}</div>${esc(u.name)}</th>`).join('')}</tr></thead><tbody>`;
-  acts().forEach(a=>{
-    h += `<tr><td class="mx-a"><div class="mx-an">${esc(a.name)}</div><div class="mx-af">${esc(freqLabel(a.months))}</div></td>`;
+  const schedActs = acts().filter(a=>!isEvent(a)), evActs = acts().filter(isEvent);
+  schedActs.forEach(a=>{
+    h += `<tr>${label(a)}`;
     us.forEach(u=>{
-      if(!actUnits(a).includes(u.id)){ h += '<td><div class="cell na" title="Not applicable to this unit">–</div></td>'; return; }
-      const its = all.filter(i=>i.act.id === a.id && i.unit === u.id);
+      if(!actUnits(a).includes(u.id)){ h += naCell(a, u); return; }
+      const its = sched.filter(i=>i.act.id === a.id && i.unit === u.id);
       const worst = its.reduce((w, i)=>ST_RANK[i.st] < ST_RANK[w] ? i.st : w, 'ok');
       const g = its.filter(i=>i.st === 'ok' || i.st === 'due').length;
       const sel = (A.ov.act === a.id && A.ov.cu === u.id) ? ' sel' : '';
@@ -938,31 +1050,81 @@ function fillOverview(){
     });
     h += '</tr>';
   });
-  byId('ov-matrix').innerHTML = acts().length ? h + '</tbody></table>' : '<div class="empty">No activities yet. An admin can add them under Activities &amp; equipment.</div>';
+  if(evActs.length){
+    h += `<tr><td class="mx-sec" colspan="${us.length + 1}">Without fixed frequency · OEM visit · call · project · other</td></tr>`;
+    evActs.forEach(a=>{
+      h += `<tr>${label(a)}`;
+      us.forEach(u=>{
+        if(!actUnits(a).includes(u.id)){ h += naCell(a, u); return; }
+        const rs = recs.filter(r=>r.actId === a.id && r.unit === u.id).sort((x, y)=>String(y.date).localeCompare(String(x.date)));
+        const open = rs.filter(r=>r.result === 'Open'), late = open.filter(r=>r.nextDue && r.nextDue < todayIso());
+        const cls = late.length ? 'over' : open.length ? 'due' : rs.length ? 'ev' : 'evnone';
+        const sel = (A.ov.act === a.id && A.ov.cu === u.id) ? ' sel' : '';
+        h += `<td><button type="button" class="cell ${cls}${sel}" onclick="aicCell('${a.id}','${u.id}')" aria-label="${esc(a.name)}, ${esc(unitLabel(u.id))}: ${rs.length} logged, ${open.length} open"><b>${rs.length}</b><small>${open.length ? open.length + ' open' : rs.length ? 'last ' + ddmm(rs[0].date) : 'none'}</small></button></td>`;
+      });
+      h += '</tr>';
+    });
+  }
+  byId('ov-matrix').innerHTML = acts().length ? h + '</tbody></table>' : `<div class="empty">No activities yet.${adm ? ' Tap “＋ Add activity”.' : ' An admin can add them.'}</div>`;
 
-  let list = scoped;
-  if(A.ov.act) list = list.filter(i=>i.act.id === A.ov.act && (!A.ov.cu || i.unit === A.ov.cu));
-  if(A.ov.status) list = list.filter(i=>A.ov.status === 'notok' ? i.notOk : i.st === A.ov.status);
-  list.sort((x, y)=>ST_RANK[x.st] - ST_RANK[y.st] || String(x.due || '9999').localeCompare(String(y.due || '9999')) || (x.act.order || 99) - (y.act.order || 99));
+  // action list / cell list
   const a = A.ov.act ? actById(A.ov.act) : null;
-  byId('ov-list-title').textContent = a ? `${a.name} — ${unitLabel(A.ov.cu)}` : 'Action list';
-  byId('ov-list-sub').innerHTML = a ? `${list.length} item${list.length === 1 ? '' : 's'} · <a href="#" onclick="aicCell('','');return false" style="color:var(--accent)">Show all</a>`
+  byId('ov-new').textContent = isEvent(a) ? '＋ Log activity' : '＋ New record';
+  if(isEvent(a)){
+    const list = recs.filter(r=>r.actId === a.id && (!A.ov.cu || r.unit === A.ov.cu)).sort((x, y)=>String(y.date).localeCompare(String(x.date)) || String(y.at).localeCompare(String(x.at)));
+    byId('ov-list-title').textContent = `${a.name} — ${A.ov.cu ? unitLabel(A.ov.cu) : 'all units'}`;
+    byId('ov-list-sub').innerHTML = `${list.length} record${list.length === 1 ? '' : 's'} · ${esc(schedLabel(a))} · newest first · <a href="#" onclick="aicCell('','');return false" style="color:var(--accent)">Show all</a>${cellAdminLink(a)}`;
+    byId('ov-list').innerHTML = list.length ? list.map(recRow).join('') : `<div class="empty">Nothing logged yet. Tap “＋ Log activity” after the visit / call / work, with its MoM or report.</div>`;
+    return;
+  }
+  let list = A.ov.unit ? all.filter(i=>i.unit === A.ov.unit) : all;
+  if(A.ov.act) list = list.filter(i=>i.act.id === A.ov.act && (!A.ov.cu || i.unit === A.ov.cu));
+  if(A.ov.status) list = list.filter(i=>A.ov.status === 'notok' ? i.notOk : A.ov.status === 'open' ? i.ev : i.st === A.ov.status);
+  list.sort((x, y)=>ST_RANK[x.st] - ST_RANK[y.st] || String(x.due || '9999').localeCompare(String(y.due || '9999')) || (x.act.order || 99) - (y.act.order || 99));
+  byId('ov-list-title').textContent = a ? `${a.name} — ${A.ov.cu ? unitLabel(A.ov.cu) : 'all units'}` : 'Action list';
+  byId('ov-list-sub').innerHTML = a ? `${list.length} item${list.length === 1 ? '' : 's'} · <a href="#" onclick="aicCell('','');return false" style="color:var(--accent)">Show all</a>${cellAdminLink(a)}`
     : `${list.length} item${list.length === 1 ? '' : 's'} · overdue first`;
   byId('ov-list').innerHTML = list.length
     ? list.slice(0, 150).map(itemRow).join('') + (list.length > 150 ? `<div class="more">Showing the first 150 of ${list.length}. Use the filters to narrow down.</div>` : '')
     : '<div class="empty">Nothing matches these filters.</div>';
 }
+function cellAdminLink(a){
+  if(!isAdmin() || !a || !A.ov.cu) return '';
+  return ` · <a href="#" class="rm-link" onclick="aicRemoveUnit('${a.id}','${A.ov.cu}');return false">Stop tracking in ${esc(unitLabel(A.ov.cu))}</a>`;
+}
 function itemRow(i){
+  if(i.ev){
+    return `<div class="li click" onclick="aicOpenRecord('${i.last.id}')">
+      <div class="main">
+        <div class="t">${esc(i.act.name)} <span class="pill ${i.st === 'over' ? 'over' : 'due'}">${i.st === 'over' ? 'Follow-up overdue' : 'Open'}</span> ${basisPill(i.last, i.act)}</div>
+        <div class="s">${esc(unitLabel(i.unit))} · ${esc(i.label)}${i.last.doneBy ? ' · ' + esc(i.last.doneBy) : ''}</div>
+        <div class="s mono">Logged ${fmtDate(i.last.date)} · Follow-up ${i.due ? fmtDate(i.due) : '—'}</div>
+      </div>
+      <div class="acts"><button type="button" class="btn sm ghost" onclick="event.stopPropagation();aicOpenRecord('${i.last.id}')">Open</button></div>
+    </div>`;
+  }
   return `<div class="li">
     <div class="main">
       <div class="t">${esc(i.act.name)} <span class="pill ${i.st}">${ST_TEXT[i.st]}</span>${i.notOk ? ' <span class="pill notok">Not OK</span>' : ''}</div>
       <div class="s">${esc(unitLabel(i.unit))} · ${esc(i.label)}${i.loc ? ' · ' + esc(i.loc) : ''}</div>
-      <div class="s mono">Last ${i.last ? fmtDate(i.last.date) + ' · ' + esc(i.last.result) : '—'} · Next due ${i.due ? fmtDate(i.due) : '—'}</div>
+      <div class="s mono">Last ${i.last ? fmtDate(i.last.date) + ' · ' + esc(i.last.result) + (i.eqId && !i.last.eqId ? ' (whole unit)' : '') : '—'} · Next due ${i.due ? fmtDate(i.due) : '—'}</div>
     </div>
     <div class="acts">
       ${i.last ? `<button type="button" class="btn sm ghost" onclick="aicHistory('${i.act.id}','${i.unit}','${i.eqId}')">History</button>` : ''}
       <button type="button" class="btn sm" onclick="aicNewRecord('${i.act.id}','${i.unit}','${i.eqId}')">＋ Record</button>
     </div>
+  </div>`;
+}
+function recRow(r){
+  const a = actById(r.actId);
+  return `<div class="li click" onclick="aicOpenRecord('${r.id}')">
+    <div class="main">
+      <div class="t">${esc(a ? a.name : 'Activity')} ${resultPill(r.result)} ${basisPill(r, a)}</div>
+      <div class="s">${esc(unitLabel(r.unit))} · ${esc(targetLabel(r))}${r.doneBy ? ' · ' + esc(r.doneBy) : ''}</div>
+      ${(r.reportNo || r.reportDesc) ? `<div class="s rep">${isEvent(a) ? '🗂' : '📄'} ${r.reportNo ? esc(r.reportNo) + (r.reportDesc ? ' · ' : '') : ''}${esc((r.reportDesc || '').slice(0, 110))}${(r.reportDesc || '').length > 110 ? '…' : ''}</div>` : ''}
+      ${isEvent(a) && r.result === 'Open' && r.nextDue ? `<div class="s mono">Follow-up ${fmtDate(r.nextDue)}</div>` : ''}
+    </div>
+    <div class="acts"><span class="mono rc-date">${fmtDate(r.date)}</span><span class="att" data-att="${r.id}">${attText(r)}</span></div>
   </div>`;
 }
 function aicCell(actId, unit){
@@ -971,12 +1133,32 @@ function aicCell(actId, unit){
   fillOverview();
   if(actId){ const c = byId('ov-list-card'); if(c && c.scrollIntoView) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
+function aicActTap(id){ if(isAdmin()) aicActivityForm(id); else aicActInfo(id); }
+function aicActInfo(id){
+  const a = actById(id); if(!a) return;
+  const n = records().filter(r=>r.actId === id).length;
+  openModal(`${mHead(a.name, schedLabel(a))}
+    <div class="modal-body"><div class="facts">
+      <div><div class="k">${isEvent(a) ? 'Basis' : 'Frequency'}</div><div class="v">${esc(isEvent(a) ? basisDef(a.basis).l : freqLabel(a.months))}</div></div>
+      <div><div class="k">Records</div><div class="v mono">${n}</div></div>
+      <div class="full"><div class="k">Tracked for</div><div class="v">${esc(unitsText(actUnits(a)))}</div></div>
+      ${a.ref ? `<div class="full"><div class="k">Reference / standard</div><div class="v">${esc(a.ref)}</div></div>` : ''}
+      ${a.scope ? `<div class="full"><div class="k">Scope / checkpoints</div><div class="v pre" style="font-weight:500">${esc(a.scope)}</div></div>` : ''}
+      <div class="full hint">Only an admin can change the frequency, units or name of an activity.</div>
+    </div></div>
+    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Close</button><button type="button" class="btn" onclick="aicNewRecord('${a.id}')">${isEvent(a) ? '＋ Log activity' : '＋ New record'}</button></div>`);
+}
 
-/* Records */
+/* ═══ Records ═══ */
 function fyOptions(){
   const s = new Set(Object.keys((A.master && A.master.fyDocs) || {}).concat(Object.keys(A.recs)));
   s.add(fyOfIso(todayIso()));
   return [...s].filter(Boolean).sort().reverse();
+}
+function actOptions(list){
+  const s = list.filter(a=>!isEvent(a)), e = list.filter(isEvent);
+  return (s.length ? `<optgroup label="With fixed frequency">${s.map(a=>`<option value="${a.id}">${esc(a.name)} — ${esc(schedLabel(a))}</option>`).join('')}</optgroup>` : '')
+    + (e.length ? `<optgroup label="Without fixed frequency">${e.map(a=>`<option value="${a.id}">${esc(a.name)} — ${esc(schedLabel(a))}</option>`).join('')}</optgroup>` : '');
 }
 function renderRecords(){
   byId('view').innerHTML = `<div id="view-records"><div class="card">
@@ -984,13 +1166,13 @@ function renderRecords(){
       <button type="button" class="btn sm" onclick="aicNewRecord()">＋ New record</button></div>
     <div class="filters">
       <div class="fld"><label for="rc-unit">Plant unit</label><select id="rc-unit">${unitOptions(A.rf.unit, 'All units')}</select></div>
-      <div class="fld"><label for="rc-act">Activity</label><select id="rc-act"><option value="">All activities</option>${acts(true).map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></div>
-      <div class="fld"><label for="rc-fy">Financial year</label><select id="rc-fy"><option value="">All years</option>${fyOptions().map(f=>`<option value="${f}">${f}</option>`).join('')}</select></div>
-      <div class="fld"><label for="rc-result">Result</label><select id="rc-result"><option value="">All results</option>${RESULTS.map(r=>`<option>${r}</option>`).join('')}</select></div>
-      <div class="fld wide"><label for="rc-q">Search</label><input id="rc-q" type="search" placeholder="Equipment, agency, report no., description, readings…" value="${esc(A.rf.q)}"></div>
+      <div class="fld"><label for="rc-act">Activity</label><select id="rc-act"><option value="">All activities</option>${actOptions(acts(true))}</select></div>
+      <div class="fld"><label for="rc-fy">Financial year</label><select id="rc-fy"></select></div>
+      <div class="fld"><label for="rc-result">Result / status</label><select id="rc-result"><option value="">All</option>${RESULTS.concat(['Open', 'Closed']).map(r=>`<option>${r}</option>`).join('')}</select></div>
+      <div class="fld wide"><label for="rc-q">Search</label><input id="rc-q" type="search" placeholder="Equipment, agency / OEM, report or MoM no., description, readings…" value="${esc(A.rf.q)}"></div>
     </div>
     <div class="list" id="rc-list"></div></div></div>`;
-  byId('rc-act').value = A.rf.act; byId('rc-fy').value = A.rf.fy; byId('rc-result').value = A.rf.result;
+  byId('rc-act').value = A.rf.act; byId('rc-result').value = A.rf.result;
   byId('rc-unit').onchange = e=>{ A.rf.unit = e.target.value; fillRecords(); };
   byId('rc-act').onchange = e=>{ A.rf.act = e.target.value; fillRecords(); };
   byId('rc-fy').onchange = e=>{ A.rf.fy = e.target.value; fillRecords(); };
@@ -1000,9 +1182,11 @@ function renderRecords(){
 }
 function attText(r){
   const n = ScanKit.count('aic', r.att, r.id);
-  return n === undefined ? '' : n ? `📎 ${n}` : `<button type="button" class="btn sm att-btn" onclick="event.stopPropagation();aicOpenRecord('${r.id}',false,true)">＋ Upload report</button>`;
+  return n === undefined ? '' : n ? `📎 ${n}` : `<button type="button" class="btn sm att-btn" onclick="event.stopPropagation();aicOpenRecord('${r.id}',false,true)">＋ Upload ${isEvent(actById(r.actId)) ? 'MoM / report' : 'report'}</button>`;
 }
 function fillRecords(){
+  const fySel = byId('rc-fy');
+  if(fySel){ const opts = fyOptions(); fySel.innerHTML = `<option value="">All years</option>${opts.map(f=>`<option value="${f}">${f}</option>`).join('')}`; fySel.value = opts.includes(A.rf.fy) ? A.rf.fy : ''; }
   const q = A.rf.q.trim().toLowerCase();
   let list = records();
   if(A.rf.unit) list = list.filter(r=>r.unit === A.rf.unit);
@@ -1010,38 +1194,34 @@ function fillRecords(){
   if(A.rf.fy) list = list.filter(r=>fyOfIso(r.date) === A.rf.fy);
   if(A.rf.result) list = list.filter(r=>r.result === A.rf.result);
   if(q) list = list.filter(r=>{ const a = actById(r.actId);
-    return [a && a.name, unitLabel(r.unit), targetLabel(r), r.doneBy, r.readings, r.remarks, r.by, r.reportNo, r.reportDesc].join(' ').toLowerCase().includes(q); });
+    return [a && a.name, unitLabel(r.unit), targetLabel(r), r.doneBy, r.readings, r.remarks, r.by, r.reportNo, r.reportDesc, r.basis && basisDef(r.basis).l].join(' ').toLowerCase().includes(q); });
   list.sort((x, y)=>String(y.date).localeCompare(String(x.date)) || String(y.at).localeCompare(String(x.at)));
   byId('rc-sub').textContent = `${list.length} record${list.length === 1 ? '' : 's'} · newest first`;
-  byId('rc-list').innerHTML = list.length ? list.slice(0, 300).map(r=>{
-    const a = actById(r.actId);
-    return `<div class="li click" onclick="aicOpenRecord('${r.id}')">
-      <div class="main">
-        <div class="t">${esc(a ? a.name : 'Activity')} ${resultPill(r.result)}</div>
-        <div class="s">${esc(unitLabel(r.unit))} · ${esc(targetLabel(r))}${r.doneBy ? ' · ' + esc(r.doneBy) : ''}</div>
-        ${(r.reportNo || r.reportDesc) ? `<div class="s rep">📄 ${r.reportNo ? esc(r.reportNo) + (r.reportDesc ? ' · ' : '') : ''}${esc((r.reportDesc || '').slice(0, 110))}${(r.reportDesc || '').length > 110 ? '…' : ''}</div>` : ''}
-      </div>
-      <div class="acts"><span class="mono rc-date">${fmtDate(r.date)}</span><span class="att" data-att="${r.id}">${attText(r)}</span></div>
-    </div>`;
-  }).join('') + (list.length > 300 ? `<div class="more">Showing the newest 300 of ${list.length}.</div>` : '')
-    : `<div class="empty">${records().length ? 'No records match these filters.' : 'No records yet. Tap “＋ New record” after each test or inspection.'}</div>`;
+  byId('rc-list').innerHTML = list.length ? list.slice(0, 300).map(recRow).join('') + (list.length > 300 ? `<div class="more">Showing the newest 300 of ${list.length}.</div>` : '')
+    : `<div class="empty">${records().length ? 'No records match these filters.' : 'No records yet. Tap “＋ New record” after each test or inspection, or “🗂 Log visit / MoM” for an OEM visit, call or project.'}</div>`;
 }
 function updateAttBadges(){
-  document.querySelectorAll('#rc-list [data-att]').forEach(el=>{ const r = recById(el.getAttribute('data-att')); if(r) el.innerHTML = attText(r); });
+  document.querySelectorAll('[data-att]').forEach(el=>{ const r = recById(el.getAttribute('data-att')); if(r) el.innerHTML = attText(r); });
 }
 
-/* Setup — activities & equipment (the modification panel) */
+/* ═══ Setup — activities & equipment (the modification panel) ═══ */
 function renderSetup(){
+  const adm = isAdmin();
   byId('view').innerHTML = `<div id="view-setup">
     <div class="card"><div class="card-h"><div><div class="card-t">Activities</div>
-      <div class="card-m">Frequency sets the next-due date. Only admins can add, edit or retire activities.</div></div>
-      ${isAdmin() ? '<button type="button" class="btn sm" onclick="aicActivityForm()">＋ Add activity</button>' : ''}</div>
-      <div class="list" id="st-acts"></div></div>
+      <div class="card-m">Frequency sets the next-due date. Activities without a fixed frequency (OEM visit, call based, project based, other) are logged when they happen. Only admins can add, edit or remove activities; every change shows at once in every login.</div></div>
+      ${adm ? '<button type="button" class="btn sm" onclick="aicActivityForm()">＋ Add activity</button>' : ''}</div>
+      <div class="sub-h">With fixed frequency</div>
+      <div class="list" id="st-acts"></div>
+      <div class="sub-h">Without fixed frequency — OEM visit · call based · project based · other
+        ${adm ? `<button type="button" class="btn sm ghost" onclick="aicActivityForm(null,{ev:true})">＋ Add</button>` : ''}</div>
+      <div class="list" id="st-evacts"></div>
+      <div id="st-retired"></div></div>
     <div class="card"><div class="card-h"><div><div class="card-t">Equipment</div>
-      <div class="card-m">List transformers, earth pits, breakers, ladders and so on for each unit. If an activity has no equipment listed for a unit, it is tracked for the whole unit.</div></div>
+      <div class="card-m">List transformers, earth pits, breakers, ladders, DG sets and so on for each unit. If an activity has no equipment listed for a unit, it is tracked for the whole unit. “History” shows every record of the equipment, with or without a fixed frequency.</div></div>
       <button type="button" class="btn sm" onclick="aicEquipmentForm()">＋ Add equipment</button></div>
       <div class="filters">
-        <div class="fld"><label for="sf-act">Activity</label><select id="sf-act"><option value="">All activities</option>${acts().map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></div>
+        <div class="fld"><label for="sf-act">Activity</label><select id="sf-act"><option value="">All activities</option>${actOptions(acts())}</select></div>
         <div class="fld"><label for="sf-unit">Plant unit</label><select id="sf-unit">${unitOptions(A.sf.unit, 'All units')}</select></div>
       </div>
       <div class="list" id="st-eqs"></div></div>
@@ -1051,98 +1231,167 @@ function renderSetup(){
   byId('sf-unit').onchange = e=>{ A.sf.unit = e.target.value; fillSetup(); };
   fillSetup();
 }
+function actRow(a, adm){
+  const n = records().filter(r=>r.actId === a.id).length;
+  return `<div class="li">
+    <div class="main"><div class="t">${esc(a.name)} <span class="pill ${isEvent(a) ? 'ev' : 'acc'}">${esc(schedLabel(a))}</span></div>
+      <div class="s">${esc(unitsText(actUnits(a)))}${a.ref ? ' · ' + esc(a.ref) : ''} · ${n} record${n === 1 ? '' : 's'}</div>
+      ${a.scope ? `<div class="s">${esc(a.scope)}</div>` : ''}</div>
+    ${adm ? `<div class="acts"><button type="button" class="btn sm ghost" onclick="aicActivityForm('${a.id}')">Edit</button><button type="button" class="btn sm danger" onclick="aicRetireActivity('${a.id}',true)">Remove</button></div>`
+          : `<div class="acts"><button type="button" class="btn sm ghost" onclick="aicActInfo('${a.id}')">Details</button></div>`}
+  </div>`;
+}
 function fillSetup(){
+  if(!byId('st-acts')) return;
   const adm = isAdmin();
   const live = acts(), retired = acts(true).filter(a=>a.active === false);
-  byId('st-acts').innerHTML = (live.map(a=>`<div class="li">
-      <div class="main"><div class="t">${esc(a.name)} <span class="pill acc">${esc(freqLabel(a.months))}</span></div>
-        <div class="s">${actUnits(a).map(id=>esc((unitById(id) || { name: id }).name)).join(' · ')}${a.ref ? ' · ' + esc(a.ref) : ''}</div>
-        ${a.scope ? `<div class="s">${esc(a.scope)}</div>` : ''}</div>
-      ${adm ? `<div class="acts"><button type="button" class="btn sm ghost" onclick="aicActivityForm('${a.id}')">Edit</button><button type="button" class="btn sm danger" onclick="aicRetireActivity('${a.id}',true)">Retire</button></div>` : ''}
-    </div>`).join('') || '<div class="empty">No activities.</div>') +
-    (retired.length ? `<div class="more">Retired: ${retired.map(a=>`${esc(a.name)}${adm ? ` <a href="#" style="color:var(--accent)" onclick="aicRetireActivity('${a.id}',false);return false">Restore</a>` : ''}`).join(' · ')}</div>` : '');
+  byId('st-acts').innerHTML = live.filter(a=>!isEvent(a)).map(a=>actRow(a, adm)).join('') || '<div class="empty">No activities with a fixed frequency.</div>';
+  byId('st-evacts').innerHTML = live.filter(isEvent).map(a=>actRow(a, adm)).join('') || '<div class="empty">None.</div>';
+  byId('st-retired').innerHTML = retired.length ? `<div class="more">Removed from the matrix: ${retired.map(a=>`${esc(a.name)}${adm ? ` <a href="#" style="color:var(--accent)" onclick="aicRetireActivity('${a.id}',false);return false">Restore</a>` : ''}`).join(' · ')}</div>` : '';
 
   let list = eqs();
   if(A.sf.act) list = list.filter(e=>e.actId === A.sf.act);
   if(A.sf.unit) list = list.filter(e=>e.unit === A.sf.unit);
   const removed = eqs(true).filter(e=>e.active === false && (!A.sf.act || e.actId === A.sf.act) && (!A.sf.unit || e.unit === A.sf.unit));
-  byId('st-eqs').innerHTML = (list.map(e=>{ const a = actById(e.actId);
+  const recs = records();
+  byId('st-eqs').innerHTML = (list.map(e=>{ const a = actById(e.actId); const n = recs.filter(r=>r.eqId === e.id || (!r.eqId && r.eqName && r.unit === e.unit && r.eqName.toLowerCase() === e.name.toLowerCase())).length;
     return `<div class="li"><div class="main"><div class="t">${esc(e.name)}</div>
       <div class="s">${esc(a ? a.name : 'Activity')} · ${esc(unitLabel(e.unit))}${e.location ? ' · ' + esc(e.location) : ''}</div>
       ${e.notes ? `<div class="s">${esc(e.notes)}</div>` : ''}</div>
-      <div class="acts"><button type="button" class="btn sm ghost" onclick="aicEquipmentForm('${e.id}')">Edit</button>
+      <div class="acts"><button type="button" class="btn sm ghost" onclick="aicEqHistory('${e.id}')">History${n ? ` (${n})` : ''}</button><button type="button" class="btn sm ghost" onclick="aicEquipmentForm('${e.id}')">Edit</button>
       ${adm ? `<button type="button" class="btn sm danger" onclick="aicRemoveEquipment('${e.id}',true)">Remove</button>` : ''}</div></div>`; }).join('')
     || '<div class="empty">No equipment listed here yet — these activities are tracked for the whole unit.</div>') +
     (removed.length ? `<div class="more">Removed: ${removed.map(e=>`${esc(e.name)}${adm ? ` <a href="#" style="color:var(--accent)" onclick="aicRemoveEquipment('${e.id}',false);return false">Restore</a>` : ''}`).join(' · ')}</div>` : '');
 }
 
-/* ─── Records: create / view / edit / delete ─── */
+/* ═══ Records: create / view / edit / delete ═══ */
 function aicNewRecord(actId, unit, eqId){ aicRecordForm(null, { actId: actId || '', unit: unit || '', eqId: eqId || '' }); }
+function aicLogEvent(){
+  const ev = acts().filter(isEvent);
+  if(!ev.length){ toast('No activity without a fixed frequency', isAdmin() ? 'Add one under Activities & equipment.' : 'Ask an admin to add one.', 'warn'); return; }
+  aicNewRecord(isEvent(actById(A.ov.act)) ? A.ov.act : ev[0].id, A.ov.cu || A.ov.unit || '');
+}
 function aicRecordForm(rec, preset){
   if(!requireReady()) return;
   const list = acts();
   if(!list.length){ toast('No activities', 'An admin needs to add activities first.', 'warn'); return; }
-  const r = rec || { actId: preset.actId || A.ov.act || list[0].id, unit: preset.unit || A.ov.cu || A.ov.unit || '', eqId: preset.eqId || '',
-                     date: todayIso(), result: 'OK', doneBy: '', readings: '', remarks: '', nextDue: '', reportNo: '', reportDesc: '' };
-  // 3.10: the record id + file shard are fixed when the form opens, so the report
-  // can be uploaded BEFORE saving. If the form is cancelled, uploads are discarded.
+  preset = preset || {};
+  const a0 = actById(preset.actId);
+  const r = rec || { actId: (a0 && a0.active !== false && preset.actId) || (actById(A.ov.act) && A.ov.act) || list[0].id, unit: preset.unit || A.ov.cu || A.ov.unit || '', eqId: preset.eqId || '',
+                     date: todayIso(), result: '', doneBy: '', readings: '', remarks: '', nextDue: '', reportNo: '', reportDesc: '', basis: '', eqName: '' };
+  // the record id + file shard are fixed when the form opens, so the report can be uploaded BEFORE saving
   const draft = rec ? { id: rec.id, att: rec.att || fyOfIso(rec.date) } : { id: newId('r'), att: fyOfIso(todayIso()) };
   A.draft = rec ? null : draft;
-  openModal(`${mHead(rec ? 'Edit record' : 'New record', 'Date-wise test, inspection or maintenance record')}
-    <div class="modal-body">
+  const retiredOwn = rec && actById(rec.actId) && actById(rec.actId).active === false ? actById(rec.actId) : null;
+  openModal(`${mHead(rec ? 'Edit record' : 'New record', 'Date-wise test, inspection, maintenance or visit record')}
+    <div class="modal-body" id="rf-body">
       <div class="banner info" id="rf-err" hidden></div>
-      <div class="fld"><label class="req" for="rf-act">Activity</label><select id="rf-act">${list.map(a=>`<option value="${a.id}">${esc(a.name)} — ${esc(freqLabel(a.months))}</option>`).join('')}</select></div>
+      <div class="fld"><label class="req" for="rf-act">Activity</label><select id="rf-act">${actOptions(retiredOwn ? list.concat([retiredOwn]) : list)}</select></div>
+      <div class="banner evb ev-only" id="rf-evb">🗂 <b>Activity without a fixed frequency.</b> Record the visit / call / work with its MoM or service report. No due date is set — add a follow-up date if action points are still open.</div>
+      <div class="row2 ev-only">
+        <div class="fld"><label class="req" for="rf-basis">Basis</label><select id="rf-basis">${BASES.map(b=>`<option value="${b.k}">${esc(b.l)}</option>`).join('')}</select></div>
+        <div class="fld"><label class="req" for="rf-status">Status</label><select id="rf-status"><option value="Closed">Closed — nothing pending</option><option value="Open">Open — follow-up pending</option></select></div>
+      </div>
       <div class="row2">
-        <div class="fld"><label class="req" for="rf-unit">Plant unit</label><select id="rf-unit"></select></div>
+        <div class="fld"><label class="req" for="rf-unit">Plant unit</label><select id="rf-unit"></select><div class="hint" id="rf-unit-hint"></div></div>
         <div class="fld"><label for="rf-eq">Equipment</label><select id="rf-eq"></select></div>
       </div>
+      <div class="fld ev-only" id="rf-eqnew" hidden><label for="rf-eqname">Equipment name</label><input id="rf-eqname" value="${esc(r.eqName || '')}" placeholder="e.g. DG-1 (1010 kVA)">
+        <label class="inl"><input type="checkbox" id="rf-eqadd" checked> Also add it to the equipment list of this unit</label></div>
       <div class="row2">
-        <div class="fld"><label class="req" for="rf-date">Date done</label><input type="date" id="rf-date" max="${todayIso()}" value="${esc(r.date)}"></div>
-        <div class="fld"><label class="req" for="rf-result">Result</label><select id="rf-result">${RESULTS.map(x=>`<option ${x === r.result ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+        <div class="fld"><label class="req" for="rf-date" id="rf-date-l">Date done</label><input type="date" id="rf-date" max="${todayIso()}" value="${esc(r.date)}"></div>
+        <div class="fld sch-only"><label class="req" for="rf-result">Result</label><select id="rf-result">${RESULTS.map(x=>`<option ${x === (r.result || 'OK') ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       </div>
       <div class="rep-box" id="rf-report">
-        <div class="rep-t">📄 Test report / certificate</div>
-        <div class="fld"><label for="rf-repno">Report / certificate no.</label><input id="rf-repno" value="${esc(r.reportNo || '')}" placeholder="e.g. TR/2026/114 · Cert. EP-0925"></div>
-        <div class="fld"><label for="rf-repdesc">Report description</label><textarea id="rf-repdesc" rows="3" placeholder="What the report covers and what it found — e.g. Annual oil BDV, IR/PI and ratio test on TR-1 by XYZ agency; all values within limits; oil filtration advised next year.">${esc(r.reportDesc || '')}</textarea></div>
+        <div class="rep-t" id="rf-rep-t">📄 Test report / certificate</div>
+        <div class="fld"><label for="rf-repno" id="rf-repno-l">Report / certificate no.</label><input id="rf-repno" value="${esc(r.reportNo || '')}"></div>
+        <div class="fld"><label for="rf-repdesc" id="rf-repdesc-l">Report description</label><textarea id="rf-repdesc" rows="3">${esc(r.reportDesc || '')}</textarea></div>
         <div id="rf-att"></div>
       </div>
-      <div class="fld"><label for="rf-by">Done by / agency</label><input id="rf-by" value="${esc(r.doneBy)}" placeholder="e.g. In-house electrical team, testing agency name"></div>
-      <div class="fld"><label for="rf-read">Key readings</label><textarea id="rf-read" rows="3" placeholder="e.g. EP-07: 1.8 Ω · Oil BDV 62 kV · Hot spot ΔT 18 °C">${esc(r.readings)}</textarea></div>
-      <div class="fld"><label for="rf-rem">Remarks / action taken</label><textarea id="rf-rem" rows="2">${esc(r.remarks)}</textarea></div>
-      <div class="fld"><label for="rf-next">Next due</label><input type="date" id="rf-next"><div class="hint" id="rf-next-hint"></div></div>
+      <div class="fld"><label for="rf-by" id="rf-by-l">Done by / agency</label><input id="rf-by" value="${esc(r.doneBy)}"></div>
+      <div class="fld"><label for="rf-read" id="rf-read-l">Key readings</label><textarea id="rf-read" rows="3">${esc(r.readings)}</textarea></div>
+      <div class="fld"><label for="rf-rem" id="rf-rem-l">Remarks / action taken</label><textarea id="rf-rem" rows="2">${esc(r.remarks)}</textarea></div>
+      <div class="fld"><label for="rf-next" id="rf-next-l">Next due</label><input type="date" id="rf-next"><div class="hint" id="rf-next-hint"></div></div>
     </div>
     <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
       <button type="button" class="btn" id="rf-save" onclick="aicSaveRecord(${rec ? `'${rec.id}'` : ''})">${rec ? 'Save changes' : 'Save record'}</button></div>`);
   const actSel = byId('rf-act'), unitSel = byId('rf-unit'), eqSel = byId('rf-eq'), dateIn = byId('rf-date'), nextIn = byId('rf-next');
-  let touched = !!(rec && rec.nextDue);
-  const calc = ()=>{ const a = actById(actSel.value); return (a && dateIn.value) ? addMonthsIso(dateIn.value, a.months) : ''; };
+  let touched = !!(rec && rec.nextDue), mode = null;
+  const calc = ()=>{ const a = actById(actSel.value); return (a && !isEvent(a) && dateIn.value) ? addMonthsIso(dateIn.value, a.months) : ''; };
+  const setTxt = (id, t)=>{ const e = byId(id); if(e) e.textContent = t; };
+  const setPh = (id, t)=>{ const e = byId(id); if(e) e.placeholder = t; };
+  function applyMode(first){
+    const a = actById(actSel.value), ev = isEvent(a);
+    byId('rf-body').classList.toggle('mode-ev', ev);
+    if(ev){
+      setTxt('rf-rep-t', '🗂 MoM / service report'); setTxt('rf-repno-l', 'MoM / report no.'); setTxt('rf-repdesc-l', 'MoM / report summary');
+      setPh('rf-repno', 'e.g. MoM/DG/2026/07 · Service report SR-4412');
+      setPh('rf-repdesc', 'What was discussed / done and agreed — e.g. Cummins engineer visit on DG-1: ECM software upgraded, governor tuned, load trial at 80 % OK; replace radiator hoses at next PM.');
+      setTxt('rf-by-l', 'OEM / vendor / agency'); setPh('rf-by', 'e.g. Cummins India — Mr. X, service engineer');
+      setTxt('rf-read-l', 'Purpose / work done'); setPh('rf-read', 'e.g. Upgradation of AMF controller, parameter settings, trial run');
+      setTxt('rf-rem-l', 'Action points / follow-up'); setPh('rf-rem', 'e.g. Spares to be indented; OEM to revisit after 250 h');
+      setTxt('rf-date-l', 'Date of visit / work'); setTxt('rf-next-l', 'Follow-up / next visit (optional)');
+      if(mode !== 'ev'){ if(!touched || mode === 'sch') nextIn.value = rec && rec.nextDue && isEvent(actById(rec.actId)) ? rec.nextDue : ''; }
+      byId('rf-basis').value = (first && rec && rec.basis) ? rec.basis : a.basis;
+      const s = byId('rf-status'); s.value = rec && EV_STATUS.includes(rec.result) && first ? rec.result : (first ? 'Closed' : s.value);
+      byId('rf-next-hint').textContent = 'Leave empty if nothing is pending. With status “Open”, the follow-up shows in the action list.';
+      if(!first){ const bx = byId('rf-evb'); bx.classList.remove('pop'); void bx.offsetWidth; bx.classList.add('pop'); }
+    } else {
+      setTxt('rf-rep-t', '📄 Test report / certificate'); setTxt('rf-repno-l', 'Report / certificate no.'); setTxt('rf-repdesc-l', 'Report description');
+      setPh('rf-repno', 'e.g. TR/2026/114 · Cert. EP-0925');
+      setPh('rf-repdesc', 'What the report covers and what it found — e.g. Annual oil BDV, IR/PI and ratio test on TR-1 by XYZ agency; all values within limits; oil filtration advised next year.');
+      setTxt('rf-by-l', 'Done by / agency'); setPh('rf-by', 'e.g. In-house electrical team, testing agency name');
+      setTxt('rf-read-l', 'Key readings'); setPh('rf-read', 'e.g. EP-07: 1.8 Ω · Oil BDV 62 kV · Hot spot ΔT 18 °C');
+      setTxt('rf-rem-l', 'Remarks / action taken'); setPh('rf-rem', '');
+      setTxt('rf-date-l', 'Date done'); setTxt('rf-next-l', 'Next due');
+      if(mode === 'ev') touched = false;
+      if(!touched) nextIn.value = calc();
+      byId('rf-next-hint').textContent = a ? `Worked out as date done + ${freqLabel(a.months).toLowerCase()} (${fmtDate(calc())}). Change it only if the report says otherwise.` : '';
+    }
+    mode = ev ? 'ev' : 'sch';
+  }
   function fillUnits(sel){
     const a = actById(actSel.value); const cur = sel !== undefined ? sel : unitSel.value;
-    unitSel.innerHTML = '<option value="">Select unit…</option>' + actUnits(a).map(id=>`<option value="${id}">${esc(unitLabel(id))}</option>`).join('');
-    unitSel.value = actUnits(a).includes(cur) ? cur : '';
+    const on = actUnits(a), off = isAdmin() ? ALL_UNIT_IDS.filter(id=>!on.includes(id)) : [];
+    unitSel.innerHTML = '<option value="">Select unit…</option>' + on.map(id=>`<option value="${id}">${esc(unitLabel(id))}</option>`).join('')
+      + (off.length ? `<optgroup label="Not tracked yet — saving adds this unit">${off.map(id=>`<option value="${id}">${esc(unitLabel(id))} ＋</option>`).join('')}</optgroup>` : '');
+    unitSel.value = on.concat(off).includes(cur) ? cur : '';
+    unitHint();
+  }
+  function unitHint(){
+    const a = actById(actSel.value), u = unitSel.value;
+    byId('rf-unit-hint').textContent = a && u && !actUnits(a).includes(u) ? `“${a.name}” is not tracked for ${unitLabel(u)} yet — saving adds this unit to it for everyone.` : '';
   }
   function fillEq(sel){
+    const a = actById(actSel.value), ev = isEvent(a);
     const cur = sel !== undefined ? sel : eqSel.value;
-    const opts = eqs().filter(e=>e.actId === actSel.value && e.unit === unitSel.value);
-    eqSel.innerHTML = '<option value="">Whole unit / general</option>' + opts.map(e=>`<option value="${e.id}">${esc(e.name)}${e.location ? ' · ' + esc(e.location) : ''}</option>`).join('');
-    eqSel.value = opts.some(e=>e.id === cur) ? cur : '';
+    let opts;
+    if(ev){   // any equipment of the unit, its own entries first, one per name
+      const seen = new Set(); opts = [];
+      eqs().filter(e=>e.unit === unitSel.value).sort((x, y)=>(x.actId === a.id ? 0 : 1) - (y.actId === a.id ? 0 : 1) || String(x.name).localeCompare(y.name, undefined, { numeric: true }))
+        .forEach(e=>{ const k = e.name.toLowerCase(); if(seen.has(k)) return; seen.add(k); opts.push(e); });
+    } else opts = eqs().filter(e=>e.actId === actSel.value && e.unit === unitSel.value);
+    eqSel.innerHTML = `<option value="">${ev ? 'Whole unit / general' : 'Whole unit / general'}</option>` + opts.map(e=>`<option value="${e.id}">${esc(e.name)}${e.location ? ' · ' + esc(e.location) : ''}</option>`).join('')
+      + (ev ? '<option value="__new__">＋ Other equipment — type the name…</option>' : '');
+    const keepName = ev && rec && !rec.eqId && rec.eqName && sel !== undefined;
+    eqSel.value = opts.some(e=>e.id === cur) ? cur : (keepName ? '__new__' : '');
+    if(keepName) byId('rf-eqadd').checked = false;
+    eqNew();
   }
-  function syncNext(){
-    if(!touched) nextIn.value = calc();
-    const a = actById(actSel.value);
-    byId('rf-next-hint').textContent = a ? `Worked out as date done + ${freqLabel(a.months).toLowerCase()} (${fmtDate(calc())}). Change it only if the report says otherwise.` : '';
-  }
+  function eqNew(){ byId('rf-eqnew').hidden = !(isEvent(actById(actSel.value)) && eqSel.value === '__new__'); }
   actSel.value = r.actId;
   fillUnits(r.unit); fillEq(r.eqId);
   nextIn.value = rec && rec.nextDue ? rec.nextDue : calc();
-  syncNext();
-  actSel.onchange = ()=>{ fillUnits(); fillEq(); syncNext(); };
-  unitSel.onchange = ()=>fillEq();
-  dateIn.onchange = syncNext;
+  applyMode(true);
+  actSel.onchange = ()=>{ fillUnits(); fillEq(); applyMode(false); };
+  unitSel.onchange = ()=>{ unitHint(); fillEq(); };
+  eqSel.onchange = eqNew;
+  dateIn.onchange = ()=>{ if(mode !== 'sch') return; const a = actById(actSel.value); if(!touched) nextIn.value = calc();
+    byId('rf-next-hint').textContent = a ? `Worked out as date done + ${freqLabel(a.months).toLowerCase()} (${fmtDate(calc())}). Change it only if the report says otherwise.` : ''; };
   nextIn.oninput = ()=>{ touched = !!nextIn.value && nextIn.value !== calc(); };
   ScanKit.mount(byId('rf-att'), { module: 'aic', shard: draft.att, key: draft.id, accept: REPORT_ACCEPT,
-    pickLabel: 'Upload report (PDF / photo / Excel / Word)', itemWord: 'File',
-    emptyText: rec ? 'No report attached yet.' : 'Attach the signed test report (PDF) or take photos of it. It is saved with this record.',
+    pickLabel: 'Upload report / MoM (PDF / photo / Excel / Word)', itemWord: 'File',
+    emptyText: rec ? 'No file attached yet.' : 'Attach the signed report, the MoM or photos of it. It is saved with this record.',
     hint: 'Photos are compressed automatically; PDFs and other files up to 4 MB each.' });
   if(!rec){
     window.__onModalClose = ()=>{
@@ -1157,16 +1406,33 @@ function aicRecordForm(rec, preset){
 }
 async function aicSaveRecord(editId){
   if(!requireReady()) return;
-  const actId = val('rf-act'), unit = val('rf-unit'), eqId = val('rf-eq'), date = val('rf-date'), result = val('rf-result');
-  if(!actId || !unit || !date || !result) return formErr('rf-err', 'Fill in activity, plant unit, date done and result.');
-  if(date > todayIso()) return formErr('rf-err', 'Date done cannot be in the future.');
-  const a = actById(actId); const calc = addMonthsIso(date, a.months); const nx = val('rf-next');
-  if(nx && nx < date) return formErr('rf-err', 'Next due cannot be before the date done.');
-  const u = me(); const now = new Date().toISOString();
-  const body = { actId, unit, eqId, date, result, doneBy: val('rf-by'), readings: val('rf-read'), remarks: val('rf-rem'), nextDue: (nx && nx !== calc) ? nx : '',
-                 reportNo: val('rf-repno'), reportDesc: val('rf-repdesc') };
+  const actId = val('rf-act'), unit = val('rf-unit'), date = val('rf-date');
+  const a = actById(actId); const ev = isEvent(a);
+  let eqId = val('rf-eq'), eqName = '';
+  const result = ev ? val('rf-status') : val('rf-result');
+  if(!actId || !a || !unit || !date || !result) return formErr('rf-err', `Fill in activity, plant unit, ${ev ? 'date of visit and status' : 'date done and result'}.`);
+  if(date > todayIso()) return formErr('rf-err', 'The date cannot be in the future.');
+  const nx = val('rf-next');
+  if(nx && nx < date) return formErr('rf-err', ev ? 'Follow-up date cannot be before the visit date.' : 'Next due cannot be before the date done.');
+  if(!actUnits(a).includes(unit) && !isAdmin()) return formErr('rf-err', `“${a.name}” is not tracked for ${unitLabel(unit)}. Ask an admin to add the unit.`);
+  const u = me(); const now = nowIso();
   const btn = byId('rf-save'); if(btn) btn.disabled = true;
   try{
+    if(eqId === '__new__'){
+      eqName = val('rf-eqname'); eqId = '';
+      if(!eqName){ if(btn) btn.disabled = false; return formErr('rf-err', 'Type the equipment name, or choose “Whole unit / general”.'); }
+      if(byId('rf-eqadd') && byId('rf-eqadd').checked){
+        const ex = eqs().find(e=>e.unit === unit && e.name.toLowerCase() === eqName.toLowerCase());
+        if(ex) eqId = ex.id;
+        else { const eid = newId('eq_'); const obj = { id: eid, actId, unit, name: eqName, location: '', notes: '', active: true, by: u.email, uid: u.uid, at: now };
+          await setMerge(MASTER_DOC, { equipment: { [eid]: obj } }); A.master.equipment = Object.assign({}, A.master.equipment, { [eid]: obj }); eqId = eid; }
+        eqName = eqId ? '' : eqName;
+      }
+    }
+    if(!actUnits(a).includes(unit)) await setActUnits(a, actUnits(a).concat([unit]));   // admin: saving into an untracked unit starts tracking it
+    const calc = ev ? '' : addMonthsIso(date, a.months);
+    const body = { actId, unit, eqId, eqName, date, result, doneBy: val('rf-by'), readings: val('rf-read'), remarks: val('rf-rem'),
+                   nextDue: ev ? nx : ((nx && nx !== calc) ? nx : ''), reportNo: val('rf-repno'), reportDesc: val('rf-repdesc'), basis: ev ? val('rf-basis') : '' };
     if(!editId){
       const d = A.draft || { id: newId('r'), att: fyOfIso(date) };
       const id = d.id; const fy = fyOfIso(date);
@@ -1178,7 +1444,7 @@ async function aicSaveRecord(editId){
       refresh();
       aicOpenRecord(id, true);
       const nf = ScanKit.count('aic', d.att, id) || 0;
-      toast('Record saved', `${a.name} · ${unitLabel(unit)} · ${fmtDate(date)}${nf ? ` · ${nf} report file${nf > 1 ? 's' : ''}` : ''}`);
+      toast(ev ? 'Activity logged' : 'Record saved', `${a.name} · ${unitLabel(unit)} · ${fmtDate(date)}${nf ? ` · ${nf} file${nf > 1 ? 's' : ''}` : ''}`);
     } else {
       const old = recById(editId); if(!old) throw new Error('record not found — it may have been deleted');
       const oldFy = fyOfIso(old.date), newFy = fyOfIso(date);
@@ -1200,40 +1466,51 @@ async function aicSaveRecord(editId){
 }
 function aicOpenRecord(id, justSaved, focusUpload){
   const r = recById(id); if(!r){ toast('Record not found', 'It may have been deleted.', 'warn'); return; }
-  const a = actById(r.actId); const mine = me() && r.uid === me().uid;
+  const a = actById(r.actId); const mine = me() && r.uid === me().uid; const ev = isEvent(a);
   const canEdit = isAdmin() || mine;
   openModal(`${mHead(a ? a.name : 'Record', `${unitLabel(r.unit)} · ${targetLabel(r)}`)}
     <div class="modal-body">
-      ${justSaved ? '<div class="banner ok">Record saved. You can add more report files or photos below.</div>' : ''}
+      ${justSaved ? `<div class="banner ok">${ev ? 'Activity logged' : 'Record saved'}. You can add more ${ev ? 'MoM / report files' : 'report files'} or photos below.</div>` : ''}
       <div class="rep-box">
-        <div class="rep-t">📄 Test report / certificate</div>
+        <div class="rep-t">${ev ? '🗂 MoM / service report' : '📄 Test report / certificate'}</div>
         <div class="facts" style="margin-bottom:10px">
-          <div class="full"><div class="k">Report / certificate no.</div><div class="v mono">${esc(r.reportNo || '—')}</div></div>
-          <div class="full"><div class="k">Report description</div><div class="v pre" style="font-weight:500">${r.reportDesc ? esc(r.reportDesc) : '<span style="color:var(--text-3)">No description yet' + (canEdit ? ' — tap Edit to add one' : '') + '.</span>'}</div></div>
+          <div class="full"><div class="k">${ev ? 'MoM / report no.' : 'Report / certificate no.'}</div><div class="v mono">${esc(r.reportNo || '—')}</div></div>
+          <div class="full"><div class="k">${ev ? 'MoM / report summary' : 'Report description'}</div><div class="v pre" style="font-weight:500">${r.reportDesc ? esc(r.reportDesc) : '<span style="color:var(--text-3)">Nothing written yet' + (canEdit ? ' — tap Edit to add it' : '') + '.</span>'}</div></div>
         </div>
         <div id="rec-att"></div>
       </div>
       <div class="facts">
-        <div><div class="k">Date done</div><div class="v mono">${fmtDate(r.date)}</div></div>
-        <div><div class="k">Result</div><div class="v">${resultPill(r.result)}</div></div>
-        <div><div class="k">Next due</div><div class="v mono">${fmtDate(nextDueOf(r))}${r.nextDue ? ' <span class="pill">set manually</span>' : ''}</div></div>
-        <div><div class="k">Done by / agency</div><div class="v">${esc(r.doneBy || '—')}</div></div>
-        ${r.readings ? `<div class="full"><div class="k">Key readings</div><div class="v pre">${esc(r.readings)}</div></div>` : ''}
-        ${r.remarks ? `<div class="full"><div class="k">Remarks / action taken</div><div class="v pre">${esc(r.remarks)}</div></div>` : ''}
+        <div><div class="k">${ev ? 'Date of visit / work' : 'Date done'}</div><div class="v mono">${fmtDate(r.date)}</div></div>
+        <div><div class="k">${ev ? 'Status' : 'Result'}</div><div class="v">${resultPill(r.result)}</div></div>
+        ${ev ? `<div><div class="k">Basis</div><div class="v">${esc(basisDef(r.basis || a.basis).l)}</div></div>
+                <div><div class="k">Follow-up</div><div class="v mono">${r.nextDue ? fmtDate(r.nextDue) : '—'}</div></div>`
+             : `<div><div class="k">Next due</div><div class="v mono">${fmtDate(nextDueOf(r))}${r.nextDue ? ' <span class="pill">set manually</span>' : ''}</div></div>`}
+        <div><div class="k">${ev ? 'OEM / vendor / agency' : 'Done by / agency'}</div><div class="v">${esc(r.doneBy || '—')}</div></div>
+        ${r.readings ? `<div class="full"><div class="k">${ev ? 'Purpose / work done' : 'Key readings'}</div><div class="v pre">${esc(r.readings)}</div></div>` : ''}
+        ${r.remarks ? `<div class="full"><div class="k">${ev ? 'Action points / follow-up' : 'Remarks / action taken'}</div><div class="v pre">${esc(r.remarks)}</div></div>` : ''}
         ${a && a.ref ? `<div class="full"><div class="k">Reference</div><div class="v">${esc(a.ref)}</div></div>` : ''}
-        <div class="full"><div class="k">Logged</div><div class="v" style="font-weight:500">${esc(r.by || '—')} · ${fmtStamp(r.at)}${r.editedAt ? ` · edited by ${esc(r.editedBy || '')} ${fmtStamp(r.editedAt)}` : ''}</div></div>
+        <div class="full"><div class="k">Logged</div><div class="v" style="font-weight:500">${esc(r.by || '—')} · ${fmtStamp(r.at)}${r.editedAt ? ` · edited by ${esc(r.editedBy || '')} ${fmtStamp(r.editedAt)}` : ''}${r.closedAt ? ` · closed by ${esc(r.closedBy || '')} ${fmtStamp(r.closedAt)}` : ''}</div></div>
       </div>
     </div>
     <div class="modal-foot">
       ${isAdmin() ? `<button type="button" class="btn danger" onclick="aicDeleteRecord('${r.id}')">Delete</button>` : ''}
       ${canEdit ? `<button type="button" class="btn ghost" onclick="aicEditRecord('${r.id}')">Edit</button>` : ''}
+      ${ev && r.result === 'Open' && canEdit ? `<button type="button" class="btn ghost" onclick="aicCloseEvent('${r.id}')">✓ Mark closed</button>` : ''}
       <button type="button" class="btn" onclick="closeModal()">Done</button>
     </div>`);
   ScanKit.mount(byId('rec-att'), { module: 'aic', shard: r.att, key: r.id, accept: REPORT_ACCEPT,
-    pickLabel: 'Upload report (PDF, photo, Excel, Word)', itemWord: 'File',
-    emptyText: 'No report attached yet. Upload the test report or take photos of it.',
+    pickLabel: 'Upload report / MoM (PDF, photo, Excel, Word)', itemWord: 'File',
+    emptyText: 'No file attached yet. Upload the report or MoM, or take photos of it.',
     hint: 'Photos are compressed automatically; other files can be up to 4 MB each.' });
   if(focusUpload){ const el = byId('rec-att'); if(el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); }
+}
+async function aicCloseEvent(id){
+  const r = recById(id); if(!r || !requireReady()) return;
+  if(!(isAdmin() || (me() && r.uid === me().uid))){ toast('Not allowed', 'Only an admin or the person who logged it can close it.', 'warn'); return; }
+  const u = me(), now = nowIso(), fy = fyOfIso(r.date);
+  const rec = Object.assign({}, r, { result: 'Closed', closedBy: u.email, closedAt: now });
+  try{ await updateFields(recDocId(fy), { ['records.' + id]: rec }); localPut(fy, rec); refresh(); aicOpenRecord(id); toast('Marked closed', targetLabel(r)); }
+  catch(e){ toast('Could not update', friendlyErr(e), 'error'); }
 }
 function aicEditRecord(id){
   const r = recById(id); if(!r) return;
@@ -1243,7 +1520,7 @@ function aicEditRecord(id){
 async function aicDeleteRecord(id){
   if(!requireAdmin('Delete record')) return;
   const r = recById(id); if(!r) return;
-  if(!confirm('Delete this record and its attached reports? This cannot be undone.')) return;
+  if(!confirm('Delete this record and its attached files? This cannot be undone.')) return;
   try{
     const fy = fyOfIso(r.date);
     await updateFields(recDocId(fy), { ['records.' + id]: delField() });
@@ -1253,67 +1530,127 @@ async function aicDeleteRecord(id){
     toast('Record deleted', n ? `${n} attached file${n > 1 ? 's' : ''} removed too` : '');
   }catch(e){ toast('Delete failed', friendlyErr(e), 'error'); }
 }
+function historyModal(title, sub, list, foot, showAct){
+  openModal(`${mHead(title, sub)}
+    <div class="modal-body" style="padding:0"><div class="list">${list.map(r=>{ const a = actById(r.actId);
+      return `<div class="li click" onclick="aicOpenRecord('${r.id}')">
+        <div class="main"><div class="t mono">${fmtDate(r.date)} ${resultPill(r.result)} ${basisPill(r, a)}</div>
+          <div class="s">${showAct ? esc(a ? a.name : 'Activity') + ' · ' : ''}${esc(r.doneBy || '—')}${r.readings ? ' · ' + esc(r.readings.slice(0, 80)) : ''}</div></div>
+        <div class="acts"><span class="att" data-att="${r.id}">${attText(r)}</span></div></div>`; }).join('') || '<div class="empty">No records yet.</div>'}</div></div>
+    <div class="modal-foot">${foot}</div>`);
+}
 function aicHistory(actId, unit, eqId){
   const a = actById(actId); if(!a) return;
-  const list = records().filter(r=>r.actId === actId && r.unit === unit && (r.eqId || '') === (eqId || ''))
+  const list = records().filter(r=>r.actId === actId && r.unit === unit && (isEvent(a) || (r.eqId || '') === (eqId || '') || (eqId && !r.eqId)))
     .sort((x, y)=>String(y.date).localeCompare(String(x.date)));
-  openModal(`${mHead(a.name, `${unitLabel(unit)} · ${eqId ? (eqById(eqId) || { name: '(removed)' }).name : 'Whole unit'} · ${freqLabel(a.months)}`)}
-    <div class="modal-body" style="padding:0"><div class="list">${list.map(r=>`<div class="li click" onclick="aicOpenRecord('${r.id}')">
-      <div class="main"><div class="t mono">${fmtDate(r.date)} ${resultPill(r.result)}</div><div class="s">${esc(r.doneBy || '—')}${r.readings ? ' · ' + esc(r.readings.slice(0, 80)) : ''}</div></div>
-      <div class="acts"><span class="att">${attText(r)}</span></div></div>`).join('') || '<div class="empty">No records yet.</div>'}</div></div>
-    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Close</button>
-      <button type="button" class="btn" onclick="aicNewRecord('${actId}','${unit}','${eqId || ''}')">＋ New record</button></div>`);
+  historyModal(a.name, `${unitLabel(unit)} · ${eqId ? (eqById(eqId) || { name: '(removed)' }).name : 'Whole unit'} · ${schedLabel(a)}`, list,
+    `<button type="button" class="btn ghost" onclick="closeModal()">Close</button><button type="button" class="btn" onclick="aicNewRecord('${actId}','${unit}','${eqId || ''}')">＋ New record</button>`, false);
+}
+// Every record of one equipment — tests with a frequency and visits / calls / projects
+function aicEqHistory(eqId){
+  const e = eqById(eqId); if(!e) return;
+  const list = records().filter(r=>r.eqId === eqId || (!r.eqId && r.eqName && r.unit === e.unit && r.eqName.toLowerCase() === e.name.toLowerCase())
+      || (!r.eqId && !r.eqName && r.actId === e.actId && r.unit === e.unit && !isEvent(actById(r.actId))))
+    .sort((x, y)=>String(y.date).localeCompare(String(x.date)));
+  const ev = acts().filter(isEvent);
+  historyModal(e.name, `${unitLabel(e.unit)}${e.location ? ' · ' + e.location : ''} · every record (incl. whole-unit tests of its activity)`, list,
+    `<button type="button" class="btn ghost" onclick="closeModal()">Close</button>${ev.length ? `<button type="button" class="btn ghost" onclick="aicNewRecord('${ev[0].id}','${e.unit}','${e.id}')">🗂 Log visit / MoM</button>` : ''}<button type="button" class="btn" onclick="aicNewRecord('${e.actId}','${e.unit}','${e.id}')">＋ New record</button>`, true);
 }
 
-/* ─── Activities (admin) ─── */
-function aicActivityForm(id){
+/* ═══ Activities (admin) — also opened from the matrix ═══ */
+async function setActUnits(a, units){
+  units = ALL_UNIT_IDS.filter(x=>units.includes(x));
+  A.localAt = Date.now();
+  if(A.master.activities && A.master.activities[a.id]) await updateFields(MASTER_DOC, { ['activities.' + a.id + '.units']: units, ['activities.' + a.id + '.unitsV2']: true });
+  else await setMerge(MASTER_DOC, { activities: { [a.id]: Object.assign({}, a, { units, unitsV2: true }) } });
+  A.master.activities[a.id] = Object.assign({}, A.master.activities[a.id] || a, { units, unitsV2: true });
+  rebuildActs();
+}
+async function aicAddUnit(actId, unit){
+  if(!requireAdmin('Add unit to activity') || !requireReady()) return;
+  const a = actById(actId); if(!a) return;
+  if(!confirm(`Start tracking “${a.name}” in ${unitLabel(unit)}?\n\nIt appears in the matrix and in the record form for every login.`)) return;
+  try{ await setActUnits(a, actUnits(a).concat([unit])); refresh(); toast('Unit added', `${a.name} · ${unitLabel(unit)}`); }
+  catch(e){ toast('Could not update', friendlyErr(e), 'error'); }
+}
+async function aicRemoveUnit(actId, unit){
+  if(!requireAdmin('Remove unit from activity') || !requireReady()) return;
+  const a = actById(actId); if(!a) return;
+  const left = actUnits(a).filter(x=>x !== unit);
+  if(!left.length){ toast('Last unit', `“${a.name}” is tracked only in ${unitLabel(unit)} — remove the activity instead (tap its name).`, 'warn'); return; }
+  if(!confirm(`Stop tracking “${a.name}” in ${unitLabel(unit)}?\n\nIts records are kept and come back if you add the unit again.`)) return;
+  try{ await setActUnits(a, left); A.ov.act = ''; A.ov.cu = ''; refresh(); toast('Unit removed', `${a.name} · ${unitLabel(unit)}`); }
+  catch(e){ toast('Could not update', friendlyErr(e), 'error'); }
+}
+function aicActivityForm(id, preset){
   if(!requireAdmin(id ? 'Edit activity' : 'Add activity')) return;
-  const a = id ? actById(id) : { name: '', months: 12, units: ALL_UNIT_IDS.slice(), ref: '', scope: '' };
+  const a = id ? actById(id) : { name: '', months: preset && preset.ev ? 0 : 12, basis: preset && preset.ev ? 'oem' : '', units: ALL_UNIT_IDS.slice(), ref: '', scope: '' };
   if(!a) return;
-  openModal(`${mHead(id ? 'Edit activity' : 'Add activity', 'Frequency sets the next-due date for every record of this activity')}
+  const cur = isEvent(a) ? 'b:' + a.basis : 'm:' + (a.months || 12);
+  const n = id ? records().filter(r=>r.actId === id).length : 0;
+  const units = actUnits(a);
+  openModal(`${mHead(id ? 'Edit activity' : 'Add activity', id ? `${n} record${n === 1 ? '' : 's'} · changes show at once in every login` : 'Appears in the compliance matrix for every login')}
     <div class="modal-body">
       <div class="banner info" id="af-err" hidden></div>
-      <div class="fld"><label class="req" for="af-name">Activity name</label><input id="af-name" value="${esc(a.name)}" placeholder="e.g. Battery bank discharge test"></div>
-      <div class="fld"><label class="req" for="af-months">Frequency</label><select id="af-months">${FREQS.map(f=>`<option value="${f.m}" ${+a.months === f.m ? 'selected' : ''}>${f.l}</option>`).join('')}</select>
-        <div class="hint">Changing the frequency recalculates next-due dates for records without a manual next-due date.</div></div>
-      <div class="fld"><label class="req">Applies to</label><div class="checks">${UNITS.map(u=>`<label><input type="checkbox" class="af-unit" value="${u.id}" ${actUnits(a).includes(u.id) ? 'checked' : ''}> ${esc(u.phase + ' · ' + u.name)}</label>`).join('')}</div></div>
+      <div class="fld"><label class="req" for="af-name">Activity name</label><input id="af-name" value="${esc(a.name)}" placeholder="e.g. DG maintenance, Battery bank discharge test"></div>
+      <div class="fld"><label class="req" for="af-sched">Frequency</label><select id="af-sched">
+        <optgroup label="Fixed frequency — sets the next-due date">${FREQS.map(f=>`<option value="m:${f.m}">${f.l}</option>`).join('')}</optgroup>
+        <optgroup label="No fixed frequency — logged when it happens">${BASES.map(b=>`<option value="b:${b.k}">${esc(b.l)}</option>`).join('')}</optgroup></select>
+        <div class="hint" id="af-hint"></div></div>
+      <div class="fld"><label class="req">Track in plant units</label>
+        <div class="checks">${UNITS.map(u=>`<label><input type="checkbox" class="af-unit" value="${u.id}" ${units.includes(u.id) ? 'checked' : ''}> ${esc(u.phase + ' · ' + u.name)}</label>`).join('')}</div>
+        <div class="hint"><a href="#" style="color:var(--accent)" onclick="document.querySelectorAll('.af-unit').forEach(c=>c.checked=true);return false">Tick all units</a> · un-ticking a unit hides it from the matrix; its records are kept.</div></div>
       <div class="fld"><label for="af-ref">Reference / standard</label><input id="af-ref" value="${esc(a.ref || '')}" placeholder="e.g. IS 3043, CEA Regulations, OEM manual"></div>
       <div class="fld"><label for="af-scope">Scope / checkpoints</label><textarea id="af-scope" rows="3">${esc(a.scope || '')}</textarea></div>
     </div>
-    <div class="modal-foot"><button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+    <div class="modal-foot">${id ? `<button type="button" class="btn danger" onclick="aicRetireActivity('${id}',true)">Remove from matrix</button>` : ''}<button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
       <button type="button" class="btn" id="af-save" onclick="aicSaveActivity(${id ? `'${id}'` : ''})">Save activity</button></div>`);
+  const sel = byId('af-sched'); sel.value = cur;
+  const hint = ()=>{ const v = sel.value; byId('af-hint').textContent = v.startsWith('b:')
+      ? 'No due date. Records are logged when the visit / call / work happens, with MoM or report, status and an optional follow-up date.'
+      : (id ? 'Changing the frequency recalculates next-due dates of records that have no manual next-due date.' : 'Next due = date done + this frequency.'); };
+  sel.onchange = hint; hint();
 }
 async function aicSaveActivity(id){
   if(!requireAdmin('Save activity') || !requireReady()) return;
-  const name = val('af-name'), months = +val('af-months');
+  const name = val('af-name'), sched = val('af-sched');
   const units = [...document.querySelectorAll('.af-unit:checked')].map(c=>c.value);
   if(!name) return formErr('af-err', 'Enter the activity name.');
   if(!units.length) return formErr('af-err', 'Tick at least one plant unit.');
   const dup = acts(true).find(x=>x.id !== id && String(x.name).toLowerCase() === name.toLowerCase());
-  if(dup) return formErr('af-err', `An activity called "${dup.name}" already exists${dup.active === false ? ' (retired — restore it instead)' : ''}.`);
-  const u = me(); const now = new Date().toISOString();
-  const base = id ? actById(id) : { id: newId('act_'), order: 50 + acts(true).length, active: true, by: u.email, at: now };
-  const obj = Object.assign({}, base, { name, months, units, ref: val('af-ref'), scope: val('af-scope'), editedBy: u.email, editedAt: now });
+  if(dup) return formErr('af-err', `An activity called "${dup.name}" already exists${dup.active === false ? ' (removed — restore it under Activities & equipment instead)' : ''}.`);
+  const basis = sched.startsWith('b:') ? sched.slice(2) : '', months = basis ? 0 : +sched.slice(2) || 12;
+  const old = id ? actById(id) : null;
+  if(old && isEvent(old) !== !!basis && records().some(r=>r.actId === id)
+     && !confirm(`Change “${old.name}” from ${schedLabel(old)} to ${basis ? basisDef(basis).s : freqLabel(months)}?\n\nIts records are kept and shown the new way.`)) return;
+  const u = me(); const now = nowIso();
+  const base = old || { id: newId(basis ? 'ev_' : 'act_'), order: (basis ? 150 : 50) + acts(true).length, active: true, by: u.email, at: now };
+  const obj = Object.assign({}, base, { name, months, basis, units: ALL_UNIT_IDS.filter(x=>units.includes(x)), unitsV2: true, ref: val('af-ref'), scope: val('af-scope'), editedBy: u.email, editedAt: now });
   const btn = byId('af-save'); if(btn) btn.disabled = true;
   try{
-    if(id) await updateFields(MASTER_DOC, { ['activities.' + id]: obj });
+    A.localAt = Date.now();
+    if(id && A.master.activities && A.master.activities[id]) await updateFields(MASTER_DOC, { ['activities.' + id]: obj });
     else await setMerge(MASTER_DOC, { activities: { [obj.id]: obj } });
-    A.master.activities[obj.id] = obj;
-    closeModal(); refresh(); toast(id ? 'Activity updated' : 'Activity added', `${name} · ${freqLabel(months)}`);
+    A.master.activities[obj.id] = obj; rebuildActs();
+    closeModal(); refresh(); toast(id ? 'Activity updated' : 'Activity added', `${name} · ${schedLabel(obj)} · ${unitsText(obj.units)}`);
   }catch(e){ if(btn) btn.disabled = false; formErr('af-err', 'Could not save: ' + friendlyErr(e)); }
 }
 async function aicRetireActivity(id, retire){
-  if(!requireAdmin(retire ? 'Retire activity' : 'Restore activity') || !requireReady()) return;
+  if(!requireAdmin(retire ? 'Remove activity' : 'Restore activity') || !requireReady()) return;
   const a = actById(id); if(!a) return;
-  if(retire && !confirm(`Retire "${a.name}"? It disappears from the matrix and forms. Existing records are kept, and you can restore it later.`)) return;
+  if(retire && !confirm(`Remove “${a.name}” from the compliance matrix?\n\nIt disappears from the matrix and the forms for every login. Existing records are kept, and you can restore it under Activities & equipment.`)) return;
   try{
-    await updateFields(MASTER_DOC, { ['activities.' + id + '.active']: !retire });
-    a.active = !retire; refresh();
-    toast(retire ? 'Activity retired' : 'Activity restored', a.name);
+    A.localAt = Date.now();
+    if(A.master.activities && A.master.activities[id]) await updateFields(MASTER_DOC, { ['activities.' + id + '.active']: !retire });
+    else await setMerge(MASTER_DOC, { activities: { [id]: Object.assign({}, a, { active: !retire }) } });
+    A.master.activities[id] = Object.assign({}, A.master.activities[id] || a, { active: !retire }); rebuildActs();
+    if(retire && A.ov.act === id){ A.ov.act = ''; A.ov.cu = ''; }
+    closeModal(); refresh();
+    toast(retire ? 'Activity removed from the matrix' : 'Activity restored', a.name);
   }catch(e){ toast('Could not update', friendlyErr(e), 'error'); }
 }
 
-/* ─── Equipment (add / edit: everyone · remove: admin) ─── */
+/* ═══ Equipment (add / edit: everyone · remove: admin) ═══ */
 function aicEquipmentForm(id, preset){
   if(!requireReady()) return;
   const list = acts(); if(!list.length){ toast('No activities', 'An admin needs to add activities first.', 'warn'); return; }
@@ -1322,10 +1659,10 @@ function aicEquipmentForm(id, preset){
   openModal(`${mHead(id ? 'Edit equipment' : 'Add equipment', 'Equipment tracked individually under an activity')}
     <div class="modal-body">
       <div class="banner info" id="ef-err" hidden></div>
-      <div class="fld"><label class="req" for="ef-act">Activity</label><select id="ef-act">${list.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('')}</select></div>
+      <div class="fld"><label class="req" for="ef-act">Activity</label><select id="ef-act">${actOptions(list)}</select></div>
       <div class="fld"><label class="req" for="ef-unit">Plant unit</label><select id="ef-unit"></select></div>
       ${id ? `<div class="fld"><label class="req" for="ef-name">Name / ID</label><input id="ef-name" value="${esc(e.name)}"></div>`
-           : `<div class="fld"><label class="req" for="ef-names">Name / ID — one per line</label><textarea id="ef-names" rows="5" placeholder="EP-01\nEP-02\nEP-03"></textarea><div class="hint">Add many at once, e.g. every earth pit or ladder in the unit.</div></div>`}
+           : `<div class="fld"><label class="req" for="ef-names">Name / ID — one per line</label><textarea id="ef-names" rows="5" placeholder="EP-01\nEP-02\nEP-03"></textarea><div class="hint">Add many at once, e.g. every earth pit, ladder or DG set in the unit.</div></div>`}
       <div class="fld"><label for="ef-loc">Location</label><input id="ef-loc" value="${esc(e.location || '')}" placeholder="e.g. HT substation, DG yard"></div>
       <div class="fld"><label for="ef-notes">Notes</label><input id="ef-notes" value="${esc(e.notes || '')}" placeholder="e.g. rating, make, tag details"></div>
     </div>
@@ -1344,7 +1681,7 @@ async function aicSaveEquipment(id){
   if(!requireReady()) return;
   const actId = val('ef-act'), unit = val('ef-unit');
   if(!actId || !unit) return formErr('ef-err', 'Choose the activity and plant unit.');
-  const u = me(); const now = new Date().toISOString();
+  const u = me(); const now = nowIso();
   const location = val('ef-loc'), notes = val('ef-notes');
   const btn = byId('ef-save');
   try{
@@ -1393,11 +1730,37 @@ function subRecs(fy){
 }
 async function seedDefaults(){
   if(A.seeding) return; A.seeding = true;
-  try{ await setMerge(MASTER_DOC, { activities: DEFAULT_ACTIVITIES, fyDocs: {}, createdAt: new Date().toISOString() }); }
+  try{ A.localAt = Date.now(); await setMerge(MASTER_DOC, { activities: Object.assign({}, DEFAULT_ACTIVITIES, EVENT_DEFAULTS), fyDocs: {}, evSeeded: true, unitsV: 2, createdAt: nowIso() }); }
   catch(e){
     console.warn('[aic] could not create the default activities', e); A.seeding = false;
     aicStatus(`<b>Could not create the register:</b> ${esc(friendlyErr(e))} ${fixHint(e)}`);
   }
+}
+// 3.16 — once, by the first admin who opens the page: save the four "no fixed frequency" activities
+// and add Ph-2 · COT to every activity that was tracked in all units
+async function migrate316(data){
+  if(!isAdmin() || A.migrating || !data || (data.evSeeded && data.unitsV === 2)) return;
+  A.migrating = true;
+  const stored = data.activities || {}, patch = {};
+  if(!data.evSeeded) Object.values(EVENT_DEFAULTS).forEach(d=>{ if(!stored[d.id]) patch[d.id] = Object.assign({}, d); });
+  if(data.unitsV !== 2) Object.values(stored).forEach(a=>{ if(a && a.id && !a.unitsV2){ const u = actUnits(a); patch[a.id] = Object.assign(patch[a.id] || {}, { units: u, unitsV2: true }); } });
+  try{ A.localAt = Date.now(); await setMerge(MASTER_DOC, { activities: patch, evSeeded: true, unitsV: 2 }); }
+  catch(e){ console.warn('[aic] 3.16 update of the register', e); A.migrating = false; }
+}
+function describeChange(before, after){
+  const out = [];
+  Object.values(after).forEach(a=>{
+    const b = before[a.id];
+    if(!b){ if(a.active !== false) out.push(`added “${a.name}” (${schedLabel(a)})`); return; }
+    if((b.active !== false) && a.active === false) return out.push(`removed “${a.name}”`);
+    if(b.active === false && a.active !== false) return out.push(`restored “${a.name}”`);
+    if(schedLabel(b) !== schedLabel(a)) out.push(`“${a.name}”: ${schedLabel(b)} → ${schedLabel(a)}`);
+    const ub = actUnits(b), ua = actUnits(a);
+    ua.filter(x=>!ub.includes(x)).forEach(x=>out.push(`“${a.name}” now in ${unitLabel(x)}`));
+    ub.filter(x=>!ua.includes(x)).forEach(x=>out.push(`“${a.name}” no longer in ${unitLabel(x)}`));
+    if(b.name !== a.name) out.push(`“${b.name}” renamed “${a.name}”`);
+  });
+  return out;
 }
 // 3.10b — visible status strip (errors used to go to the console only)
 function aicStatus(html){ const el = byId('aic-status'); if(el) el.innerHTML = html ? `<div class="banner bad">${html}</div>` : ''; }
@@ -1441,7 +1804,7 @@ async function aicDiagnostics(){
   }catch(e){ put('Read register (itc_pm/aic_master)', errTxt(e) + fixHint(e), 'no'); }
   const tid = 'aic_selftest_' + u.uid;
   try{
-    await withTimeout(f.setDoc(docRef(tid), { at: new Date().toISOString(), by: u.email || u.uid }), 10000);
+    await withTimeout(f.setDoc(docRef(tid), { at: nowIso(), by: u.email || u.uid }), 10000);
     put('Save test', '✓ write allowed', 'ok');
     try{ await withTimeout(f.deleteDoc(docRef(tid)), 10000); }catch(_){}
   }catch(e){ put('Save test', errTxt(e) + fixHint(e), 'no'); }
@@ -1460,13 +1823,22 @@ function start(){
     if(err){ aicStatus(`<b>Could not load the register:</b> ${esc(friendlyErr(err))} ${fixHint(err)}`);
              byId('view').innerHTML = `<div class="empty">Could not load the register: ${esc(friendlyErr(err))}</div>`; return; }
     clearTimeout(A.loadTimer); if(!A.seeding) aicStatus('');
+    const before = A.master === undefined ? null : { sig: A.actSig, map: JSON.parse(JSON.stringify(A.actMap)) };
     if(data === null){ A.master = { activities: {}, equipment: {}, fyDocs: {} }; seedDefaults(); }
-    else A.master = { activities: data.activities || {}, equipment: data.equipment || {}, fyDocs: data.fyDocs || {} };
+    else A.master = { activities: data.activities || {}, equipment: data.equipment || {}, fyDocs: data.fyDocs || {}, evSeeded: !!data.evSeeded, unitsV: data.unitsV || 1 };
+    rebuildActs();
+    // a change made in another login (e.g. by the admin) — say what changed
+    if(before && before.sig !== A.actSig && Date.now() - A.localAt > 5000){
+      const ch = describeChange(before.map, A.actMap);
+      if(ch.length) toast('Register updated by admin', ch.slice(0, 3).join(' · ') + (ch.length > 3 ? ` · +${ch.length - 3} more` : ''));
+    }
+    if(data) migrate316(data);
     const cur = fyOfIso(todayIso()); const y = +cur.slice(2, 6);
     [cur, `FY${y - 1}-${z2(y % 100)}`].concat(Object.keys(A.master.fyDocs)).forEach(subRecs);
     refresh();
   });
-  ScanKit.onChange(()=>{ if(A.view === 'records') updateAttBadges(); });
+  ScanKit.onChange(()=>{ updateAttBadges(); });
+  if(A.view === 'setup') renderView();   // admin-only buttons depend on the role
 }
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click', ()=>setView(b.dataset.v)));
 renderView();

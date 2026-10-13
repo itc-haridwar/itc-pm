@@ -245,7 +245,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 // 3.12 — read-only access for the global search (tabs that are not opened yet)
 window.__gsFs = { db: getFirestore(app), doc, getDoc };
-window.__appBuild = '3.14 · 01-10-2026';
+window.__appBuild = '3.16 · 13-10-2026';
 
 // 3.10b — always load the newest module files (no stale phone cache after a GitHub update)
 const FRESH = '?v=' + Date.now();
@@ -340,7 +340,7 @@ const KIND = { motor: 'Motor', pm: 'PM', area: 'Area', owner: 'Owner', field: 'C
 const KIND_BOOST = { motor: 6, panel: 6, equip: 6, record: 4, complaint: 4, activity: 5, aicitem: 3, area: 3, punit: 3, parea: 2, ptype: 2,
   owner: 3, field: 2, holiday: 2, carea: 1, section: 3, action: 3, pm: 0 };
 const UNITS = [ { id: 'P1-FOODS', phase: 'Ph-1', name: 'Foods' }, { id: 'P1-PCPB', phase: 'Ph-1', name: 'PCPB' },
-                { id: 'P1-COT', phase: 'Ph-1', name: 'COT' }, { id: 'P2-PPB', phase: 'Ph-2', name: 'PPB' } ];
+                { id: 'P1-COT', phase: 'Ph-1', name: 'COT' }, { id: 'P2-COT', phase: 'Ph-2', name: 'COT' }, { id: 'P2-PPB', phase: 'Ph-2', name: 'PPB' } ];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const FREQ_WORDS = { BM: 'bm bimonthly bi monthly every 60 days', Q: 'q quarterly every 90 days', HY: 'hy half yearly halfyearly every 180 days' };
 const CYCLE = { BM: 60, Q: 90, HY: 180 };
@@ -360,7 +360,9 @@ function addDaysIso(iso, n){ const d = dOf(iso); d.setDate(d.getDate() + n); ret
 function startOfWeek(d){ const x = new Date(d); const w = x.getDay(); x.setDate(x.getDate() + (w === 0 ? -6 : 1 - w)); x.setHours(0, 0, 0, 0); return x; }
 function addMonthsIso(iso, n){ const d = dOf(iso); if(!d) return ''; const day = d.getDate(); d.setMonth(d.getMonth() + (+n || 0)); if(d.getDate() < day) d.setDate(0); return isoOf(d); }
 function unitLabel(id){ const u = UNITS.find(x => x.id === id); return u ? `${u.phase} · ${u.name}` : (id || '—'); }
-function freqLabel(m){ return ({ 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Annual', 24: 'Every 2 years' })[+m] || `Every ${m} months`; }
+function freqLabel(m){ return ({ 1: 'Monthly', 2: 'Bi-monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Annual', 24: 'Every 2 years', 36: 'Every 3 years', 60: 'Every 5 years' })[+m] || `Every ${m} months`; }
+const AIC_BASIS = { oem: 'OEM visit', call: 'Call based', project: 'Project based', other: 'As required' };   // 3.16: activities without a fixed frequency
+function aicSched(a){ return a && a.basis ? (AIC_BASIS[a.basis] || 'As required') : freqLabel(a && a.months); }
 function fmtDT(s){ const d = new Date(s); return (!s || isNaN(d)) ? '—' : `${z2(d.getDate())}-${z2(d.getMonth() + 1)}-${d.getFullYear()} ${z2(d.getHours())}:${z2(d.getMinutes())}`; }
 function fmtMin(m){ if(m == null || m === '') return '—'; m = +m; return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; }
 function withTimeout(p, ms){ return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]); }
@@ -662,14 +664,15 @@ function indexAic(A, out, info){
   const acts = Object.values(actsAll).filter(a => a && a.id && a.active !== false).sort((x, y) => (x.order || 99) - (y.order || 99) || String(x.name).localeCompare(y.name));
   const eqs = Object.values(eqAll).filter(e => e && e.id && e.active !== false);
   const recs = []; Object.values(A.recs || {}).forEach(m => Object.values(m || {}).forEach(r => { if(r && r.id) recs.push(r); }));
-  const nextDue = r => { const a = actsAll[r.actId]; return r.nextDue || (a && r.date ? addMonthsIso(r.date, a.months) : ''); };
+  const nextDue = r => { const a = actsAll[r.actId]; return r.nextDue || (a && !a.basis && r.date ? addMonthsIso(r.date, a.months) : ''); };
   const T = isoOf(todayD()); const latest = {};
   recs.forEach(r => { const k = `${r.actId}|${r.unit}|${r.eqId || ''}`; const c = latest[k];
     if(!c || r.date > c.date || (r.date === c.date && String(r.at) > String(c.at))) latest[k] = r; });
   acts.forEach(a => {
     const units = a.units && a.units.length ? a.units : UNITS.map(u => u.id);
-    out.push(mk({ mod: 'aic', kind: 'activity', title: a.name, sub: `${freqLabel(a.months)}${a.ref ? ' · ' + a.ref : ''}`,
-      fields: [[a.name, 3], [a.ref, 1.2], [a.scope, 0.7], [freqLabel(a.months), 0.5]], go: { t: 'aicActivity', actId: a.id } }));
+    out.push(mk({ mod: 'aic', kind: 'activity', title: a.name, sub: `${aicSched(a)}${a.ref ? ' · ' + a.ref : ''}`,
+      fields: [[a.name, 3], [a.ref, 1.2], [a.scope, 0.7], [aicSched(a), 0.5]], go: { t: 'aicActivity', actId: a.id } }));
+    if(a.basis) return;   // no fixed frequency → no due items, only its records
     units.forEach(u => {
       const list = eqs.filter(e => e.actId === a.id && e.unit === u);
       const targets = list.length ? list.map(e => ({ eqId: e.id, label: e.name, loc: e.location || '' })) : [{ eqId: '', label: 'Whole unit', loc: '' }];
@@ -688,8 +691,8 @@ function indexAic(A, out, info){
     });
   });
   recs.forEach(r => {
-    const a = actsAll[r.actId]; const e = r.eqId ? eqAll[r.eqId] : null; const target = r.eqId ? (e ? e.name : '(removed equipment)') : 'Whole unit';
-    const key = r.result === 'OK' ? 'ok' : r.result === 'Not OK' ? 'notok' : 'observation';
+    const a = actsAll[r.actId]; const e = r.eqId ? eqAll[r.eqId] : null; const target = r.eqId ? (e ? e.name : (r.eqName || '(removed equipment)')) : (r.eqName || 'Whole unit');
+    const key = r.result === 'OK' || r.result === 'Closed' ? 'ok' : r.result === 'Not OK' ? 'notok' : 'observation';
     out.push(mk({ mod: 'aic', kind: 'record', title: `${a ? a.name : 'Record'} · ${target}`, st: key, sortDate: r.date,
       sub: `${unitLabel(r.unit)} · done ${dmy(r.date)}${r.reportNo ? ' · report ' + r.reportNo : ''}${r.doneBy ? ' · ' + r.doneBy : ''}`,
       fields: [[a && a.name, 2], [target, 2], [r.reportNo, 3], [r.reportDesc, 1.5], [r.doneBy, 1.2], [r.readings, 1], [r.remarks, 1], [unitLabel(r.unit), 1], [r.by, 0.4]],
@@ -781,6 +784,7 @@ const SECTIONS = [
   ['aic', 'setup', 'Activities', 'Activities (Asset Integrity)', 'What is tested and how often', 'activities frequency setup statutory'],
   ['aic', 'setup', 'Equipment', 'Equipment (Asset Integrity)', 'Transformers, earth pits, ladders … per unit', 'equipment setup earth pit transformer ladder'],
   ['aic', '', '', 'Add test report', 'Asset Integrity · new record with report file', 'add test report new record upload pdf certificate', 0, 'aicAddReport', []],
+  ['aic', '', '', 'Log visit / MoM (no fixed frequency)', 'Asset Integrity · OEM visit, call, project or other — MoM and report', 'log visit mom minutes of meeting oem service call breakdown project upgradation modification', 0, 'aicLogEvent', []],
   ['aic', '', '', 'Connection check · Asset Integrity 🩺', 'Checks sign-in and cloud access', 'diagnostics not working connection check problem error', 0, 'aicDiagnostics', []],
   // Factory Passport
   ['passport', 'find', 'Find equipment', 'Find equipment', 'Factory Passport · filters and search', 'passport find equipment list'],
