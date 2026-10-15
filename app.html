@@ -201,8 +201,8 @@ iframe{width:100%;height:100%;border:none;background:var(--bg-deep)}
 .gs-pill.st-donelate{color:#ff6b8f;border-color:rgba(255,59,107,.55);background:rgba(255,59,107,.1)}
 .gs-snip{display:block;font-size:11.5px;color:var(--accent-2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
-<style id="fx318-css">
-/* ═══ 3.18 · Visual layer — 3D maintenance scene, glass, lights and morph transitions ═══
+<style id="fx321-css">
+/* ═══ 3.21 · Visual layer — 3D maintenance scene, glass, lights and morph transitions (smooth build) ═══
    Purely visual. Every rule is behind html.fx-on, so "✦ Effects off" (or a failed script) shows the
    original 3.16 look. No data, ids, text or logic are touched. */
 html[data-fx]{
@@ -258,7 +258,7 @@ html.fx-on .kpi{background:
   -webkit-backdrop-filter:blur(var(--fx-blur)) saturate(150%);backdrop-filter:blur(var(--fx-blur)) saturate(150%);
   border-color:var(--fx-edge) !important;border-radius:12px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 14px 34px -22px rgba(0,0,0,.9);
-  transition:transform .25s var(--fx-ease),box-shadow .3s,border-color .25s;transform-style:preserve-3d}
+  transition:transform .25s var(--fx-ease),box-shadow .3s,border-color .25s}
 html.fx-on .kpi-strip .kpi{background:radial-gradient(240px circle at var(--fx-mx,50%) var(--fx-my,-60%),rgba(255,255,255,.07),transparent 60%) !important;
   -webkit-backdrop-filter:none;backdrop-filter:none;border-radius:0;box-shadow:none;border-color:rgba(255,255,255,.06) !important}
 html.fx-on :is(.kpi-value,.kpi .v,.x13-kpi b,.dn-kpi b){text-shadow:0 0 18px color-mix(in srgb,currentColor 45%,transparent),0 0 2px color-mix(in srgb,currentColor 30%,transparent)}
@@ -281,13 +281,13 @@ html.fx-on :is(.app-header,.tabbar,.topbar,.app-head){background:linear-gradient
 html.fx-on .sidebar{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.01) 30%,rgba(255,255,255,.02)),var(--fx-glass-3) !important;
   -webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%);border-color:var(--fx-edge) !important;box-shadow:1px 0 0 rgba(255,255,255,.03),10px 0 40px -30px #000}
 html.fx-on :is(.app-header,.topbar,.app-head)::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:1px;pointer-events:none;
-  background:linear-gradient(90deg,transparent 5%,color-mix(in srgb,var(--fx-a) 75%,transparent) 30%,color-mix(in srgb,var(--fx-b) 70%,transparent) 60%,transparent 95%);background-size:200% 100%;animation:fx-flow 7s linear infinite;opacity:.8}
+  background:linear-gradient(90deg,transparent 5%,color-mix(in srgb,var(--fx-a) 75%,transparent) 30%,color-mix(in srgb,var(--fx-b) 70%,transparent) 60%,transparent 95%);opacity:.8}
 html.fx-on .app-header{position:relative}
 @keyframes fx-flow{to{background-position:-200% 0}}
-html.fx-on :is(.brand-logo span,.page-title span){background:linear-gradient(90deg,var(--fx-a),var(--fx-b),var(--fx-a));background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;animation:fx-flow 6s linear infinite;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--fx-a) 40%,transparent))}
+html.fx-on :is(.brand-logo span,.page-title span){background:linear-gradient(90deg,var(--fx-a),var(--fx-b),var(--fx-a));background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--fx-a) 40%,transparent))}
 html.fx-on :is(.mod-title,.page-title,.topbar-title h1){text-shadow:0 0 22px color-mix(in srgb,var(--fx-a) 22%,transparent)}
 html.fx-on .main{background:transparent !important}
-html.fx-on #motor-build::after,html.fx-on #aic-build::after,html.fx-on #pp-build::after,html.fx-on .fx-stamp::after{content:' · FX 3.18';color:var(--fx-a);opacity:.85}
+html.fx-on #motor-build::after,html.fx-on #aic-build::after,html.fx-on #pp-build::after,html.fx-on .fx-stamp::after{content:' · FX 3.21';color:var(--fx-a);opacity:.85}
 
 /* ── Morphing tab indicator (one per tab group; positioned by the script) ── */
 html.fx-on .fx-has-ind{position:relative}
@@ -310,11 +310,10 @@ html.fx-on .fx-has-ind > :is(.tab,.subtab,.nav-item,button){transition:color .3s
 html.fx-on .fx-has-ind > :is(.tab,.subtab,.nav-item,button):active{transform:scale(.96)}
 
 /* ── Morph transitions: pages, sub-sections, views, app tabs ── */
-html.fx-on .fx-enter{animation:fx-morph .55s var(--fx-ease) both;transform-origin:50% 0}
-@keyframes fx-morph{0%{opacity:0;transform:translate3d(0,22px,0) scale(.985)}100%{opacity:1;transform:none}}
-html.fx-on .fx-enter .fx-cas{animation:fx-rise .62s var(--fx-ease) both;animation-delay:calc(min(var(--fx-i,0),14) * 40ms + 60ms)}
-html.fx-on .fx-enter :is(.card,.x13-card,.fx-insight,.acard,.month-card,.action-tile,.filters).fx-cas{animation:fx-rise .62s var(--fx-ease) both,fx-sweep 1.3s ease-out both;animation-delay:calc(min(var(--fx-i,0),14) * 40ms + 60ms),calc(min(var(--fx-i,0),14) * 40ms + 240ms)}
-@keyframes fx-rise{0%{opacity:0;transform:perspective(900px) translate3d(0,34px,-90px) rotateX(18deg)}55%{opacity:1}100%{opacity:1;transform:none}}
+html.fx-on .fx-enter{animation:fx-morph .4s var(--fx-ease) both}
+@keyframes fx-morph{0%{opacity:0;transform:translate3d(0,14px,0)}100%{opacity:1;transform:none}}
+html.fx-on .fx-enter .fx-cas{animation:fx-rise .5s var(--fx-ease) both;animation-delay:calc(var(--fx-i,0) * 38ms + 40ms)}
+@keyframes fx-rise{0%{opacity:0;transform:perspective(900px) translate3d(0,26px,-60px) rotateX(12deg)}60%{opacity:1}100%{opacity:1;transform:none}}
 @keyframes fx-sweep{0%{background-position:160% 0,0 0,0 0,0 0}100%{background-position:-60% 0,0 0,0 0,0 0}}
 html.fx-on .tab-content{perspective:1600px}
 html.fx-on .tab-pane.active{animation:fx-pane .55s var(--fx-ease) both;transform-origin:calc(50% + var(--fx-dir,0) * -50%) 50%}
@@ -322,7 +321,7 @@ html.fx-on .tab-pane.active{animation:fx-pane .55s var(--fx-ease) both;transform
 html.fx-on details:is(.x13-card,.ed-audit)[open] > :not(summary){animation:fx-unfold .42s var(--fx-ease) both}
 @keyframes fx-unfold{0%{opacity:0;transform:translateY(-8px) scaleY(.97);transform-origin:top}100%{opacity:1;transform:none}}
 /* motor's own fade-in on .page is kept for the no-FX look; FX uses the morph above */
-html.fx-on .page.active.fx-enter{animation:fx-morph .55s var(--fx-ease) both}
+html.fx-on .page.active.fx-enter{animation:fx-morph .4s var(--fx-ease) both}
 
 /* ── Modals: glass sheet that pops forward in 3D ── */
 html.fx-on :is(#modal-backdrop,#m-bd,#cx-bd,#modal-bd).show{-webkit-backdrop-filter:blur(7px) saturate(120%);backdrop-filter:blur(7px) saturate(120%);background:rgba(3,5,12,.58) !important;animation:fx-fade .3s ease both}
@@ -369,7 +368,7 @@ html.fx-on .plate{border-radius:12px}
 /* ── Matrix (Asset Integrity): status cells glow ── */
 html.fx-on table.mx .cell{transition:transform .2s var(--fx-ease),box-shadow .25s}
 html.fx-on table.mx .cell.ok{box-shadow:inset 0 0 0 1px rgba(34,197,94,.35),0 0 14px -6px rgba(34,197,94,.7)}
-html.fx-on table.mx .cell.over{box-shadow:inset 0 0 0 1px rgba(239,68,68,.45),0 0 16px -5px rgba(239,68,68,.8);animation:fx-alarm 2.4s ease-in-out infinite}
+html.fx-on table.mx .cell.over{box-shadow:inset 0 0 0 1px rgba(239,68,68,.45),0 0 16px -5px rgba(239,68,68,.8)}
 html.fx-on table.mx .cell.due{box-shadow:inset 0 0 0 1px rgba(245,158,11,.4),0 0 14px -6px rgba(245,158,11,.75)}
 html.fx-on table.mx .cell:hover{transform:translateY(-1px) scale(1.04)}
 @keyframes fx-alarm{0%,100%{box-shadow:inset 0 0 0 1px rgba(239,68,68,.45),0 0 10px -6px rgba(239,68,68,.6)}50%{box-shadow:inset 0 0 0 1px rgba(239,68,68,.7),0 0 20px -4px rgba(239,68,68,.95)}}
@@ -452,7 +451,7 @@ html.fx-on[data-fx=index] .shell{background:linear-gradient(160deg,rgba(255,255,
   -webkit-backdrop-filter:blur(22px) saturate(160%);backdrop-filter:blur(22px) saturate(160%);border:1px solid rgba(255,255,255,.12) !important;border-radius:20px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 30px 80px -20px rgba(0,0,0,.85),0 0 80px -40px var(--fx-a);transform-style:preserve-3d;
   animation:fx-shell .9s var(--fx-spring) both;transition:transform .15s linear}
-html.fx-on[data-fx=index] .shell::before{height:2px;background:linear-gradient(90deg,var(--fx-a),var(--fx-c),var(--fx-ok),var(--fx-a));background-size:200% 100%;animation:fx-flow 5s linear infinite;box-shadow:0 0 16px var(--fx-a)}
+html.fx-on[data-fx=index] .shell::before{height:2px;background:linear-gradient(90deg,var(--fx-a),var(--fx-c),var(--fx-ok),var(--fx-a));background-size:200% 100%;box-shadow:0 0 16px var(--fx-a)}
 @keyframes fx-shell{0%{opacity:0;transform:perspective(1000px) translate3d(0,40px,-160px) rotateX(18deg)}100%{opacity:1;transform:none}}
 html.fx-on[data-fx=index] :is(#signin-form,#signup-form){animation:fx-flip .6s var(--fx-ease) both}
 @keyframes fx-flip{0%{opacity:0;transform:perspective(900px) rotateY(-24deg) translateX(-14px)}100%{opacity:1;transform:none}}
@@ -492,15 +491,141 @@ html.fx-on .fx-beam::after{content:'';position:absolute;left:0;right:0;bottom:1p
 @property --fx-ang{syntax:'<angle>';inherits:false;initial-value:0deg}
 html.fx-on .fx-ind:not(.fx-fill)::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
   background:conic-gradient(from var(--fx-ang),transparent 0 62%,color-mix(in srgb,var(--fx-a) 70%,transparent) 80%,#fff 86%,transparent 92%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:fx-spin 3.2s linear infinite}
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 @keyframes fx-spin{to{--fx-ang:360deg}}
 /* the effects switch shows the mode */
 html[data-fx=app] .fx-sw[data-m=lite] .d{background:transparent;border:1.5px solid currentColor}
 html[data-fx=app] .fx-sw[data-m=off]{opacity:.7}
 @media (prefers-reduced-motion:reduce){ html.fx-on .fx-beam{display:none} }
 @media print{ #fx-gl,.fx-beam{display:none !important} }
+
+/* ═══ 3.19 · smooth on phones ═══
+   Phones (touch screen, or narrower than 760 px) skip the expensive part of glass — the live blur behind every card,
+   which had to be recomputed on every frame of the moving 3D scene. Cards become tinted glass instead; headers and
+   pop-up forms keep a light blur. Card entry is a flat slide (no 3D), the page itself does not fade. */
+@media (pointer:coarse),(max-width:760px){
+  html.fx-on :is(.card,.kpi-strip,.filters,.x13-card,.fy-tag,.month-card,.action-tile,.fx-insight,.notify-banner,details.ed-audit,.signed-tile,.rep-box,.acard,.plate,.kpi,.sidebar,.sys,.topbar,.app-head,.app-header,.tabbar,.toast,#toast-wrap .toast,.toast-wrap .toast,.btn,.x13-btn){-webkit-backdrop-filter:none !important;backdrop-filter:none !important}
+  html.fx-on{--fx-glass:rgba(13,18,34,.8);--fx-glass-3:rgba(9,12,25,.94)}
+  html.fx-on.fx-3d{--fx-glass:rgba(12,17,33,.7);--fx-glass-3:rgba(8,11,24,.92)}
+  html.fx-on:is([data-fx=panel],[data-fx=complaint],[data-fx=aic],[data-fx=passport]){--fx-glass:rgba(20,20,26,.82);--fx-glass-3:rgba(13,13,17,.94)}
+  html.fx-on.fx-3d:is([data-fx=panel],[data-fx=complaint],[data-fx=aic],[data-fx=passport]){--fx-glass:rgba(18,18,24,.72);--fx-glass-3:rgba(12,12,16,.93)}
+  html.fx-on .page.active.fx-enter,html.fx-on .fx-enter{animation:none}
+  html.fx-on .fx-enter .fx-cas{animation:fx-rise-flat .38s cubic-bezier(.2,.8,.3,1) both;animation-delay:calc(var(--fx-i,0) * 32ms)}
+  @keyframes fx-rise-flat{0%{opacity:0;transform:translate3d(0,14px,0)}100%{opacity:1;transform:none}}
+  html.fx-on.fx-3d :is(.card,.kpi-strip,.x13-card,.fx-insight,.acard,.kpi){box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 14px 30px -20px rgba(0,0,0,.9)}
+  html.fx-on :is(.card,.x13-card,.month-card,.action-tile,.fx-insight,.acard,.kpi):hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 14px 30px -20px rgba(0,0,0,.9)}
+  /* Lite on a phone: the colour lights are painted once into the page background — no moving layers at all */
+  html.fx-on #fx-bg{display:none !important}
+  html.fx-on:not(.fx-3d){background:radial-gradient(120% 55% at 0% 0%,color-mix(in srgb,var(--fx-a) 16%,transparent),transparent 62%),radial-gradient(110% 50% at 100% 100%,color-mix(in srgb,var(--fx-b) 12%,transparent),transparent 62%),var(--fx-deep) !important}
+}
+
+/* ═══ 3.20 · every module morphs in its own way ═══
+   Motor keeps the light curtain + 3-D rise. Panel ENERGISES (a bus light runs left→right, cards switch on with a
+   flicker). Complaints PULSE (a shock ring from the centre, cards land with a damped jolt). Asset Integrity SCANS
+   (a thin laser sheet, cards revealed line by line). Passport UNFOLDS (a blueprint grid flashes, cards unfold like a
+   drawing sheet). Only transform / opacity are animated on phones. */
+html.fx-on[data-fx=panel] .fx-beam{top:0;bottom:0;left:0;right:auto;height:auto;width:34vw;
+  background:linear-gradient(90deg,transparent 0%,color-mix(in srgb,var(--fx-a) 5%,transparent) 55%,color-mix(in srgb,var(--fx-a) 20%,transparent) 94%,color-mix(in srgb,var(--fx-a) 60%,transparent) 99%,transparent 100%);
+  animation:fx-beam-x .8s cubic-bezier(.55,.05,.3,1) forwards}
+html.fx-on[data-fx=panel] .fx-beam::after{left:auto;right:1px;top:0;bottom:0;width:2px;height:auto;background:linear-gradient(180deg,transparent,#fff 20%,var(--fx-a) 50%,#fff 80%,transparent)}
+@keyframes fx-beam-x{0%{transform:translate3d(-36vw,0,0);opacity:0}12%{opacity:1}82%{opacity:.9}100%{transform:translate3d(104vw,0,0);opacity:0}}
+html.fx-on[data-fx=panel] .fx-enter .fx-cas{animation:fx-energise .56s var(--fx-ease) both;animation-delay:calc(var(--fx-i,0) * 40ms + 30ms)}
+@keyframes fx-energise{0%{opacity:0;transform:perspective(900px) translate3d(-36px,0,-50px) rotateY(10deg)}34%{opacity:.9}44%{opacity:.35}56%{opacity:1}100%{opacity:1;transform:none}}
+
+html.fx-on[data-fx=complaint] .fx-beam{top:50%;left:50%;right:auto;width:120vmax;height:120vmax;margin:-60vmax 0 0 -60vmax;border-radius:50%;
+  background:radial-gradient(circle,transparent 56%,color-mix(in srgb,var(--fx-a) 8%,transparent) 64%,color-mix(in srgb,var(--fx-a) 40%,transparent) 69.4%,#fff 69.9%,transparent 70.5%);
+  animation:fx-shock .82s cubic-bezier(.2,.7,.3,1) forwards}
+html.fx-on[data-fx=complaint] .fx-beam::after{display:none}
+@keyframes fx-shock{0%{transform:scale(.04);opacity:0}10%{opacity:1}75%{opacity:.75}100%{transform:scale(1);opacity:0}}
+html.fx-on[data-fx=complaint] .fx-enter .fx-cas{animation:fx-jolt .62s var(--fx-ease) both;animation-delay:calc(var(--fx-i,0) * 36ms + 60ms)}
+@keyframes fx-jolt{0%{opacity:0;transform:perspective(900px) translate3d(0,18px,-70px) scale(.96)}40%{opacity:1;transform:translate3d(5px,0,0)}55%{transform:translate3d(-4px,0,0)}70%{transform:translate3d(2.5px,0,0)}85%{transform:translate3d(-1px,0,0)}100%{opacity:1;transform:none}}
+
+html.fx-on[data-fx=aic] .fx-beam{height:14vh;
+  background:linear-gradient(180deg,transparent 0%,color-mix(in srgb,var(--fx-a) 7%,transparent) 70%,color-mix(in srgb,var(--fx-a) 35%,transparent) 99%,transparent 100%);
+  animation:fx-laser .72s cubic-bezier(.45,.05,.35,1) forwards}
+@keyframes fx-laser{0%{transform:translate3d(0,-16vh,0);opacity:0}10%{opacity:1}85%{opacity:.95}100%{transform:translate3d(0,102vh,0);opacity:0}}
+html.fx-on[data-fx=aic] .fx-enter .fx-cas{animation:fx-scanin .62s cubic-bezier(.3,.7,.3,1) both;animation-delay:calc(var(--fx-i,0) * 45ms)}
+@keyframes fx-scanin{0%{opacity:0;clip-path:inset(-60px -60px calc(100% + 60px) -60px);transform:translate3d(0,6px,0)}12%{opacity:1}100%{opacity:1;clip-path:inset(-60px -60px -60px -60px);transform:none}}
+
+html.fx-on[data-fx=passport] .fx-beam{top:0;bottom:0;height:auto;
+  background:linear-gradient(color-mix(in srgb,var(--fx-a) 24%,transparent) 1px,transparent 1px) 0 0/48px 48px,linear-gradient(90deg,color-mix(in srgb,var(--fx-a) 24%,transparent) 1px,transparent 1px) 0 0/48px 48px;
+  -webkit-mask:radial-gradient(ellipse at 50% 40%,#000 0,rgba(0,0,0,.7) 45%,transparent 80%);mask:radial-gradient(ellipse at 50% 40%,#000 0,rgba(0,0,0,.7) 45%,transparent 80%);
+  animation:fx-grid .85s ease-out forwards}
+html.fx-on[data-fx=passport] .fx-beam::after{display:none}
+@keyframes fx-grid{0%{opacity:0;transform:scale(1.08)}22%{opacity:.85}100%{opacity:0;transform:scale(1)}}
+html.fx-on[data-fx=passport] .fx-enter .fx-cas{animation:fx-sheet .62s var(--fx-ease) both;transform-origin:50% 0;animation-delay:calc(var(--fx-i,0) * 40ms + 40ms)}
+@keyframes fx-sheet{0%{opacity:0;transform:perspective(1100px) rotateX(-30deg) translate3d(0,-8px,0)}60%{opacity:1}100%{opacity:1;transform:none}}
+
+@media (pointer:coarse),(max-width:760px){
+  html.fx-on[data-fx=panel] .fx-enter .fx-cas{animation:fx-energise-flat .42s cubic-bezier(.2,.8,.3,1) both;animation-delay:calc(var(--fx-i,0) * 32ms)}
+  @keyframes fx-energise-flat{0%{opacity:0;transform:translate3d(-18px,0,0)}34%{opacity:.9}44%{opacity:.4}56%{opacity:1}100%{opacity:1;transform:none}}
+  html.fx-on[data-fx=complaint] .fx-enter .fx-cas{animation:fx-jolt-flat .46s cubic-bezier(.2,.8,.3,1) both;animation-delay:calc(var(--fx-i,0) * 32ms)}
+  @keyframes fx-jolt-flat{0%{opacity:0;transform:translate3d(0,12px,0)}45%{opacity:1;transform:translate3d(4px,0,0)}65%{transform:translate3d(-3px,0,0)}82%{transform:translate3d(1.5px,0,0)}100%{opacity:1;transform:none}}
+  html.fx-on[data-fx=aic] .fx-enter .fx-cas{animation:fx-scan-flat .4s cubic-bezier(.2,.8,.3,1) both;animation-delay:calc(var(--fx-i,0) * 36ms)}
+  @keyframes fx-scan-flat{0%{opacity:0;transform:translate3d(0,-10px,0)}100%{opacity:1;transform:none}}
+  html.fx-on[data-fx=passport] .fx-enter .fx-cas{animation:fx-sheet-flat .42s cubic-bezier(.2,.8,.3,1) both;transform-origin:50% 0;animation-delay:calc(var(--fx-i,0) * 32ms)}
+  @keyframes fx-sheet-flat{0%{opacity:0;transform:translate3d(0,-6px,0) scaleY(.94)}100%{opacity:1;transform:none}}
+}
+
+/* ═══ 3.21 · Sign-in page: engineering showreel + hero ═══
+   The page keeps its sign-in card (same fields, same buttons, same script). Around it: a hero with the module list
+   and a "Now showing" caption that follows the 3-D reel of machines behind the glass. */
+html.fx-on[data-fx=index] body{perspective:none}
+.fx-hero{display:none}
+html.fx-on[data-fx=index] .fx-hero{display:flex;flex-direction:column;gap:14px;min-width:0;color:var(--text,#e8ecf3);pointer-events:none}
+html.fx-on[data-fx=index] .fx-hero a,html.fx-on[data-fx=index] .fx-hero button{pointer-events:auto}
+.fx-kick{font:700 10px/1 'JetBrains Mono',ui-monospace,monospace;letter-spacing:3.5px;text-transform:uppercase;color:var(--fx-a);display:flex;align-items:center;gap:10px}
+.fx-kick::before{content:'';width:26px;height:2px;background:var(--fx-a);box-shadow:0 0 10px var(--fx-a)}
+.fx-h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(40px,6.2vw,78px);line-height:.92;letter-spacing:2px;font-weight:400;
+  background:linear-gradient(100deg,#fff 0%,#dff8ff 40%,var(--fx-a) 70%,var(--fx-b) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 22px color-mix(in srgb,var(--fx-a) 30%,transparent));animation:fx-hero-in .9s var(--fx-ease) both}
+.fx-lead{max-width:470px;font-size:14px;line-height:1.55;color:#a9b4cc;animation:fx-hero-in .9s var(--fx-ease) .12s both}
+.fx-stage{flex:1;min-height:180px}
+.fx-now{align-self:flex-start;display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:3px;align-items:center;padding:12px 16px 14px;border-radius:14px;min-width:min(380px,100%);
+  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015)),rgba(10,16,32,.55);border:1px solid rgba(255,255,255,.1);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 18px 40px -24px rgba(0,0,0,.9);animation:fx-hero-in .9s var(--fx-ease) .25s both}
+.fx-now-k{grid-row:1 / span 2;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--fx-a);position:relative;box-shadow:0 0 14px -2px var(--fx-a)}
+.fx-now-k::after{content:'';position:absolute;inset:9px;border-radius:50%;background:var(--fx-a);box-shadow:0 0 12px var(--fx-a);animation:fx-pulse 2.2s ease-in-out infinite}
+.fx-now-t{font:600 15px/1.2 Inter,system-ui,sans-serif;color:#fff;transition:opacity .35s,transform .35s var(--fx-ease)}
+.fx-now-s{font:500 11.5px/1.3 Inter,system-ui,sans-serif;color:#8fa0bf;transition:opacity .35s .05s,transform .35s .05s var(--fx-ease)}
+.fx-now.swap .fx-now-t,.fx-now.swap .fx-now-s{opacity:0;transform:translateY(6px)}
+.fx-now-bar{grid-column:1 / -1;height:2px;margin-top:9px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.fx-now-bar u{display:block;height:100%;background:linear-gradient(90deg,var(--fx-a),var(--fx-b));transform-origin:0 50%;transform:scaleX(0);transition:transform .4s linear}
+.fx-now-dots{grid-column:1 / -1;display:flex;gap:6px;margin-top:8px}
+.fx-now-dots i{width:16px;height:3px;border-radius:2px;background:rgba(255,255,255,.14);transition:background .4s,width .4s var(--fx-ease)}
+.fx-now-dots i.on{width:28px;background:var(--fx-a);box-shadow:0 0 8px var(--fx-a)}
+.fx-mods{display:flex;flex-wrap:wrap;gap:8px;animation:fx-hero-in .9s var(--fx-ease) .35s both}
+.fx-mods span{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.3px;color:#cfd8ea;
+  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.1)}
+.fx-mods span b{width:6px;height:6px;border-radius:50%;background:var(--fx-ok);box-shadow:0 0 8px var(--fx-ok)}
+@keyframes fx-hero-in{0%{opacity:0;transform:translate3d(-18px,0,0)}100%{opacity:1;transform:none}}
+/* without the 3-D scene (Lite / no graphics) the stage and caption are not needed */
+html.fx-on[data-fx=index]:not(.fx-3d) .fx-stage,html.fx-on[data-fx=index]:not(.fx-3d) .fx-now{display:none}
+/* laptop / desktop-site: hero on the left, sign-in card on the right */
+@media (min-width:980px){
+  html.fx-on[data-fx=index] body{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:56px;align-items:center;justify-content:stretch;max-width:1320px;margin:0 auto;padding:36px 56px;min-height:100vh}
+  html.fx-on[data-fx=index] .fx-hero{height:min(86vh,780px);justify-content:space-between}
+  html.fx-on[data-fx=index] .shell{justify-self:end}
+}
+/* phone: a short hero (title + the machine on show), the card underneath */
+@media (max-width:979px){
+  html.fx-on[data-fx=index] body{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:22px 16px 28px;gap:10px}
+  html.fx-on[data-fx=index] .fx-hero{width:100%;max-width:420px;gap:8px}
+  html.fx-on[data-fx=index] .fx-h1{font-size:40px}
+  html.fx-on[data-fx=index] .fx-lead,html.fx-on[data-fx=index] .fx-mods{display:none}
+  html.fx-on[data-fx=index] .fx-stage{flex:none;height:24vh;min-height:150px;max-height:260px}
+  html.fx-on.fx-3d[data-fx=index] .shell .brand{display:none}          /* the hero already carries the name — keeps Sign In above the fold */
+  html.fx-on.fx-3d[data-fx=index] .shell{padding:28px 24px}
+  html.fx-on[data-fx=index] .fx-now{min-width:0;width:100%;padding:10px 14px 12px}
+  html.fx-on[data-fx=index]:not(.fx-3d) .fx-hero{display:none}
+}
+/* phones: the sign-in card is tinted glass without live blur (the scene behind it moves) */
+@media (pointer:coarse),(max-width:760px){
+  html.fx-on[data-fx=index] .shell{-webkit-backdrop-filter:none !important;backdrop-filter:none !important;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015) 40%),rgba(12,18,34,.86) !important}
+  html.fx-on[data-fx=index] .fx-now{background:rgba(10,16,32,.82)}
+}
 </style>
-<script id="fx318-head">(function(){var on=true;try{on=localStorage.getItem('pmfx')!=='off';}catch(e){}var h=document.documentElement;if(on)h.classList.add('fx-on');try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)h.classList.add('fx-still');}catch(e){}})();</script>
+<script id="fx321-head">(function(){var on=true;try{on=localStorage.getItem('pmfx')!=='off';}catch(e){}var h=document.documentElement;if(on)h.classList.add('fx-on');try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)h.classList.add('fx-still');}catch(e){}})();</script>
 </head>
 <body>
 <div class="app-shell">
@@ -1804,8 +1929,8 @@ window.GS = {
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
-<script id="fx318-js">
-/* ═══ 3.18 · Maintenance digital-twin background (WebGL, no libraries) ═══
+<script id="fx321-js">
+/* ═══ 3.19 · Maintenance digital-twin background (WebGL, no libraries) — smooth build ═══
    A holographic piece of plant equipment made of light particles (motor, panel, pump impeller, boiler,
    gauge, PM calendar ring, wrench, shield, check-sheet, vibration spectrum, passport plate) that MORPHS
    when you change page; two real meshing gears with sparks at the mesh; a 52-week PM ring with the current
@@ -1820,7 +1945,7 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
   function warn(e){ try{ console.warn('[fx scene]', e); }catch(_){ } }
   var STILL = mq('(prefers-reduced-motion: reduce)');
   var MOBILE = mq('(pointer:coarse)') || Math.min(screen.width || 999, screen.height || 999) < 760;
-  var NP = MOBILE ? 2600 : 4600;          // hero particles
+  var NP = MOBILE ? 2000 : 4600;          // hero particles
   var GAIN = MOBILE ? 1.3 : 1;            // phones see the scene through glass: a little brighter
   var PAL = {
     motor: ['#00d9ff', '#a78bfa', '#ffb000'], app: ['#00d9ff', '#a78bfa', '#ffb000'], index: ['#00d9ff', '#7cf28b', '#ffb000'],
@@ -1991,8 +2116,8 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
     wrench: [-0.2, 0.15, 7.8], shield: [0.1, 0.1, 7.8], sheet: [-0.3, 0.12, 7.6], wave: [0.35, 0.35, 8.0], plate: [0.05, 0.12, 7.6] };
 
   /* ── WebGL ── */
-  var cv, gl, P = {}, B = {}, ready = false, running = false, raf = 0, lastT = 0, lastDraw = 0, q = MOBILE ? 0.55 : 0.85, fpsCap = MOBILE ? 30 : 60, drawN = NP;
-  var slow = 0, frames = 0, tStart = performance.now(), stripH = 0, lastAct = performance.now();
+  var cv, gl, P = {}, B = {}, ready = false, running = false, raf = 0, lastT = 0, lastDraw = 0, q = MOBILE ? 0.5 : 0.85, fpsCap = MOBILE ? 30 : 60, drawN = NP;
+  var slow = 0, frames = 0, tStart = performance.now(), stripH = 0, lastAct = performance.now(), lastScroll = -1e9, held = false, drawn = 0, yieldUntil = 0, autoStill = false;
   var M = { a: null, b: null, t0: 0, dur: 1900, cur: '', swirl: 0 };
   var camNow = [0.2, 0.42, 7.8], camFrom = camNow.slice(), camTo = camNow.slice(), camT0 = -1e9;
   var ptr = [0, 0], ptrS = [0, 0], scrollS = 0, scrollT = 0;
@@ -2106,10 +2231,10 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
     B.ha = buf(s0.p.slice()); B.hb = buf(s0.p.slice()); B.hxa = buf(s0.x.slice()); B.hxb = buf(s0.x.slice()); B.hs = buf(seeds);
     M.a = { p: s0.p.slice(), x: s0.x.slice() }; M.b = s0; M.cur = 'impeller'; M.t0 = -1e9;
     // dust, sparks, glow
-    var ND = MOBILE ? 140 : 260, dp = new Float32Array(ND * 3), ds = new Float32Array(ND * 2);
+    var ND = MOBILE ? 90 : 260, dp = new Float32Array(ND * 3), ds = new Float32Array(ND * 2);
     for(i = 0; i < ND; i++){ dp[i * 3] = (r() - 0.5) * 16; dp[i * 3 + 1] = r() * 7; dp[i * 3 + 2] = -6 + r() * 9; ds[i * 2] = r(); ds[i * 2 + 1] = 0.035 + r() * r() * 0.11; }
     B.dp = buf(dp); B.ds = buf(ds); B.nd = ND;
-    var NS = MOBILE ? 50 : 90, sp = new Float32Array(NS * 3), ss = new Float32Array(NS * 2);
+    var NS = MOBILE ? 36 : 90, sp = new Float32Array(NS * 3), ss = new Float32Array(NS * 2);
     for(i = 0; i < NS; i++){ ss[i * 2] = r(); ss[i * 2 + 1] = 0.022 + r() * 0.025; }
     B.sp = buf(sp); B.ss = buf(ss); B.ns = NS;
     B.gp = buf(new Float32Array(3)); B.gs = buf(new Float32Array([0.5, 1.5]));
@@ -2235,21 +2360,22 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
     gl.depthMask(true);
   }
 
-  function visible(){ return !D.hidden && W.innerWidth > 2 && W.innerHeight > 2 && H.classList.contains('fx-3d'); }
+  function visible(){ return !held && !D.hidden && W.innerWidth > 2 && W.innerHeight > 2 && H.classList.contains('fx-3d'); }
   function loop(ts){
     raf = 0; if(!running) return;
     if(!visible()){ raf = 0; return; }
     raf = requestAnimationFrame(loop);
-    var idle = ts - lastAct > 45000, cap = idle ? Math.min(12, fpsCap) : fpsCap;   // battery: slow down when nobody touches the screen
+    if(MOBILE && (ts - lastScroll < 220 || performance.now() < yieldUntil)) return;   // phones: give every frame to the scrolling page / page change
+    var idle = ts - lastAct > 45000, cap = autoStill ? 0.5 : idle ? Math.min(12, fpsCap) : fpsCap;   // battery: slow down when nobody touches the screen
     var minGap = 1000 / cap - 2; if(ts - lastDraw < minGap) return;
     var gap = ts - lastDraw; lastDraw = ts;
     // adaptive quality: if frames come late, drop resolution, then particles, then frame rate
     if(gap < 400 && !idle){ frames++; if(gap > (1000 / fpsCap) * 1.7) slow++; }
     if(frames >= 60){
-      if(slow > 20){ if(q > 0.45){ q = Math.max(0.42, q - 0.15); size(); } else if(drawN > NP * 0.5){ drawN = Math.floor(NP * 0.5); } else if(fpsCap > 20){ fpsCap = 20; } }
+      if(slow > 20){ if(q > 0.45){ q = Math.max(0.42, q - 0.15); size(); } else if(drawN > NP * 0.5){ drawN = Math.floor(NP * 0.5); } else if(fpsCap > 20){ fpsCap = 20; } else { autoStill = true; } }
       frames = 0; slow = 0;
     }
-    try{ draw((ts - tStart) / 1000); }catch(e){ warn(e); stop(); }
+    try{ draw((ts - tStart) / 1000); drawn++; }catch(e){ warn(e); stop(); }
   }
   function start(){ if(!ready || running) return; running = true; size(); if(STILL){ draw((performance.now() - tStart) / 1000); return; } if(!raf) raf = requestAnimationFrame(loop); }
   function stop(){ running = false; if(raf) cancelAnimationFrame(raf); raf = 0; }
@@ -2257,6 +2383,7 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
 
   function init(){
     try{
+      if(MOD === 'app' && MOBILE) return false;      // phones: the header keeps CSS light only; the module below has the scene
       if(!setup()){ return false; }
       D.body.appendChild(cv); ready = true;
       cv.addEventListener('webglcontextlost', function(e){ e.preventDefault(); ready = false; stop(); H.classList.remove('fx-gl'); }, false);
@@ -2264,10 +2391,11 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
       W.addEventListener('resize', function(){ size(); if(STILL && running) draw((performance.now() - tStart) / 1000); }, { passive: true });
       D.addEventListener('visibilitychange', kick);
       setInterval(kick, 1000);
+      D.addEventListener('touchmove', function(){ lastScroll = lastAct = performance.now(); }, { passive: true, capture: true });
       ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function(ev){ D.addEventListener(ev, function(){ lastAct = performance.now(); kick(); }, { passive: true, capture: true }); });
       D.addEventListener('pointermove', function(e){ lastAct = performance.now(); ptr[0] = (e.clientX / Math.max(1, W.innerWidth)) * 2 - 1; ptr[1] = (e.clientY / Math.max(1, W.innerHeight)) * 2 - 1; }, { passive: true });
       W.addEventListener('deviceorientation', function(e){ if(e.gamma == null) return; ptr[0] = Math.max(-1, Math.min(1, e.gamma / 30)); ptr[1] = Math.max(-1, Math.min(1, ((e.beta || 45) - 45) / 30)); }, { passive: true });
-      D.addEventListener('scroll', function(e){ var el = (e.target && e.target !== D && e.target.nodeType === 1) ? e.target : (D.scrollingElement || H); scrollT = Math.max(-1, Math.min(1.6, (el.scrollTop || 0) / 1800)); lastAct = performance.now(); }, { passive: true, capture: true });
+      D.addEventListener('scroll', function(e){ var el = (e.target && e.target !== D && e.target.nodeType === 1) ? e.target : (D.scrollingElement || H); scrollT = Math.max(-1, Math.min(1.6, (el.scrollTop || 0) / 1800)); lastAct = lastScroll = performance.now(); }, { passive: true, capture: true });
       if(MOD === 'index'){ var cyc = ['impeller', 'motor', 'panel', 'boiler', 'gauge', 'shield', 'ring'], ci = 0; setInterval(function(){ if(visible() && !STILL && W.__fxScene.cycle !== false){ ci = (ci + 1) % cyc.length; morphTo(cyc[ci]); } }, 6500); }
       return true;
     }catch(e){ warn(e); ready = false; try{ if(cv && cv.parentNode) cv.parentNode.removeChild(cv); }catch(_){ } return false; }
@@ -2275,24 +2403,27 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
   W.__fxScene = {
     init: init, start: start, stop: stop, ok: function(){ return ready; },
     page: function(key){ var s = PAGE[key]; if(s) morphTo(s); },
-    shape: morphTo, quality: function(){ return { q: q, fps: fpsCap, n: drawN, running: running, shape: M.cur }; }
+    shape: morphTo, quality: function(){ return { q: q, fps: fpsCap, n: drawN, running: running, shape: M.cur, held: held, drawn: drawn, still: autoStill }; },
+    hold: function(on){ held = !!on; if(!held) kick(); },
+    yieldFor: function(ms){ yieldUntil = performance.now() + (ms || 0); }
   };
 })();
 
-/* ═══ 3.18 · Visual layer — 3D maintenance scene, glass, lights, morphing tabs and pages, animated graphs ═══
+/* ═══ 3.21 · Visual layer — 3D maintenance scene, glass, lights, morphing tabs and pages, animated graphs (smooth build) ═══
    Reads the page, never writes data: it only adds classes / CSS variables to elements, a light layer,
    tab indicators and read-only graphs. Every step is wrapped so a failure here can never stop the module. */
 (function(){
   'use strict';
   var D = document, H = D.documentElement, W = window;
   var MOD = H.getAttribute('data-fx') || '';
-  W.__fxBuild = '3.18 · 15-10-2026';
-  function warn(e){ try{ console.warn('[fx 3.18]', e); }catch(_){ } }
+  W.__fxBuild = '3.21 · 15-10-2026';
+  function warn(e){ try{ console.warn('[fx 3.21]', e); }catch(_){ } }
   function safe(fn){ return function(){ try{ return fn.apply(this, arguments); }catch(e){ warn(e); } }; }
   function isOn(){ return H.classList.contains('fx-on'); }
   function mq(q){ try{ return W.matchMedia(q).matches; }catch(e){ return false; } }
   var still = mq('(prefers-reduced-motion: reduce)');
   var fine = mq('(hover:hover) and (pointer:fine)');
+  function phone(){ return mq('(pointer:coarse)') || W.innerWidth <= 760; }   // phones get the light path (no live blur, no chart glow)
   function store(k, v){ try{ if(v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); }catch(e){ return null; } }
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
@@ -2397,9 +2528,10 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
   function enter(el){
     if(!isOn() || still) return;
     el.classList.remove('fx-enter'); void el.offsetWidth;
-    var picks = [], all = el.querySelectorAll(CAS);
-    for(var i = 0; i < all.length && picks.length < 26; i++){
+    var picks = [], all = el.querySelectorAll(CAS), MAX = phone() ? 8 : 14, VH = W.innerHeight || 800;
+    for(var i = 0; i < all.length && picks.length < MAX; i++){
       var x = all[i]; if(x.offsetParent === null) continue;
+      var rr = x.getBoundingClientRect(); if(rr.top > VH || rr.bottom < 0) continue;      // below the fold: no animation needed
       var p = x.parentElement, nested = false;
       while(p && p !== el){ if(p.classList && p.classList.contains('fx-cas')){ nested = true; break; } p = p.parentElement; }
       if(nested) continue;
@@ -2413,11 +2545,11 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
       picks.forEach(function(x){ x.classList.remove('fx-cas'); x.style.removeProperty('--fx-i'); });
     }), 1700);
     // graphs inside replay their grow-in animation
-    setTimeout(safe(function(){
+    if(!phone()) setTimeout(safe(function(){
       if(!W.Chart || !W.Chart.instances) return;
       Object.keys(W.Chart.instances).forEach(function(id){
         var ch = W.Chart.instances[id];
-        if(ch && ch.canvas && el.contains(ch.canvas) && ch.canvas.offsetParent !== null){ ch.reset(); ch.update(); }
+        if(ch && ch.canvas && el.contains(ch.canvas) && ch.canvas.offsetParent !== null){ var cr = ch.canvas.getBoundingClientRect(); if(cr.top < (W.innerHeight || 800) && cr.bottom > 0){ ch.reset(); ch.update(); } }
       });
     }), 60);
   }
@@ -2427,7 +2559,13 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
       var key = p.key ? p.key() : (el.id || el.className);
       if(paneLast[i] === key) return;
       paneLast[i] = key; enter(el);
-      try{ if(i === 0 && W.__fxScene) W.__fxScene.page(key); }catch(e){ warn(e); }
+      try{
+        var S = W.__fxScene;
+        if(i === 0 && S){
+          if(phone()){ S.yieldFor(900); setTimeout(function(){ try{ S.page(key); }catch(e){ warn(e); } }, 880); }   // phones: the page and its card morph settle first, then the 3-D world moves
+          else S.page(key);
+        }
+      }catch(e){ warn(e); }
     });
   });
 
@@ -2542,7 +2680,7 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
       },
       beforeDatasetDraw: function(ch, args){
         try{
-          if(!isOn()) return;
+          if(!isOn() || phone()) return;                     // canvas shadow-blur is costly on phones: gradients only
           var ds = ch.data.datasets[args.index] || {}, t = (args.meta && args.meta.type) || '';
           var c = first(ds.$fxBg !== undefined ? ds.$fxBg : ds.backgroundColor);
           if(t === 'line') c = first(ds.borderColor) || c;
@@ -2608,11 +2746,14 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
   var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   /* Complaint register — analytics from the complaints already on screen (read-only) */
-  var cmpSig = '';
+  var cmpSig = '', cmpN = -1, cmpT0 = Date.now();
   var complaintGraphs = safe(function(){
     var S = null; try{ S = (typeof STATE !== 'undefined') ? STATE : null; }catch(e){}
     var strip = D.querySelector('.wrap > .kpi-strip'); if(!S || !strip) return;
     var list = Array.isArray(S.complaints) ? S.complaints : [];
+    // a newly logged complaint sends an impact through the 3-D vibration spectrum (not on the first load)
+    if(cmpN >= 0 && list.length > cmpN && Date.now() - cmpT0 > 5000){ sceneData(true); try{ if(W.__fxScene && W.__fxScene.event) W.__fxScene.event('spike'); }catch(e){ warn(e); } beam(); }
+    cmpN = list.length;
     var sig = list.length + '|' + list.map(function(c){ return c.id + (c.status || '') + (c.downtimeMin || '') + (c.area || '') + (c.start || ''); }).join(',');
     var el = D.getElementById('fx-cmp');
     if(el && el.previousElementSibling === strip && sig === cmpSig) return;
@@ -2762,28 +2903,115 @@ if(document.readyState === 'loading') document.addEventListener('DOMContentLoade
       g.innerHTML = '<i></i><i></i><i></i><b></b>';
       br.insertBefore(g, br.firstChild);
     }
+    // 3.21 · hero beside the card: title, module list and a "Now showing" caption that follows the 3-D reel
+    var shell = D.querySelector('.shell');
+    if(shell && !D.querySelector('.fx-hero')){
+      var h = D.createElement('div'); h.className = 'fx-hero';
+      h.innerHTML = '<div class="fx-hero-top"><div class="fx-kick">ITC Haridwar · Utilities</div><div class="fx-h1">PM Command Centre</div>' +
+        '<div class="fx-lead">Preventive maintenance for motors, panels, complaints, statutory assets and the factory passport — one live system, aiming at zero downtime.</div></div>' +
+        '<div class="fx-stage" aria-hidden="true"></div>' +
+        '<div class="fx-now" aria-live="off"><span class="fx-now-k" aria-hidden="true"></span><b class="fx-now-t">Engineering showreel</b><span class="fx-now-s">3-D maintenance views</span>' +
+        '<i class="fx-now-bar" aria-hidden="true"><u></u></i><span class="fx-now-dots" aria-hidden="true"></span></div>' +
+        '<div class="fx-mods"><span><b></b>Motor PM</span><span><b></b>Panel PM</span><span><b></b>Complaints</span><span><b></b>Asset Integrity</span><span><b></b>Factory Passport</span></div>';
+      shell.parentNode.insertBefore(h, shell);
+      var nowEl = h.querySelector('.fx-now'), tEl = h.querySelector('.fx-now-t'), sEl = h.querySelector('.fx-now-s'), bar = h.querySelector('.fx-now-bar u'), dots = h.querySelector('.fx-now-dots'), lastKey = '';
+      setInterval(safe(function(){
+        var S = W.__fxScene; if(D.hidden || !S || !S.quality || !H.classList.contains('fx-3d')) return;
+        var q = S.quality(), inf = q && q.info; if(!inf) return;
+        if(dots.children.length !== inf.n){ dots.innerHTML = new Array(inf.n + 1).join('<i></i>'); }
+        if(inf.key !== lastKey){
+          var first = !lastKey; lastKey = inf.key; nowEl.classList.add('swap');
+          setTimeout(function(){ tEl.textContent = inf.title; sEl.textContent = inf.sub; nowEl.classList.remove('swap'); }, first ? 0 : 320);
+          [].forEach.call(dots.children, function(d, i){ d.classList.toggle('on', i === inf.i); });
+        }
+        var sx = Math.min(1, inf.w / 0.95);
+        if(sx < (bar.__x || 0)){ bar.style.transition = 'none'; bar.style.transform = 'scaleX(0)'; void bar.offsetWidth; bar.style.transition = ''; }
+        bar.__x = sx; bar.style.transform = 'scaleX(' + sx.toFixed(3) + ')';
+      }), 400);
+    }
   });
 
+  /* ── 3.21 · figures the 3-D world reads to colour itself (only what the module already shows; read-only) ── */
+  function txt(id){ var e = D.getElementById(id); return e ? (e.textContent || '').trim() : ''; }
+  function num(id){ var v = parseFloat(txt(id).replace(/,/g, '').replace(/[^\d.\-]/g, '')); return isFinite(v) ? v : null; }
+  function cmpCat(c){
+    var s = ((c && c.issue) || '') + ' ' + ((c && c.actionTaken) || ''); s = s.toLowerCase();
+    if(/bearing|noise|vibrat|greas/.test(s)) return 'bearing';
+    if(/pump|gland|seal|impeller|valve|leak|cavitat|suction|discharge/.test(s)) return 'pump';
+    if(/panel|mccb|mcb|breaker|vfd|drive|contactor|relay|cable|fuse|starter|acb|vcb|trip|feeder/.test(s)) return 'panel';
+    return 'motor';
+  }
+  function aicCat(name){
+    var s = (name || '').toLowerCase();
+    if(/boiler|ibr|steam|safety valve|economi|feed ?water|chimney|stack|burner|deaerat|thermic|furnace/.test(s)) return 'boiler';
+    if(/hydro|receiver|pressure vessel|vessel|lift|tackle|hoist|crane|ladder|sling|chain|compressor|mechanical|scaffold/.test(s)) return 'mechanical';
+    return 'electrical';
+  }
+  function collectData(){
+    if(MOD === 'motor') return { compl: num('kpi-compl'), overdue: num('kpi-overdue'), due: num('d-due'), total: num('kpi-motors') };
+    if(MOD === 'panel') return { compl: num('k-comp'), overdue: num('k-over'), due: num('k-due'), total: num('k-total') };
+    if(MOD === 'complaint'){
+      var S = null; try{ S = (typeof STATE !== 'undefined') ? STATE : null; }catch(e){}
+      var list = S && Array.isArray(S.complaints) ? S.complaints : [], cats = { motor: { n: 0, open: 0 }, pump: { n: 0, open: 0 }, bearing: { n: 0, open: 0 }, panel: { n: 0, open: 0 } }, last = null, lastAt = '';
+      list.forEach(function(c){ var k = cmpCat(c); cats[k].n++; if(String(c.status || '').toLowerCase() !== 'closed') cats[k].open++; var at = String(c.loggedAt || c.start || ''); if(at >= lastAt){ lastAt = at; last = k; } });
+      return { cats: cats, last: last, n: list.length };
+    }
+    if(MOD === 'aic'){
+      var cat = { electrical: { ok: 0, due: 0, over: 0, none: 0 }, mechanical: { ok: 0, due: 0, over: 0, none: 0 }, boiler: { ok: 0, due: 0, over: 0, none: 0 } };
+      [].forEach.call(D.querySelectorAll('#ov-matrix tbody tr'), function(tr){
+        var td = tr.querySelector('td'); if(!td) return; var k = aicCat(td.textContent);
+        [].forEach.call(tr.querySelectorAll('.cell'), function(c){ var cl = c.classList; if(cl.contains('ok')) cat[k].ok++; else if(cl.contains('due')) cat[k].due++; else if(cl.contains('over')) cat[k].over++; else if(cl.contains('none')) cat[k].none++; });
+      });
+      return { cat: cat };
+    }
+    if(MOD === 'passport'){
+      var items = []; try{ items = (typeof allItems === 'function') ? allItems() : []; }catch(e){ items = []; }
+      var by = {}; items.forEach(function(i){ var k = 'General'; try{ k = (typeof systemOf === 'function') ? systemOf(i.area) : 'General'; }catch(e){} by[k] = (by[k] || 0) + 1; });
+      return { total: items.length, bySys: by };
+    }
+    return null;
+  }
+  var dataSig = '', dataT = 0;
+  function sceneData(force){
+    var S = W.__fxScene; if(!S || !S.data) return;
+    var now = Date.now(); if(!force && now - dataT < 1500) return; dataT = now;
+    var d = null; try{ d = collectData(); }catch(e){ warn(e); }
+    if(!d) return; var sig = JSON.stringify(d); if(sig === dataSig) return; dataSig = sig;
+    try{ S.data(d); }catch(e){ warn(e); }
+  }
+
   /* ── scheduler: one pass per frame after any change on the page ── */
-  var pend = 0;
+  var pend = 0, pendT = 0, lastPass = 0;
   var pass = safe(function(){
-    pend = 0;
-    syncTabs(); syncPanes(); syncKpi(); syncFixed();
+    pend = 0; lastPass = Date.now();
+    syncTabs(); syncPanes(); syncKpi(); syncFixed(); modalHold();
     if(MOD === 'complaint') complaintGraphs();
     if(MOD === 'aic') aicGraphs();
     if(MOD === 'passport') passportGraphs();
+    sceneData(false);
   });
   function schedule(){ if(!pend) pend = requestAnimationFrame(pass); }
+  function scheduleSoon(){   // coalesce bursts of DOM changes (big list renders) into one pass
+    if(pend || pendT) return;
+    var wait = Math.max(0, 120 - (Date.now() - lastPass));
+    pendT = setTimeout(function(){ pendT = 0; schedule(); }, wait);
+  }
+  var held = false;
+  function modalHold(){   // while a form is open the 3D scene pauses, so typing stays smooth
+    var open = !!D.querySelector('#modal-host.show,#m-host.show,#cx-host.show,.gs:not([hidden])');
+    if(open !== held){ held = open; try{ if(W.__fxScene) W.__fxScene.hold(open); }catch(e){ warn(e); } }
+  }
 
   W.__fx = { apply: safe(apply), refresh: schedule, build: W.__fxBuild };
   var boot = safe(function(){
     lights(); chartTheme(); appShell(); indexPage(); bindPointer();
     if(MOD !== 'app') apply();
-    try{ new MutationObserver(function(){ schedule(); }).observe(D.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden'] }); }catch(e){ warn(e); }
+    try{ new MutationObserver(function(){ scheduleSoon(); }).observe(D.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden'] }); }catch(e){ warn(e); }
     W.addEventListener('resize', schedule, { passive: true });
     W.addEventListener('storage', function(e){ if(e.key === 'pmfx') apply(); });
     try{ if(D.fonts && D.fonts.ready) D.fonts.ready.then(function(){ D.querySelectorAll('.fx-has-ind').forEach(function(c){ c.__fxR = null; }); schedule(); }); }catch(e){}
-    setInterval(function(){ if(!D.hidden) schedule(); }, 2500);
+    D.addEventListener('click', function(){ schedule(); }, true);
+    setInterval(function(){ if(!D.hidden && W.innerWidth > 2) scheduleSoon(); }, 4000);
     schedule();
   });
   if(D.readyState === 'loading') D.addEventListener('DOMContentLoaded', boot); else boot();
