@@ -418,8 +418,8 @@ body.role-user .admin-only{display:none !important}
 .ck-add .ctrl{min-width:0}.ck-add .ctrl input,.ck-add .ctrl select{width:100%;min-width:0}.ck-add > .btn{min-height:36px}
 #page-checklist .card-body.no-pad{overflow-x:auto;-webkit-overflow-scrolling:touch}
 </style>
-<style id="fx321-css">
-/* ═══ 3.21 · Visual layer — 3D maintenance scene, glass, lights and morph transitions (smooth build) ═══
+<style id="fx322-css">
+/* ═══ 3.22 · Visual layer — 3D maintenance scene, glass, lights and morph transitions (smooth build) ═══
    Purely visual. Every rule is behind html.fx-on, so "✦ Effects off" (or a failed script) shows the
    original 3.16 look. No data, ids, text or logic are touched. */
 html[data-fx]{
@@ -504,7 +504,7 @@ html.fx-on .app-header{position:relative}
 html.fx-on :is(.brand-logo span,.page-title span){background:linear-gradient(90deg,var(--fx-a),var(--fx-b),var(--fx-a));background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--fx-a) 40%,transparent))}
 html.fx-on :is(.mod-title,.page-title,.topbar-title h1){text-shadow:0 0 22px color-mix(in srgb,var(--fx-a) 22%,transparent)}
 html.fx-on .main{background:transparent !important}
-html.fx-on #motor-build::after,html.fx-on #aic-build::after,html.fx-on #pp-build::after,html.fx-on .fx-stamp::after{content:' · FX 3.21';color:var(--fx-a);opacity:.85}
+html.fx-on #motor-build::after,html.fx-on #aic-build::after,html.fx-on #pp-build::after,html.fx-on .fx-stamp::after{content:' · FX 3.22';color:var(--fx-a);opacity:.85}
 
 /* ── Morphing tab indicator (one per tab group; positioned by the script) ── */
 html.fx-on .fx-has-ind{position:relative}
@@ -704,12 +704,22 @@ html.fx-on .fx-beam{display:block;position:fixed;left:0;right:0;top:0;height:42v
   animation:fx-beam .85s cubic-bezier(.55,.05,.3,1) forwards}
 html.fx-on .fx-beam::after{content:'';position:absolute;left:0;right:0;bottom:1px;height:2px;background:linear-gradient(90deg,transparent,#fff 20%,var(--fx-a) 50%,#fff 80%,transparent);box-shadow:0 0 14px 2px var(--fx-a),0 0 40px 6px color-mix(in srgb,var(--fx-a) 45%,transparent)}
 @keyframes fx-beam{0%{transform:translate3d(0,-44vh,0);opacity:0}12%{opacity:1}82%{opacity:.9}100%{transform:translate3d(0,104vh,0);opacity:0}}
-/* morphing pill: a light runs round its edge */
-@property --fx-ang{syntax:'<angle>';inherits:false;initial-value:0deg}
-html.fx-on .fx-ind:not(.fx-fill)::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
-  background:conic-gradient(from var(--fx-ang),transparent 0 62%,color-mix(in srgb,var(--fx-a) 70%,transparent) 80%,#fff 86%,transparent 92%);
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
-@keyframes fx-spin{to{--fx-ang:360deg}}
+/* morphing pill: ONE point of light runs round the edge of the active tab (3.22).
+   The point and its short tail only move (transform), so it costs nothing to repaint. It reacts: a quick bright lap
+   when you change tab, faster while your finger / pointer is on the tabs, calm otherwise. */
+.fx-comet{display:none}
+html.fx-on .fx-ind:not(.fx-fill) > .fx-comet{display:block;position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;opacity:1;transition:opacity .35s ease}
+html.fx-on .fx-ind.fx-moving > .fx-comet{opacity:0;transition:opacity .1s ease}
+html.fx-on .fx-ind.fx-sleep > .fx-comet i:not(:first-child){opacity:0;transition:opacity .6s ease}
+html.fx-on .fx-ind.fx-sleep > .fx-comet i:first-child{opacity:.6;transition:opacity .6s ease}
+.fx-comet i{transition:opacity .35s ease}
+.fx-comet i{position:absolute;left:-3.5px;top:-3.5px;width:7px;height:7px;border-radius:50%;background:#fff;will-change:transform;
+  box-shadow:0 0 6px 2px var(--fx-a),0 0 18px 5px color-mix(in srgb,var(--fx-a) 60%,transparent)}
+.fx-comet i:nth-child(2){left:-2.5px;top:-2.5px;width:5px;height:5px;background:color-mix(in srgb,var(--fx-a) 70%,#fff);opacity:.62;box-shadow:0 0 8px 1px color-mix(in srgb,var(--fx-a) 60%,transparent)}
+.fx-comet i:nth-child(3){left:-2px;top:-2px;width:4px;height:4px;background:var(--fx-a);opacity:.38;box-shadow:0 0 6px color-mix(in srgb,var(--fx-a) 50%,transparent)}
+.fx-comet i:nth-child(4){left:-1.5px;top:-1.5px;width:3px;height:3px;background:var(--fx-a);opacity:.2;box-shadow:none}
+html.fx-on .fx-ind.fx-hot > .fx-comet i:first-child{box-shadow:0 0 6px 2px #fff,0 0 18px 6px var(--fx-a)}
+html.fx-on .fx-ind:not(.fx-fill){box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px color-mix(in srgb,var(--fx-a) 34%,transparent),0 0 22px -6px color-mix(in srgb,var(--fx-a) 60%,transparent)}
 /* the effects switch shows the mode */
 html[data-fx=app] .fx-sw[data-m=lite] .d{background:transparent;border:1.5px solid currentColor}
 html[data-fx=app] .fx-sw[data-m=off]{opacity:.7}
@@ -841,8 +851,39 @@ html.fx-on[data-fx=index]:not(.fx-3d) .fx-stage,html.fx-on[data-fx=index]:not(.f
   html.fx-on[data-fx=index] .shell{-webkit-backdrop-filter:none !important;backdrop-filter:none !important;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015) 40%),rgba(12,18,34,.86) !important}
   html.fx-on[data-fx=index] .fx-now{background:rgba(10,16,32,.82)}
 }
+
+
+/* ═══ 3.22 · glass everywhere: surfaces that were still solid ═══
+   Motor PM Schedule (52-week heatmap, legend, Move-area list), report KPI tiles (Motor + Panel), overdue lists,
+   table headers in every module, Done-PM KPI strip, upload drop zone, complaint area chips, Asset Integrity
+   sub-headers. Sticky parts (heatmap motor names, table headers) use a stronger tint so text stays readable
+   when rows scroll underneath; nothing gets a live blur, so scrolling stays smooth on phones. */
+html.fx-on .heatmap{gap:2px}
+html.fx-on .heatmap-cell{background:rgba(255,255,255,.035);border-radius:3px;box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+html.fx-on .heatmap-cell.bm{background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,0) 62%),color-mix(in srgb,var(--bm) 82%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 10px -3px var(--bm)}
+html.fx-on .heatmap-cell.q{background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,0) 62%),color-mix(in srgb,var(--q) 82%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 0 10px -3px var(--q)}
+html.fx-on .heatmap-cell.hy{background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,0) 62%),color-mix(in srgb,var(--hy) 82%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 10px -3px var(--hy)}
+html.fx-on .heatmap-cell.done{outline-color:color-mix(in srgb,var(--accent-4,#7cf28b) 90%,#fff)}
+html.fx-on .heatmap-h{background:rgba(255,255,255,.035);border-radius:3px}
+html.fx-on .heatmap-month{background:linear-gradient(180deg,color-mix(in srgb,var(--fx-a) 16%,transparent),rgba(255,255,255,.02));border-bottom-color:color-mix(in srgb,var(--fx-a) 55%,transparent);border-radius:6px 6px 0 0;text-shadow:0 0 10px color-mix(in srgb,var(--fx-a) 60%,transparent)}
+html.fx-on :is(.heatmap-row-label,.heatmap-h.area){background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.015)),var(--fx-glass-3);border-right-color:rgba(255,255,255,.1)}
+html.fx-on .legend-item{padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+html.fx-on .x13-list{background:rgba(255,255,255,.025) !important;border-color:var(--fx-edge) !important;border-radius:10px !important}
+html.fx-on .x13-kpi{background:linear-gradient(165deg,rgba(255,255,255,.075),rgba(255,255,255,.015) 45%),var(--fx-glass) !important;border:1px solid var(--fx-edge) !important;border-radius:12px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 14px 30px -22px rgba(0,0,0,.9)}
+html.fx-on :is(#overdue-list,#overdue-list-p) > div{background:linear-gradient(90deg,rgba(255,255,255,.055),rgba(255,255,255,.015)) !important;border:1px solid rgba(255,255,255,.07);border-radius:10px;margin-bottom:6px}
+html.fx-on .dn-kpis{background:linear-gradient(165deg,rgba(255,255,255,.06),rgba(255,255,255,.01) 45%),var(--fx-glass) !important;border-color:var(--fx-edge) !important;border-radius:12px !important}
+html.fx-on .dropzone{background:rgba(255,255,255,.03) !important;border-color:color-mix(in srgb,var(--fx-a) 40%,transparent) !important;border-radius:12px !important}
+html.fx-on .area-chip{background:rgba(255,255,255,.045) !important;border-color:rgba(255,255,255,.1) !important;border-radius:999px !important}
+html.fx-on .sub-h{background:linear-gradient(90deg,color-mix(in srgb,var(--fx-a) 10%,transparent),rgba(255,255,255,.02)) !important}
+html.fx-on thead tr{background:transparent !important}
+html.fx-on th{background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.02)),var(--fx-glass-3) !important;border-color:rgba(255,255,255,.08) !important}
+html.fx-on .page > div[style*="--bg-panel-2"]{background:linear-gradient(165deg,rgba(255,255,255,.07),rgba(255,255,255,.015) 45%),var(--fx-glass) !important;border-color:var(--fx-edge) !important;border-radius:12px !important}
+html.fx-on tr[style*="--bg-2"],html.fx-on tr[style*="--bg-panel-2"]{background:linear-gradient(90deg,color-mix(in srgb,var(--fx-a) 10%,transparent),rgba(255,255,255,.03)) !important}
+html.fx-on .bar-track{background:rgba(255,255,255,.07) !important}
+html.fx-on .pill.scheduled{background:rgba(255,255,255,.06) !important;border-color:rgba(255,255,255,.14) !important}
 </style>
-<script id="fx321-head">(function(){var on=true;try{on=localStorage.getItem('pmfx')!=='off';}catch(e){}var h=document.documentElement;if(on)h.classList.add('fx-on');try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)h.classList.add('fx-still');}catch(e){}})();</script>
+<script id="fx322-head">(function(){var on=true;try{on=localStorage.getItem('pmfx')!=='off';}catch(e){}var h=document.documentElement;if(on)h.classList.add('fx-on');try{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)h.classList.add('fx-still');}catch(e){}})();</script>
 </head>
 <body>
 <div class="app">
@@ -4877,7 +4918,7 @@ select.x13-in{padding-right:24px}
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
 </script>
-<script id="fx321-js">
+<script id="fx322-js">
 /* ═══ 3.21 · Engineering 3D worlds — shared engine (WebGL 1, no libraries) ═══
    Each module gets its own engineering world (registered below by the world file):
    Motor PM → induction motor in exploded view · Panel PM → live switchboard power flow + draw-out MCCB ·
@@ -5459,15 +5500,15 @@ window.__fxEng && window.__fxEng.register((function(){
   };
 })());
 
-/* ═══ 3.21 · Visual layer — 3D maintenance scene, glass, lights, morphing tabs and pages, animated graphs (smooth build) ═══
+/* ═══ 3.22 · Visual layer — 3D maintenance scene, glass, lights, morphing tabs and pages, animated graphs (smooth build) ═══
    Reads the page, never writes data: it only adds classes / CSS variables to elements, a light layer,
    tab indicators and read-only graphs. Every step is wrapped so a failure here can never stop the module. */
 (function(){
   'use strict';
   var D = document, H = D.documentElement, W = window;
   var MOD = H.getAttribute('data-fx') || '';
-  W.__fxBuild = '3.21 · 15-10-2026';
-  function warn(e){ try{ console.warn('[fx 3.21]', e); }catch(_){ } }
+  W.__fxBuild = '3.22 · 15-10-2026';
+  function warn(e){ try{ console.warn('[fx 3.22]', e); }catch(_){ } }
   function safe(fn){ return function(){ try{ return fn.apply(this, arguments); }catch(e){ warn(e); } }; }
   function isOn(){ return H.classList.contains('fx-on'); }
   function mq(q){ try{ return W.matchMedia(q).matches; }catch(e){ return false; } }
@@ -5515,6 +5556,61 @@ window.__fxEng && window.__fxEng.register((function(){
     ind.style.opacity = r.w > 0 ? '1' : '0';
     if(!anim){ void ind.offsetWidth; ind.style.transition = ''; }
   }
+  /* 3.22 · ONE point of light that runs round the active tab's edge (a head + short tail). Pure transform animation
+     (Web Animations API), so the browser moves it on the compositor without repainting. It REACTS: it runs when the
+     page / tab opens, on a tab change (quick bright lap) and while a finger or pointer is on the tabs; when nothing
+     happens it comes to rest as a soft standing spark on the tab edge (tail fades, nothing moves) — so it never keeps
+     the phone drawing frames for nothing. */
+  function cometPath(w, h, r){
+    r = Math.max(0, Math.min(r || 0, h / 2, w / 2));
+    var P = [[r, 0], [w - r, 0]], n = 5;
+    function arc(cx, cy, a0, a1){ for(var i = 1; i <= n; i++){ var a = a0 + (a1 - a0) * i / n; P.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } }
+    arc(w - r, r, -Math.PI / 2, 0); P.push([w, h - r]); arc(w - r, h - r, 0, Math.PI / 2); P.push([r, h]); arc(r, h - r, Math.PI / 2, Math.PI); P.push([0, r]); arc(r, r, Math.PI, Math.PI * 1.5);
+    var L = [0]; for(var k = 1; k < P.length; k++) L.push(L[k - 1] + Math.hypot(P[k][0] - P[k - 1][0], P[k][1] - P[k - 1][1]));
+    var tot = L[L.length - 1] || 1;
+    return { len: tot, kf: P.map(function(p, k){ return { transform: 'translate(' + p[0].toFixed(1) + 'px,' + p[1].toFixed(1) + 'px)', offset: Math.min(1, L[k] / tot) }; }) };
+  }
+  function cometRate(ind, r){ var c = ind && ind.__cm; if(!c || !c.an) return; c.an.forEach(function(a){ try{ if(a.updatePlaybackRate && !a.pending) a.updatePlaybackRate(r); else a.playbackRate = r; }catch(e){} }); }
+  function cometSleep(ind){
+    var c = ind && ind.__cm; if(!c || !c.an) return;
+    if(ind.__hover){ c.sleepT = setTimeout(function(){ cometSleep(ind); }, 2500); return; }
+    ind.classList.add('fx-sleep'); clearTimeout(c.pauseT);
+    c.pauseT = setTimeout(function(){ if(!ind.classList.contains('fx-sleep')) return; c.an.forEach(function(a){ try{ a.pause(); }catch(e){} }); c.asleep = true; }, 650);
+  }
+  function cometWake(ind, ms){
+    var c = ind && ind.__cm; if(!c || !c.an) return;
+    clearTimeout(c.sleepT); clearTimeout(c.pauseT); clearTimeout(c.hbT);
+    ind.classList.remove('fx-sleep');
+    if(c.asleep){ c.an.forEach(function(a){ try{ a.play(); }catch(e){} }); c.asleep = false; }
+    c.sleepT = setTimeout(function(){ cometSleep(ind); }, ms || 6000);
+  }
+  function cometBurst(ind){   // reacts to a tab change: one quick bright lap, then settles
+    if(!ind || !ind.__cm) return; clearTimeout(ind.__cmB); cometWake(ind, 6000); ind.classList.add('fx-hot');
+    var steps = [[0, 3.4], [260, 2.6], [520, 1.9], [820, 1.4], [1150, 1]], j = 0;
+    (function nx(){ var st = steps[j]; cometRate(ind, ind.__hover && st[1] < 1.9 ? 1.9 : st[1]); j++; if(j < steps.length) ind.__cmB = setTimeout(nx, steps[j][0] - st[0]); else if(!ind.__hover) ind.classList.remove('fx-hot'); })();
+  }
+  function comet(ind, burst){
+    if(!ind || ind.classList.contains('fx-fill') || still || !isOn() || !ind.animate) return;
+    var w = ind.offsetWidth, h = ind.offsetHeight; if(w < 10 || h < 10) return;
+    var c = ind.__cm;
+    if(!c){ var el = D.createElement('b'); el.className = 'fx-comet'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<i></i><i></i><i></i><i></i>'; ind.appendChild(el); c = ind.__cm = { el: el, key: '', an: null }; }
+    var key = w + 'x' + h;
+    if(c.key !== key){
+      var prog = 0; try{ if(c.an && c.an[0]){ var tm = c.an[0].effect.getComputedTiming(); prog = tm.progress || 0; } }catch(e){}
+      if(c.an) c.an.forEach(function(a){ try{ a.cancel(); }catch(e){} });
+      var r = 10; try{ r = parseFloat(getComputedStyle(ind).borderTopLeftRadius) || 0; }catch(e){}
+      var p = cometPath(w, h, r), dur = Math.max(2400, p.len / 0.105), lag = Math.min(95, dur * 0.024);
+      c.an = [].map.call(c.el.children, function(dot, k){ return dot.animate(p.kf, { duration: dur, iterations: Infinity, easing: 'linear', delay: -(prog * dur) - (3 - k) * lag }); });
+      c.key = key; c.dur = dur; c.asleep = false;
+    }
+    if(burst) cometBurst(ind); else { cometRate(ind, ind.__hover ? 1.9 : 1); cometWake(ind, 6000); }
+  }
+  function cometHover(cont, ind){
+    if(cont.__fxCH) return; cont.__fxCH = 1;
+    cont.addEventListener('pointerenter', function(e){ if(e.pointerType === 'touch') return; ind.__hover = true; ind.classList.add('fx-hot'); cometWake(ind, 6000); cometRate(ind, 1.9); });
+    cont.addEventListener('pointerleave', function(){ ind.__hover = false; ind.classList.remove('fx-hot'); cometRate(ind, 1); cometWake(ind, 2500); });
+    cont.addEventListener('pointerdown', function(){ cometBurst(ind); }, { passive: true });
+  }
   var syncTabs = safe(function(){
     GROUPS.forEach(function(g){
       var list = D.querySelectorAll(g[0]);
@@ -5553,6 +5649,11 @@ window.__fxEng && window.__fxEng.register((function(){
           place(ind, r, !!(prev && prev.w > 0 && r.w > 0));
         }
         c.__fxR = { key: key, x: r.x, y: r.y, w: r.w, h: r.h, item: act };
+        if(!ind.classList.contains('fx-fill') && r.w > 0){
+          cometHover(c, ind); clearTimeout(ind.__cmT);
+          if(morph || (prev && prev.w > 0)){ ind.classList.add('fx-moving'); (function(ind){ ind.__cmT = setTimeout(function(){ ind.classList.remove('fx-moving'); comet(ind, true); }, 560); })(ind); }
+          else comet(ind, false);
+        }
       }
     });
   });
@@ -5921,6 +6022,7 @@ window.__fxEng && window.__fxEng.register((function(){
     H.classList.toggle('fx-3d', has3d);
     try{ if(S){ if(has3d) S.start(); else S.stop(); } }catch(e){ warn(e); }
     var sw = D.querySelector('.fx-sw'); if(sw){ var L = LBL[m]; sw.setAttribute('data-m', m); sw.querySelector('.t').textContent = L[0]; sw.querySelector('.t2').textContent = L[1]; sw.title = L[2]; sw.setAttribute('aria-label', L[2]); }
+    try{ [].forEach.call(D.querySelectorAll('.fx-has-ind'), function(c){ c.__fxR = null; }); }catch(e){}   // re-place indicators (and their light) after a mode change
     chartsRefresh(); schedule();
     try{ [].forEach.call(D.querySelectorAll('iframe'), function(f){ try{ if(f.contentWindow && f.contentWindow.__fx) f.contentWindow.__fx.apply(); }catch(e){} }); }catch(e){}
   }
