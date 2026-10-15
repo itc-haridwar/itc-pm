@@ -38,6 +38,10 @@ html,body{font-family:'Inter',system-ui,sans-serif;background:var(--bg-deep);col
   text-transform:uppercase;cursor:pointer;font-family:inherit;transition:all 0.15s;
 }
 .signout-btn:hover{border-color:var(--accent-3);color:var(--accent-3)}
+/* 4.0 · back to the Utilities Command Centre home page */
+.home-btn{background:transparent;border:1px solid var(--border-bright);color:var(--text-dim);padding:6px 14px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:1px;
+  text-transform:uppercase;font-family:inherit;text-decoration:none;white-space:nowrap;transition:all 0.15s}
+.home-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 /* Tab bar */
 .tabbar{
@@ -678,6 +682,7 @@ html.fx-on .pill.scheduled{background:rgba(255,255,255,.06) !important;border-co
     <button type="button" class="gs-open" id="gs-open" aria-label="Search everything"><span class="gs-ico">🔍</span><span class="gs-ph">Search motors, panels, PM IDs, reports, pages…</span><kbd>/</kbd></button>
     <div class="user-block">
       <span class="user-name">Signed in as <b id="user-display">…</b></span>
+      <a class="home-btn" href="./index.html" title="Utilities Command Centre — all modules">⌂ All modules</a>
       <button class="signout-btn" onclick="doSignOut()">Sign Out</button>
     </div>
   </header>
@@ -717,7 +722,7 @@ window.__appBuild = '3.16 · 13-10-2026';
 const FRESH = '?v=' + Date.now();
 // Gate: must be signed in
 onAuthStateChanged(auth, (user) => {
-  if(!user){ window.location.href = './index.html'; return; }
+  if(!user){ window.location.href = './pm-login.html'; return; }
   document.getElementById('user-display').textContent = user.displayName || user.email;
   // Load motor PM in iframe
   const frame = document.getElementById('motor-frame');
@@ -727,7 +732,7 @@ onAuthStateChanged(auth, (user) => {
 
 window.doSignOut = async () => {
   await signOut(auth);
-  window.location.href = './index.html';
+  window.location.href = './pm-login.html';
 };
 
 // Tab switching — lazy-load Panel PM and Complaint iframes on first click

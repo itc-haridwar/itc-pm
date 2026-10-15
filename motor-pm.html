@@ -27,7 +27,7 @@ window.__pmRole = 'user';  // default — upgraded to 'admin' if user UID found 
 
 onAuthStateChanged(auth, async (user)=>{
   if(!user){
-    if(window.parent === window) window.location.href = './index.html';
+    if(window.parent === window) window.location.href = './pm-login.html';
     return;
   }
   window.__pmCurrentUser = user;
@@ -907,7 +907,7 @@ window.__motorErrors = [];
   window.addEventListener('unhandledrejection', function(e){ var r = e && e.reason; show((r && (r.code ? r.code + ' — ' : '') + (r.message || r)) || 'request failed'); });
   setTimeout(function(){
     if(window.__motorBooted) return;
-    show('This page did not finish loading. The motor-pm.html on GitHub is probably cut short or an old copy is cached. Re-upload it with Add file → Upload files (GitHub must show 8789 lines ending with &lt;/html&gt;) and clear the browser cache.');
+    show('This page did not finish loading. The motor-pm.html on GitHub is probably cut short or an old copy is cached. Re-upload it with Add file → Upload files (GitHub must show 8790 lines ending with &lt;/html&gt;) and clear the browser cache.');
   }, 15000);
 })();
 </script>

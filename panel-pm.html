@@ -22,7 +22,7 @@ window.__pmFirebase = { db, auth, doc, getDoc, setDoc, onSnapshot };
 window.__pmFirebaseReady = false;
 window.__pmRole = 'user';
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){ if(window.parent === window) window.location.href = './index.html'; return; }
+  if(!user){ if(window.parent === window) window.location.href = './pm-login.html'; return; }
   window.__pmCurrentUser = user;
   // Robust admin check with logging — retries once on network glitch
   async function checkAdmin(retries){

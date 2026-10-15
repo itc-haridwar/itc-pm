@@ -21,7 +21,7 @@ window.__pmFirebase = { db, auth, doc, getDoc, setDoc, onSnapshot };
 window.__pmFirebaseReady = false;
 window.__pmRole = 'user';
 onAuthStateChanged(auth, async (user)=>{
-  if(!user){ if(window.parent === window) window.location.href = './index.html'; return; }
+  if(!user){ if(window.parent === window) window.location.href = './pm-login.html'; return; }
   window.__pmCurrentUser = user;
   async function checkAdmin(retries){
     try{
